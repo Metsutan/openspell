@@ -21,6 +21,8 @@ import type { Target } from "../../world/targeting/Target";
  * Runtime state for an NPC.
  * Contains full game state including aggro, movement area, etc.
  */
+export type NPCCombatStat = "hitpoints" | "accuracy" | "strength" | "defense" | "range" | "magic";
+
 export interface NPCState extends SpatialEntity {
   id: number;
   definitionId: number;
@@ -35,6 +37,12 @@ export interface NPCState extends SpatialEntity {
   conversationId: number | null;
   shopId: number | null;
   hitpointsLevel: number;
+  accuracyLevel: number;
+  strengthLevel: number;
+  defenseLevel: number;
+  magicLevel: number;
+  rangeLevel: number;
+  boostedStats: Set<NPCCombatStat>;
   nextWanderAtMs: number;
   currentState: States;
   /** Aggro radius from definition, cached for spatial queries */
@@ -51,6 +59,81 @@ export interface NPCState extends SpatialEntity {
    * then the NPC can attack again. 
    */
   combatDelay: number;
+}
+
+export function getNpcBaseCombatStat(npc: NPCState, stat: NPCCombatStat): number {
+  const combat = npc.definition.combat;
+  switch (stat) {
+    case "hitpoints":
+      return combat?.hitpoints ?? 1;
+    case "accuracy":
+      return combat?.accuracy ?? 1;
+    case "strength":
+      return combat?.strength ?? 1;
+    case "defense":
+      return combat?.defense ?? 1;
+    case "magic":
+      return combat?.magic ?? 1;
+    case "range":
+      return combat?.range ?? 1;
+    default:
+      return 1;
+  }
+}
+
+export function getNpcCurrentCombatStat(npc: NPCState, stat: NPCCombatStat): number {
+  switch (stat) {
+    case "hitpoints":
+      return npc.hitpointsLevel;
+    case "accuracy":
+      return npc.accuracyLevel;
+    case "strength":
+      return npc.strengthLevel;
+    case "defense":
+      return npc.defenseLevel;
+    case "magic":
+      return npc.magicLevel;
+    case "range":
+      return npc.rangeLevel;
+    default:
+      return 1;
+  }
+}
+
+export function setNpcCurrentCombatStat(npc: NPCState, stat: NPCCombatStat, value: number): void {
+  const clamped = stat === "hitpoints" ? Math.max(0, value) : Math.max(1, value);
+  switch (stat) {
+    case "hitpoints":
+      npc.hitpointsLevel = clamped;
+      return;
+    case "accuracy":
+      npc.accuracyLevel = clamped;
+      return;
+    case "strength":
+      npc.strengthLevel = clamped;
+      return;
+    case "defense":
+      npc.defenseLevel = clamped;
+      return;
+    case "magic":
+      npc.magicLevel = clamped;
+      return;
+    case "range":
+      npc.rangeLevel = clamped;
+      return;
+    default:
+      return;
+  }
+}
+
+export function updateNpcBoostedStats(npc: NPCState, stat: NPCCombatStat): void {
+  const base = getNpcBaseCombatStat(npc, stat);
+  const current = getNpcCurrentCombatStat(npc, stat);
+  if (current === base) {
+    npc.boostedStats.delete(stat);
+  } else {
+    npc.boostedStats.add(stat);
+  }
 }
 
 /**

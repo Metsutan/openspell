@@ -50,6 +50,7 @@ import { AggroSystem } from "./systems/AggroSystem";
 import { PathfindingSystem, type MovementPlan } from "./systems/PathfindingSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { AbilitySystem } from "./systems/AbilitySystem";
+import { RegenerationSystem } from "./systems/RegenerationSystem";
 import { ShopSystem } from "./systems/ShopSystem";
 import { CombatSystem } from "./systems/CombatSystem";
 import { DeathSystem } from "./systems/DeathSystem";
@@ -156,6 +157,7 @@ export class GameServer {
   private readonly pathfindingSystem: PathfindingSystem;
   private readonly movementSystem: MovementSystem;
   private readonly abilitySystem: AbilitySystem;
+  private readonly regenerationSystem: RegenerationSystem;
   private readonly packetAudit: PacketAuditService | null;
   private readonly itemAudit: ItemAuditService | null;
   private readonly antiCheatRealtime: AntiCheatRealtimeService | null;
@@ -329,6 +331,13 @@ export class GameServer {
 
     this.abilitySystem = new AbilitySystem({
       playerStates: this.playerStatesByUserId,
+      enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload)
+    });
+
+    this.regenerationSystem = new RegenerationSystem({
+      playerStatesByUserId: this.playerStatesByUserId,
+      npcStates: this.npcStates,
+      eventBus: this.eventBus,
       enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload)
     });
 
@@ -871,6 +880,9 @@ export class GameServer {
 
     // Regenerate Abilities
     this.abilitySystem.update();
+
+    // Regenerate Skills/Stats
+    this.regenerationSystem.update();
 
     // Restock Shops
     this.shopSystem.update();

@@ -434,6 +434,14 @@ export class DeathSystem {
     // Restore hitpoints to max
     npc.hitpointsLevel = deadNpc.maxHitpoints;
 
+    // Reset combat stats to base
+    npc.accuracyLevel = npc.definition.combat?.accuracy ?? 1;
+    npc.strengthLevel = npc.definition.combat?.strength ?? 1;
+    npc.defenseLevel = npc.definition.combat?.defense ?? 1;
+    npc.magicLevel = npc.definition.combat?.magic ?? 1;
+    npc.rangeLevel = npc.definition.combat?.range ?? 1;
+    npc.boostedStats.clear();
+
     // Reset combat state
     npc.combatDelay = 0;
     npc.aggroTarget = null;

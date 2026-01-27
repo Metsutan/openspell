@@ -475,6 +475,12 @@ export class StateMachine {
                 // Start item-on-entity action (placeholder for future implementation)
                 // startItemOnEntityAction(entityRef);
                 break;
+            case States.IdleState:
+                if (entityRef.type === EntityType.Player) {
+                    // Ensure combat targets are cleared when returning to idle (e.g., on equip/unequip).
+                    this.context.clearPlayerTarget(entityRef.id);
+                }
+                break;
             // IdleState, RespawningState, PlayerDeadState, NPCDeadState, etc.
             // don't need initialization when entering
             // State change events are emitted before enterState, so VisibilitySystem

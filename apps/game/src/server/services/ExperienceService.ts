@@ -28,6 +28,7 @@ import type { SpellDefinition } from "../../world/spells/SpellCatalog";
 import { DefaultPacketBuilder } from "../systems/PacketBuilder";
 import { EntityType } from "../../protocol/enums/EntityType";
 import type { NPCState } from "../state/EntityState";
+import { updateNpcBoostedStats } from "../state/EntityState";
 import type { EventBus } from "../events/EventBus";
 import { 
   createEntityHitpointsChangedEvent,
@@ -415,6 +416,7 @@ export class ExperienceService {
   private applyDamageToNPC(npc: NPCState, damage: number): void {
     const newHitpoints = Math.max(0, npc.hitpointsLevel - damage);
     npc.hitpointsLevel = newHitpoints;
+    updateNpcBoostedStats(npc, "hitpoints");
 
     // Broadcast hitpoints change via event bus
     const position: Position = {

@@ -101,6 +101,7 @@ export interface ItemDefinition {
   canIOU: boolean;
   inventoryActions: string[] | null;
   edibleEffects: EdibleEffect[] | null;
+  edibleResult: ItemOnItemActionItem | null;
   equippableEffects: EquippableEffect[] | null;
   equippableRequirements: EquippableRequirement[] | null;
   equipmentType: string | null;
@@ -191,6 +192,7 @@ export class ItemCatalog {
         canIOU: raw.canIOU ?? true,
         inventoryActions: raw.inventoryActions ?? null,
         edibleEffects: raw.edibleEffects ?? null,
+      edibleResult: raw.edibleResult ?? null,
         equippableEffects: raw.equippableEffects ?? null,
         equippableRequirements: raw.equippableRequirements ?? null,
         equipmentType: raw.equipmentType ?? null,
@@ -301,6 +303,7 @@ interface RawItemDefinition {
   canIOU?: boolean;
   inventoryActions?: string[] | null;
   edibleEffects?: EdibleEffect[] | null;
+  edibleResult?: ItemOnItemActionItem | null;
   equippableEffects?: EquippableEffect[] | null;
   equippableRequirements?: EquippableRequirement[] | null;
   equipmentType?: string | null;

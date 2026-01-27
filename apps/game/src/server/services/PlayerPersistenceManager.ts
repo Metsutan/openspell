@@ -6,6 +6,7 @@ import {
   createDefaultEquipment,
   createDefaultSkills,
   createEmptyInventory,
+  getLevelForExp,
   isEquipmentSlot,
   isSkillSlug,
   parsePlayerAbilities,
@@ -363,6 +364,9 @@ export class PlayerPersistenceManager {
 
         const skillState = playerState.skills[slug];
         if (!skillState) continue;
+        const normalizedBoostedLevel = Number.isFinite(skillState.boostedLevel)
+          ? skillState.boostedLevel
+          : skillState.level;
 
         await tx.playerSkill.upsert({
           where: {
@@ -374,7 +378,7 @@ export class PlayerPersistenceManager {
           },
           update: {
             level: skillState.level,
-            boostedLevel: skillState.boostedLevel,
+            boostedLevel: normalizedBoostedLevel,
             experience: BigInt(Math.floor(skillState.xp))
           },
           create: {
@@ -382,7 +386,7 @@ export class PlayerPersistenceManager {
             persistenceId,
             skillId: skillId,
             level: skillState.level,
-            boostedLevel: skillState.boostedLevel,
+            boostedLevel: normalizedBoostedLevel,
             experience: BigInt(Math.floor(skillState.xp))
           }
         });
@@ -620,8 +624,10 @@ export class PlayerPersistenceManager {
       if (!isSkillSlug(slug)) continue;
       const xpBig = r.experience ?? BigInt(0);
       const xpNum = xpBig <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(xpBig) : Number.MAX_SAFE_INTEGER;
-      const actualLevel = r.level ?? 1;
-      const boostedLevel = r.boostedLevel ?? actualLevel; // Default to actual level if not set
+      const actualLevel = Number.isFinite(r.level) ? Math.max(1, r.level ?? 1) : getLevelForExp(xpNum);
+      const boostedLevel = Number.isFinite(r.boostedLevel)
+        ? Math.max(0, r.boostedLevel ?? actualLevel)
+        : actualLevel; // Default to actual level if not set
       skills[slug] = { level: actualLevel, boostedLevel, xp: xpNum };
     }
 

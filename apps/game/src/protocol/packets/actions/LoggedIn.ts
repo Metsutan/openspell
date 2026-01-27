@@ -17,25 +17,15 @@ export type LoggedInPayload = {
   BodyTypeID: unknown;
   LegsID: unknown;
   EquipmentHead: unknown;
-  helmet?: unknown;
   EquipmentBody: unknown;
-  chest?: unknown;
   EquipmentLegs: unknown;
-  legs?: unknown;
   EquipmentBoots: unknown;
-  boots?: unknown;
   EquipmentNecklace: unknown;
-  neck?: unknown;
   EquipmentWeapon: unknown;
-  weapon?: unknown;
   EquipmentShield: unknown;
-  shield?: unknown;
   EquipmentBackPack: unknown;
-  back?: unknown;
   EquipmentGloves: unknown;
-  gloves?: unknown;
   EquipmentProjectile: unknown;
-  projectile?: unknown;
   CurrentHour: unknown;
   HitpointsExp: unknown;
   HitpointsCurrLvl: unknown;
@@ -102,25 +92,15 @@ export function decodeLoggedInPayload(payload: unknown): LoggedInPayload {
     BodyTypeID: arr[LoggedInFields.BodyTypeID] as any,
     LegsID: arr[LoggedInFields.LegsID] as any,
     EquipmentHead: arr[LoggedInFields.EquipmentHead] as any,
-    helmet: arr[LoggedInFields.helmet] as any,
     EquipmentBody: arr[LoggedInFields.EquipmentBody] as any,
-    chest: arr[LoggedInFields.chest] as any,
     EquipmentLegs: arr[LoggedInFields.EquipmentLegs] as any,
-    legs: arr[LoggedInFields.legs] as any,
     EquipmentBoots: arr[LoggedInFields.EquipmentBoots] as any,
-    boots: arr[LoggedInFields.boots] as any,
     EquipmentNecklace: arr[LoggedInFields.EquipmentNecklace] as any,
-    neck: arr[LoggedInFields.neck] as any,
     EquipmentWeapon: arr[LoggedInFields.EquipmentWeapon] as any,
-    weapon: arr[LoggedInFields.weapon] as any,
     EquipmentShield: arr[LoggedInFields.EquipmentShield] as any,
-    shield: arr[LoggedInFields.shield] as any,
     EquipmentBackPack: arr[LoggedInFields.EquipmentBackPack] as any,
-    back: arr[LoggedInFields.back] as any,
     EquipmentGloves: arr[LoggedInFields.EquipmentGloves] as any,
-    gloves: arr[LoggedInFields.gloves] as any,
     EquipmentProjectile: arr[LoggedInFields.EquipmentProjectile] as any,
-    projectile: arr[LoggedInFields.projectile] as any,
     CurrentHour: arr[LoggedInFields.CurrentHour] as any,
     HitpointsExp: arr[LoggedInFields.HitpointsExp] as any,
     HitpointsCurrLvl: arr[LoggedInFields.HitpointsCurrLvl] as any,
@@ -171,7 +151,7 @@ export function decodeLoggedInPayload(payload: unknown): LoggedInPayload {
 }
 
 export function buildLoggedInPayload(data: LoggedInPayload): unknown[] {
-  const arr: unknown[] = new Array(79);
+  const arr: unknown[] = new Array(69);
   arr[LoggedInFields.EntityID] = data.EntityID;
   arr[LoggedInFields.EntityTypeID] = data.EntityTypeID;
   arr[LoggedInFields.PlayerType] = data.PlayerType;
@@ -186,25 +166,15 @@ export function buildLoggedInPayload(data: LoggedInPayload): unknown[] {
   arr[LoggedInFields.BodyTypeID] = data.BodyTypeID;
   arr[LoggedInFields.LegsID] = data.LegsID;
   arr[LoggedInFields.EquipmentHead] = data.EquipmentHead;
-  arr[LoggedInFields.helmet] = data.helmet;
   arr[LoggedInFields.EquipmentBody] = data.EquipmentBody;
-  arr[LoggedInFields.chest] = data.chest;
   arr[LoggedInFields.EquipmentLegs] = data.EquipmentLegs;
-  arr[LoggedInFields.legs] = data.legs;
   arr[LoggedInFields.EquipmentBoots] = data.EquipmentBoots;
-  arr[LoggedInFields.boots] = data.boots;
   arr[LoggedInFields.EquipmentNecklace] = data.EquipmentNecklace;
-  arr[LoggedInFields.neck] = data.neck;
   arr[LoggedInFields.EquipmentWeapon] = data.EquipmentWeapon;
-  arr[LoggedInFields.weapon] = data.weapon;
   arr[LoggedInFields.EquipmentShield] = data.EquipmentShield;
-  arr[LoggedInFields.shield] = data.shield;
   arr[LoggedInFields.EquipmentBackPack] = data.EquipmentBackPack;
-  arr[LoggedInFields.back] = data.back;
   arr[LoggedInFields.EquipmentGloves] = data.EquipmentGloves;
-  arr[LoggedInFields.gloves] = data.gloves;
   arr[LoggedInFields.EquipmentProjectile] = data.EquipmentProjectile;
-  arr[LoggedInFields.projectile] = data.projectile;
   arr[LoggedInFields.CurrentHour] = data.CurrentHour;
   arr[LoggedInFields.HitpointsExp] = data.HitpointsExp;
   arr[LoggedInFields.HitpointsCurrLvl] = data.HitpointsCurrLvl;

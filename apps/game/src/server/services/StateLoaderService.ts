@@ -3,7 +3,7 @@ import { MAP_LEVELS, type MapLevel } from "../../world/Location";
 import type { EntityCatalog } from "../../world/entities/EntityCatalog";
 import type { ItemCatalog } from "../../world/items/ItemCatalog";
 import type { WorldEntityCatalog } from "../../world/entities/WorldEntityCatalog";
-import type { NPCState, GroundItemState, WorldEntityState } from "../state/EntityState";
+import type { NPCState, GroundItemState, WorldEntityState, NPCCombatStat } from "../state/EntityState";
 import type { SpatialIndexManager } from "../systems/SpatialIndexManager";
 
 export interface StateLoaderServiceConfig {
@@ -57,6 +57,12 @@ export class StateLoaderService {
         conversationId: instance.conversationId,
         shopId: Array.isArray(instance.shopId) ? instance.shopId[0] : instance.shopId,
         hitpointsLevel: definition.combat?.hitpoints ?? 1,
+        accuracyLevel: definition.combat?.accuracy ?? 1,
+        strengthLevel: definition.combat?.strength ?? 1,
+        defenseLevel: definition.combat?.defense ?? 1,
+        magicLevel: definition.combat?.magic ?? 1,
+        rangeLevel: definition.combat?.range ?? 1,
+        boostedStats: new Set<NPCCombatStat>(),
         currentState: States.IdleState,
         nextWanderAtMs,
         aggroRadius,

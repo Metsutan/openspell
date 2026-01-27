@@ -405,6 +405,7 @@ export class PlayerState {
   public bank: (BankItem | null)[] | null = null; // Bank storage (500 slots), loaded lazily on first bank access
   public combatDelay: number = 0; // Combat cooldown in ticks. When 0, player can attack.
   public lastLocalMessageTick: number = Number.NEGATIVE_INFINITY; // Tick of last local chat message.
+  public lastEdibleActionTick: number = Number.NEGATIVE_INFINITY; // Tick of last eat/drink action.
   public combatLevel: number = 3; // Cached combat level (recalculated when combat skills change)
   public autoCastSpellId: number | null = null; // Selected auto-cast spell (ephemeral, not persisted)
   public singleCastSpellId: number | null = null; // Single-cast spell queued for next magic attack
@@ -417,6 +418,7 @@ export class PlayerState {
   public magicBonus: number = 0; // Total magic bonus from all equipped items
   public rangeBonus: number = 0; // Total range bonus from all equipped items
   public skillBonuses: Record<string, number> = {}; // Skill bonuses (e.g., forestry: 5)
+  private readonly boostedSkillSlugs = new Set<SkillSlug>();
 
   constructor(
     public readonly userId: number,
@@ -452,6 +454,7 @@ export class PlayerState {
     this.inventoryWeight = Math.max(0, inventoryWeight);
     this.equippedWeight = Math.max(0, equippedWeight);
     this.markClean();
+    this.rebuildBoostedSkillTracking();
   }
   public dirty = false;
   public lastDirtyAt = 0;
@@ -599,6 +602,14 @@ export class PlayerState {
   }
 
   /**
+   * Returns the set of skills that are currently boosted or drained.
+   * Do not mutate this set directly; use skill update methods instead.
+   */
+  getBoostedSkillSlugs(): ReadonlySet<SkillSlug> {
+    return this.boostedSkillSlugs;
+  }
+
+  /**
    * Sets the skill level and XP for a given skill.
    * If boostedLevel is not provided, it will be set equal to the new level.
    * Returns the old combat level (before this change) if this is a combat skill, otherwise null.
@@ -618,6 +629,7 @@ export class PlayerState {
       boostedLevel: finalBoostedLevel, 
       xp: Math.max(0, xp) 
     };
+    this.updateBoostedSkillTracking(slug, actualLevel, finalBoostedLevel);
     this.flagSkillsDirty(); // Mark skills for hiscore sync
     
     return oldCombatLevel;
@@ -637,11 +649,13 @@ export class PlayerState {
    */
   setBoostedLevel(slug: SkillSlug, boostedLevel: number) {
     const current = this.getSkillState(slug);
+    const nextBoostedLevel = Math.max(0, boostedLevel);
     this.skills[slug] = { 
       level: current.level, 
-      boostedLevel: Math.max(0, boostedLevel), 
+      boostedLevel: nextBoostedLevel, 
       xp: current.xp 
     };
+    this.updateBoostedSkillTracking(slug, current.level, nextBoostedLevel);
     this.flagDirty(); // Only flag dirty, not skillsDirty (boosted level is temporary)
   }
 
@@ -656,7 +670,26 @@ export class PlayerState {
         boostedLevel: current.level, 
         xp: current.xp 
       };
+      this.updateBoostedSkillTracking(slug, current.level, current.level);
       this.flagDirty();
+    }
+  }
+
+  private rebuildBoostedSkillTracking() {
+    this.boostedSkillSlugs.clear();
+    for (const slug of SKILL_SLUGS) {
+      const state = this.skills[slug];
+      if (!state) continue;
+      this.updateBoostedSkillTracking(slug, state.level, state.boostedLevel);
+    }
+  }
+
+  private updateBoostedSkillTracking(slug: SkillSlug, level: number, boostedLevel: number) {
+    if (slug === SKILLS.overall) return;
+    if (boostedLevel !== level) {
+      this.boostedSkillSlugs.add(slug);
+    } else {
+      this.boostedSkillSlugs.delete(slug);
     }
   }
 

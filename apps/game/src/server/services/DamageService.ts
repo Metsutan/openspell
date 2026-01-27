@@ -17,6 +17,7 @@ import type { SpellCatalog } from "../../world/spells/SpellCatalog";
 import type { EntityDefinition } from "../../world/entities/EntityCatalog";
 import type { PlayerState } from "../../world/PlayerState";
 import type { NPCState } from "../state/EntityState";
+import { updateNpcBoostedStats } from "../state/EntityState";
 import type { EventBus } from "../events/EventBus";
 import { createEntityDamagedEvent, createEntityHitpointsChangedEvent, createFiredProjectileEvent, type EntityRef, type Position } from "../events/GameEvents";
 import { SKILLS } from "../../world/PlayerState";
@@ -245,14 +246,14 @@ export class DamageService {
     if ("userId" in target) {
       return target.getSkillBoostedLevel("defense");
     }
-    return target.definition.combat?.defense ?? 1;
+    return target.defenseLevel;
   }
 
   private getRangedLevel(attacker: PlayerState | NPCState): number {
     if ("userId" in attacker) {
       return attacker.getSkillBoostedLevel("range");
     }
-    return attacker.definition.combat?.range ?? 1;
+    return attacker.rangeLevel;
   }
 
   private getRangedBoost(attacker: PlayerState | NPCState): number {
@@ -341,7 +342,7 @@ export class DamageService {
       strengthLevel = attacker.getSkillBoostedLevel('strength');
     } else {
       // NPC
-      strengthLevel = attacker.definition.combat?.strength ?? 1;
+      strengthLevel = attacker.strengthLevel;
     }
 
     // TODO: Add temporary strength level buffs (potions, prayers, etc.)
@@ -394,7 +395,7 @@ export class DamageService {
       accuracyLevel = attacker.getSkillBoostedLevel('accuracy');
     } else {
       // NPC
-      accuracyLevel = attacker.definition.combat?.accuracy ?? 1;
+      accuracyLevel = attacker.accuracyLevel;
     }
 
     // TODO: Add temporary accuracy level buffs (potions, prayers, etc.)
@@ -444,7 +445,7 @@ export class DamageService {
     // NPCs have simplified defense calculation
     if (!('userId' in target)) {
       const npc = target as NPCState;
-      const npcDefense = npc.definition.combat?.defense ?? 1;
+      const npcDefense = npc.defenseLevel;
       return npcDefense + 9;
     }
 
@@ -682,6 +683,7 @@ export class DamageService {
     } else {
       // NPC - set hitpoints
       targetState.hitpointsLevel = newHp;
+      updateNpcBoostedStats(targetState, "hitpoints");
     }
 
     // Create target reference

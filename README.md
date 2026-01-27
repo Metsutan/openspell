@@ -121,6 +121,17 @@ Best for rapid iteration with hot reload, debugging, and breakpoints. Runs servi
 
 1. **Node.js 18+** and **pnpm** installed
 2. **PostgreSQL** running locally (or use Docker just for the database)
+
+**Quick database with Docker Desktop (Windows)** (if you don't have PostgreSQL installed):
+1. Install Docker Desktop for Windows and open it (wait for "Engine running").
+2. Run this in PowerShell:
+```powershell
+docker run -d --name openspell -p 5432:5432 -e POSTGRES_USER=openspell -e POSTGRES_PASSWORD=openspell -e POSTGRES_DB=openspell postgres:16-alpine
+```
+If you already created the container, start it with:
+```powershell
+docker start openspell-postgres
+```
 3. **VS Code** with the workspace open
 
 ### Initial Setup
@@ -133,27 +144,23 @@ pnpm install
 pnpm run protocol:generate
 
 # 3. Generate shared.env from template
-node scripts/setup-env.js
+#    - dev = run services on your host (DATABASE_URL uses localhost)
+#    - docker = run services with docker compose (DATABASE_URL uses postgres)
+node scripts/setup-env.js --mode=dev
 
 # 4. Edit apps/shared-assets/base/shared.env with your database URL
-#    Example: DATABASE_URL=postgresql://openspell:openspell@localhost:5432/openspell
+#    Host dev example:    DATABASE_URL=postgresql://openspell:openspell@localhost:5432/openspell?schema=public
+#    Docker compose:      DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema=public
 
-# 5. Run database migrations
+# 5. Run database migrations (make sure DATABASE_URL points to localhost)
 cd packages/db
-pnpm prisma migrate dev
+pnpm prisma:migrate:dev
 
-# 6. Seed initial data (optional - creates admin user and World 1)
-node prisma/seed.js
+# 6. Seed initial data (optional - creates admin user and World 1) (while inside of \packages\db)
+pnpm prisma:seed
 ```
 
-**Quick database with Docker** (if you don't have PostgreSQL installed):
-```powershell
-docker run -d --name openspell-postgres -p 5432:5432 \
-  -e POSTGRES_USER=openspell \
-  -e POSTGRES_PASSWORD=openspell \
-  -e POSTGRES_DB=openspell \
-  postgres:16-alpine
-```
+
 
 ### Running with VS Code Debugger
 

@@ -6,13 +6,16 @@ import { decodeInvokeInventoryItemActionPayload, InvokeInventoryItemActionPayloa
 import { buildInvokedInventoryItemActionPayload } from "../../protocol/packets/actions/InvokedInventoryItemAction";
 import { buildRemovedItemFromInventoryAtSlotPayload } from "../../protocol/packets/actions/RemovedItemFromInventoryAtSlot";
 import { buildAddedItemAtInventorySlotPayload } from "../../protocol/packets/actions/AddedItemAtInventorySlot";
+import { buildSkillCurrentLevelChangedPayload } from "../../protocol/packets/actions/SkillCurrentLevelChanged";
 import { GameAction } from "../../protocol/enums/GameAction";
 import type { ActionContext, ActionHandler } from "./types";
 import type { ItemOnItemAction, ItemOnItemActionItem } from "../../world/items/ItemCatalog";
 import { buildPlayerWeightChangedPayload } from "../../protocol/packets/actions/PlayerWeightChanged";
 import { InventoryManager, InventoryMenuType } from "../../world/systems/InventoryManager";
-import { PlayerState, EQUIPMENT_SLOTS, type EquipmentSlot, type InventoryItem } from "../../world/PlayerState";
+import { PlayerState, EQUIPMENT_SLOTS, SKILLS, isSkillSlug, skillToClientRef, type EquipmentSlot, type InventoryItem } from "../../world/PlayerState";
 import { applyWeightChange } from "../../world/systems/WeightCalculator";
+import { EntityType } from "../../protocol/enums/EntityType";
+import { createEntityHitpointsChangedEvent } from "../events/GameEvents";
 
 /**
  * Handles inventory item action invocations (e.g., eat food, equip weapon, drop, etc.)
@@ -44,6 +47,187 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     console.warn(`[handleInvokeInventoryItemAction] No player state for user ${ctx.userId}`);
     return;
   }
+
+  const handleEdibleAction = (actionLabel: "eat" | "drink") => {
+    if (payload.MenuType !== MenuType.Inventory) {
+      logInvalid(`${actionLabel}_invalid_menu`, { menuType: payload.MenuType });
+      console.warn(`[handleInvokeInventoryItemAction] ${actionLabel} called on non-inventory menu: ${payload.MenuType}`);
+      return;
+    }
+
+    const slot = Number(payload.Slot);
+    if (!Number.isInteger(slot) || slot < 0 || slot >= 28) {
+      logInvalid(`${actionLabel}_invalid_slot`, { slot });
+      console.warn(`[handleInvokeInventoryItemAction] Invalid ${actionLabel} slot index: ${slot}`);
+      return;
+    }
+
+    const inventoryItem = playerState.inventory[slot];
+    if (!inventoryItem) {
+      logInvalid(`${actionLabel}_empty_slot`, { slot });
+      console.warn(`[handleInvokeInventoryItemAction] No item at slot ${slot} for ${actionLabel}`);
+      return;
+    }
+
+    const [itemId, _itemAmount, isIOU] = inventoryItem;
+    const expectedItemId = Number(payload.ItemID);
+    if (itemId !== expectedItemId) {
+      logInvalid(`${actionLabel}_item_mismatch`, { slot, expectedItemId, itemId });
+      console.warn(`[handleInvokeInventoryItemAction] ItemID mismatch at slot ${slot}. Expected ${itemId}, got ${expectedItemId}`);
+      return;
+    }
+
+    if (playerState.lastEdibleActionTick === ctx.currentTick) {
+      logInvalid(`${actionLabel}_rate_limited`, { slot, itemId, tick: ctx.currentTick });
+      console.warn(`[handleInvokeInventoryItemAction] ${actionLabel} rate limited for user ${ctx.userId} on tick ${ctx.currentTick}`);
+      const failurePayload = buildInvokedInventoryItemActionPayload({
+        Action: payload.Action,
+        MenuType: payload.MenuType,
+        Slot: payload.Slot,
+        ItemID: payload.ItemID,
+        Amount: 1,
+        IsIOU: isIOU === 1,
+        Success: false,
+        Data: null
+      });
+      ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, failurePayload);
+      return;
+    }
+
+    if (isIOU === 1) {
+      logInvalid(`${actionLabel}_iou`, { slot, itemId });
+      console.warn(`[handleInvokeInventoryItemAction] Cannot ${actionLabel} IOU item ${itemId} at slot ${slot}`);
+      const failurePayload = buildInvokedInventoryItemActionPayload({
+        Action: payload.Action,
+        MenuType: payload.MenuType,
+        Slot: payload.Slot,
+        ItemID: payload.ItemID,
+        Amount: 1,
+        IsIOU: true,
+        Success: false,
+        Data: null
+      });
+      ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, failurePayload);
+      return;
+    }
+
+    playerState.lastEdibleActionTick = ctx.currentTick;
+
+    const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
+    if (!itemDef) {
+      console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${itemId}`);
+      return;
+    }
+
+    const edibleEffects = itemDef.edibleEffects ?? null;
+    if (!edibleEffects || edibleEffects.length === 0) {
+      logInvalid(`${actionLabel}_no_effects`, { itemId });
+      console.warn(`[handleInvokeInventoryItemAction] Item ${itemId} has no edible effects for ${actionLabel}`);
+      return;
+    }
+
+    const decrementResult = ctx.inventoryService.decrementItemAtSlot(ctx.userId!, slot, itemId, 1, isIOU);
+    if (!decrementResult || decrementResult.removed <= 0) {
+      logInvalid(`${actionLabel}_remove_failed`, { slot, itemId });
+      console.warn(`[handleInvokeInventoryItemAction] Failed to remove item ${itemId} from slot ${slot} for ${actionLabel}`);
+      return;
+    }
+
+    for (const edibleEffect of edibleEffects) {
+      const effect = edibleEffect?.effect;
+      if (!effect || !Number.isFinite(effect.amount)) {
+        continue;
+      }
+      if (!isSkillSlug(effect.skill)) {
+        console.warn(`[handleInvokeInventoryItemAction] Invalid edible effect skill "${effect.skill}" on item ${itemId}`);
+        continue;
+      }
+
+      const skill = effect.skill;
+      const currentState = playerState.getSkillState(skill);
+      const baseLevel = currentState.level;
+      const currentBoosted = currentState.boostedLevel;
+      const amount = effect.amount;
+
+      let delta: number;
+      if (Math.abs(amount) < 1) {
+        delta = amount > 0
+          ? Math.ceil(baseLevel * amount)
+          : Math.floor(baseLevel * amount);
+      } else {
+        delta = Math.round(amount);
+      }
+
+      if (delta === 0) {
+        continue;
+      }
+
+      let newBoosted = currentBoosted;
+      if (skill === SKILLS.hitpoints) {
+        if (delta > 0) {
+          if (currentBoosted < baseLevel) {
+            newBoosted = Math.min(baseLevel, currentBoosted + delta);
+          }
+        } else {
+          newBoosted = Math.max(0, currentBoosted + delta);
+        }
+      } else if (delta > 0) {
+        newBoosted = Math.max(currentBoosted, baseLevel + delta);
+      } else {
+        const floorLevel = baseLevel + delta;
+        if (currentBoosted > floorLevel) {
+          newBoosted = Math.max(currentBoosted + delta, floorLevel);
+        }
+      }
+
+      if (newBoosted === currentBoosted) {
+        continue;
+      }
+
+      playerState.setBoostedLevel(skill, newBoosted);
+
+      const clientRef = skillToClientRef(skill);
+      if (clientRef !== null) {
+        const skillPayload = buildSkillCurrentLevelChangedPayload({
+          Skill: clientRef,
+          CurrentLevel: newBoosted
+        });
+        ctx.enqueueUserMessage(ctx.userId!, GameAction.SkillCurrentLevelChanged, skillPayload);
+      }
+
+      if (skill === SKILLS.hitpoints) {
+        ctx.eventBus.emit(createEntityHitpointsChangedEvent(
+          { type: EntityType.Player, id: ctx.userId! },
+          newBoosted,
+          { mapLevel: playerState.mapLevel, x: playerState.x, y: playerState.y }
+        ));
+      }
+    }
+
+    if (itemDef.edibleResult) {
+      const result = itemDef.edibleResult;
+      ctx.inventoryService.giveItem(
+        ctx.userId!,
+        result.id,
+        result.amount,
+        result.isIOU ? 1 : 0
+      );
+    }
+
+    const successPayload = buildInvokedInventoryItemActionPayload({
+      Action: payload.Action,
+      MenuType: payload.MenuType,
+      Slot: payload.Slot,
+      ItemID: payload.ItemID,
+      Amount: 1,
+      IsIOU: isIOU === 1,
+      Success: true,
+      Data: null
+    });
+    ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, successPayload);
+
+    console.log(`[handleInvokeInventoryItemAction] User ${ctx.userId} ${actionLabel} item ${itemId} (slot ${slot})`);
+  };
 
   // Switch on the item action type
   switch (payload.Action) {
@@ -300,11 +484,11 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     }
 
     case ItemAction.eat:
-      // TODO: Implement eat action
+      handleEdibleAction("eat");
       break;
 
     case ItemAction.drink:
-      // TODO: Implement drink action
+      handleEdibleAction("drink");
       break;
 
     case ItemAction.open:
