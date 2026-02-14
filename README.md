@@ -32,9 +32,9 @@ Please always remember to take backups, download, and keep a hold of anything pr
 **Not Implemented (stubs only):**
 | Action | Notes |
 |--------|-------|
-| `Picklock` | Shows "not yet implemented" message |
-| `Unlock` | Shows "not yet implemented" message |
-| `Search` | Shows "not yet implemented" message |
+| `Picklock` | ✅ Tentatively implemented |
+| `Unlock` | ✅ Tentatively implemented |
+| `Search` | ✅ Tentatively implemented |
 | `SleepIn` | Shows "not yet implemented" message |
 | `Follow` | Pathfinding works, execute is empty TODO |
 | `TradeWith` | Pathfinding works, execute is empty TODO |
@@ -60,8 +60,8 @@ Please always remember to take backups, download, and keep a hold of anything pr
 
 | Action | Notes |
 |--------|-------|
-| `eat` | TODO - food consumption |
-| `drink` | TODO - potion consumption |
+| `eat` | ✅ Tentatively implemented |
+| `drink` | ✅ Tentatively implemented |
 | `open` (item) | TODO - opening containers |
 | `offer` | TODO - Trading |
 | `revoke` | TODO - Trading |

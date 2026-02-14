@@ -172,6 +172,7 @@ export interface WorldEntityState extends SpatialEntity {
   definitionId: number;
   definition: WorldEntityDefinition;
   type: string;
+  worldEntityLootIdOverride: number | null;
   mapLevel: MapLevel;
   x: number;
   y: number;

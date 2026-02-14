@@ -16,6 +16,7 @@ import { Action } from "../../../protocol/enums/Actions";
 import { EntityType } from "../../../protocol/enums/EntityType";
 import { PlayerSetting } from "../../../protocol/enums/PlayerSetting";
 import { MenuType } from "../../../protocol/enums/MenuType";
+import { MessageStyle } from "../../../protocol/enums/MessageStyle";
 import type { ActionContext } from "../types";
 import type { PlayerState } from "../../../world/PlayerState";
 import type { WorldEntityState } from "../../state/EntityState";
@@ -27,6 +28,9 @@ import type { WorldEntityActionLocation } from "../../services/WorldEntityAction
 import type { MapLevel } from "../../../world/Location";
 import { TargetingService } from "../../services/TargetingService";
 import type { RequirementCheckContext } from "../../services/RequirementsChecker";
+import { SKILLS, isSkillSlug } from "../../../world/PlayerState";
+import { DelayType } from "../../systems/DelaySystem";
+import { buildShowLootMenuPayload } from "../../../protocol/packets/actions/ShowLootMenu";
 
 // =============================================================================
 // Constants
@@ -76,6 +80,8 @@ const ACTION_TO_STRING: Partial<Record<Action, string>> = {
 
 /** Door-like entity types that use directional blocking */
 const DOOR_LIKE_TYPES = new Set(["door", "opendoor", "gate"]);
+const SEARCH_DELAY_TICKS = 4;
+const PICKLOCK_DELAY_TICKS = 4;
 
 function isDoorLikeEntity(entityState: WorldEntityState): boolean {
   return DOOR_LIKE_TYPES.has(entityState.type);
@@ -492,9 +498,43 @@ function executeOverrideAction(
         executeClimbSameMapLevel(ctx, playerState, entityState, eventAction.sideOne, eventAction.sideTwo);
         break;
 
+      case "PlayerGiveItems":
+        executePlayerGiveItemsEvent(ctx, playerState.userId, eventAction as any);
+        break;
+
       default:
         console.warn(`[executeOverrideAction] Unknown event type: ${eventAction.type}`);
     }
+  }
+}
+
+function executePlayerGiveItemsEvent(
+  ctx: ActionContext,
+  userId: number,
+  eventAction: {
+    messageToPlayer?: string;
+    playerGiveItems?: Array<{ id?: number; itemId?: number; amt?: number; amount?: number; isIOU?: boolean; isiou?: boolean }>;
+  }
+): void {
+  const toGive = Array.isArray(eventAction.playerGiveItems) ? eventAction.playerGiveItems : [];
+
+  for (const item of toGive) {
+    const itemId = typeof item.id === "number" ? item.id : item.itemId;
+    const amount = typeof item.amt === "number" ? item.amt : item.amount;
+    if (!Number.isFinite(itemId) || !Number.isFinite(amount) || (amount as number) <= 0) {
+      continue;
+    }
+
+    ctx.inventoryService.removeItem(
+      userId,
+      itemId as number,
+      amount as number,
+      (item.isIOU ?? item.isiou) ? 1 : 0
+    );
+  }
+
+  if (typeof eventAction.messageToPlayer === "string" && eventAction.messageToPlayer.trim().length > 0) {
+    ctx.messageService.sendServerInfo(userId, eventAction.messageToPlayer);
   }
 }
 
@@ -552,9 +592,11 @@ function executeDefaultAction(
       }
       break;
     case Action.Open:
+      ctx.messageService.sendServerInfo(playerState.userId, `Please let us know how you managed to trigger this`);
+      break;
     case Action.Close:
-    case Action.Shake:
-    case Action.Comb:
+      ctx.messageService.sendServerInfo(playerState.userId, `Hmm it won't close`);
+      break;
     case Action.Smelt: {
       ctx.skillingMenuService.openMenu(playerState.userId, entityState.id, MenuType.Smelting);
       break;
@@ -575,16 +617,510 @@ function executeDefaultAction(
       ctx.skillingMenuService.openMenu(playerState.userId, entityState.id, MenuType.PotionMaking);
       break;
     }
-    case Action.Search:
-    case Action.SleepIn:
-    case Action.Picklock:
+    case Action.Search: {
+      executeSearchAction(ctx, playerState, entityState);
+      break;
+    }
+    case Action.Picklock: {
+      executePicklockAction(ctx, playerState, entityState);
+      break;
+    }
     case Action.Unlock:
+      executeUnlockAction(ctx, playerState, entityState);
+      break;
+    case Action.SleepIn:
+    case Action.Shake:
+    case Action.Comb:
       ctx.messageService.sendServerInfo(playerState.userId, `${actionName} not yet implemented`);
       break;
     default:
       // Actions without default behavior (require override)
       ctx.messageService.sendServerInfo(playerState.userId, "Nothing interesting happens.");
   }
+}
+
+function executeSearchAction(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState
+): void {
+  const entityName = entityState.definition.name || entityState.type;
+  startDelayedLootInteraction(
+    ctx,
+    playerState,
+    entityState,
+    SEARCH_DELAY_TICKS,
+    `You search the ${entityName}...`,
+    (nextUserId, nextEntityId) => resolveSearchAction(ctx, nextUserId, nextEntityId)
+  );
+}
+
+function executePicklockAction(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState
+): void {
+  const worldEntityLootId = getWorldEntityLootIdForPicklock(entityState);
+  if (!worldEntityLootId) {
+    const entityName = entityState.definition.name || entityState.type;
+    ctx.messageService.sendServerInfo(playerState.userId, `You can't picklock the ${entityName}.`);
+    return;
+  }
+
+  if (!ctx.worldEntityLootService) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Picklock loot is not available right now.");
+    return;
+  }
+
+  const requirementCheck = ctx.worldEntityLootService.checkLootRequirements(playerState, worldEntityLootId);
+  if (!requirementCheck.passed) {
+    const unmetSkill = requirementCheck.unmetSkillRequirement;
+    if (unmetSkill && (unmetSkill.operator === ">=" || unmetSkill.operator === ">")) {
+      ctx.messageService.sendServerInfo(
+        playerState.userId,
+        `You need a ${unmetSkill.skill} level of at least ${unmetSkill.level} to picklock this`
+      );
+    } else {
+      ctx.messageService.sendServerInfo(
+        playerState.userId,
+        requirementCheck.failureReason || "You do not meet the requirements to picklock this"
+      );
+    }
+    return;
+  }
+
+  schedulePicklockAttempt(ctx, playerState.userId, entityState.id, true);
+}
+
+function executeUnlockAction(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState
+): void {
+  const entityName = entityState.definition.name || entityState.type;
+  const worldEntityLootId = getWorldEntityLootIdForUnlock(entityState);
+  if (!worldEntityLootId) {
+    ctx.messageService.sendServerInfo(playerState.userId, "It's locked shut");
+    return;
+  }
+
+  if (!ctx.worldEntityLootService) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Unlock loot is not available right now.");
+    return;
+  }
+
+  const requirementCheck = ctx.worldEntityLootService.checkLootRequirements(playerState, worldEntityLootId);
+  if (!requirementCheck.passed) {
+    ctx.messageService.sendServerInfo(playerState.userId, "It's locked shut");
+    return;
+  }
+
+  const startMessages = ctx.worldEntityLootService.getStartResultMessages(worldEntityLootId);
+  const startMessage = startMessages[0] ?? `You begin unlocking the ${entityName}...`;
+  scheduleUnlockAttempt(ctx, playerState.userId, entityState.id, worldEntityLootId, startMessage);
+}
+
+function startDelayedLootInteraction(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState,
+  delayTicks: number,
+  startMessage: string,
+  onComplete: (userId: number, worldEntityId: number) => void
+): void {
+  // Always restart windup when player clicks again.
+  ctx.delaySystem.interruptDelay(playerState.userId, false);
+
+  const delayStarted = ctx.delaySystem.startDelay({
+    userId: playerState.userId,
+    type: DelayType.NonBlocking,
+    ticks: delayTicks,
+    onComplete: (userId) => onComplete(userId, entityState.id)
+  });
+
+  if (!delayStarted) {
+    return;
+  }
+
+  ctx.messageService.sendServerInfo(playerState.userId, startMessage);
+}
+
+function resolveSearchAction(
+  ctx: ActionContext,
+  userId: number,
+  worldEntityId: number
+): void {
+  const playerState = ctx.playerStatesByUserId.get(userId);
+  if (!playerState) {
+    return;
+  }
+
+  const entityState = ctx.worldEntityStates.get(worldEntityId);
+  if (!entityState || entityState.mapLevel !== playerState.mapLevel) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You find nothing interesting");
+    return;
+  }
+
+  const entityName = entityState.definition.name || entityState.type;
+
+  if (ctx.resourceExhaustionTracker.isExhausted(entityState.id)) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You find nothing interesting");
+    return;
+  }
+
+  const worldEntityLootId = getWorldEntityLootIdForSearch(entityState);
+  if (!worldEntityLootId) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You find nothing interesting");
+    return;
+  }
+
+  if (!ctx.worldEntityLootService) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Search loot is not available right now.");
+    return;
+  }
+
+  const lootResult = ctx.worldEntityLootService.attemptLoot(playerState, worldEntityLootId, SKILLS.crime, ctx.itemCatalog);
+  if (!lootResult.passedRequirements) {
+    ctx.messageService.sendServerInfo(
+      playerState.userId,
+      lootResult.failureReason || "You do not meet the requirements to search that."
+    );
+    return;
+  }
+
+  if (lootResult.succeeded) {
+    exhaustEntityLootIfNeeded(ctx, entityState, lootResult.respawnTicks);
+  }
+
+  if (lootResult.succeeded && lootResult.xpRewards.length > 0) {
+    for (const reward of lootResult.xpRewards) {
+      if (!isSkillSlug(reward.skill)) {
+        console.warn(`[executeSearchAction] Invalid skill in xp reward: ${reward.skill}`);
+        continue;
+      }
+      if (!Number.isFinite(reward.amount) || reward.amount <= 0) {
+        continue;
+      }
+      ctx.experienceService.addSkillXp(playerState, reward.skill, reward.amount);
+    }
+  }
+
+  if (!lootResult.succeeded || !lootResult.hasLoot) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You find nothing interesting");
+    return;
+  }
+
+  let hadOverflow = false;
+  for (const drop of lootResult.drops) {
+    const result = ctx.inventoryService.giveItem(
+      playerState.userId,
+      drop.itemId,
+      drop.amount,
+      drop.isIOU ? 1 : 0
+    );
+    if (result.overflow > 0) {
+      hadOverflow = true;
+    }
+  }
+
+  if (hadOverflow) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Some items were placed on the ground.");
+  }
+
+  ctx.messageService.sendServerInfo(playerState.userId, `You find some items in the ${entityName}`);
+}
+
+function resolvePicklockAction(
+  ctx: ActionContext,
+  userId: number,
+  worldEntityId: number
+): void {
+  const playerState = ctx.playerStatesByUserId.get(userId);
+  if (!playerState) {
+    return;
+  }
+
+  const entityState = ctx.worldEntityStates.get(worldEntityId);
+  if (!entityState || entityState.mapLevel !== playerState.mapLevel) {
+    return;
+  }
+
+  const entityName = entityState.definition.name || entityState.type;
+
+  if (ctx.resourceExhaustionTracker.isExhausted(entityState.id)) {
+    ctx.messageService.sendServerInfo(playerState.userId, `The ${entityName} has already been looted.`);
+    return;
+  }
+
+  const worldEntityLootId = getWorldEntityLootIdForPicklock(entityState);
+  if (!worldEntityLootId) {
+    ctx.messageService.sendServerInfo(playerState.userId, `You can't picklock the ${entityName}.`);
+    return;
+  }
+
+  if (!ctx.worldEntityLootService) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Picklock loot is not available right now.");
+    return;
+  }
+
+  const lootResult = ctx.worldEntityLootService.attemptLoot(playerState, worldEntityLootId, SKILLS.crime, ctx.itemCatalog);
+  if (!lootResult.passedRequirements) {
+    ctx.messageService.sendServerInfo(
+      playerState.userId,
+      lootResult.failureReason || "You do not meet the requirements to picklock that."
+    );
+    return;
+  }
+
+  if (lootResult.succeeded) {
+    exhaustEntityLootIfNeeded(ctx, entityState, lootResult.respawnTicks);
+  }
+
+  // Picklock failure should retry automatically every 4 ticks until success
+  // (or until another player action interrupts the non-blocking delay).
+  if (!lootResult.succeeded) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You fumble the lock...");
+    schedulePicklockAttempt(ctx, userId, worldEntityId, false);
+    return;
+  }
+
+  if (lootResult.succeeded && lootResult.xpRewards.length > 0) {
+    for (const reward of lootResult.xpRewards) {
+      if (!isSkillSlug(reward.skill)) {
+        console.warn(`[executePicklockAction] Invalid skill in xp reward: ${reward.skill}`);
+        continue;
+      }
+      if (!Number.isFinite(reward.amount) || reward.amount <= 0) {
+        continue;
+      }
+      ctx.experienceService.addSkillXp(playerState, reward.skill, reward.amount);
+    }
+  }
+
+  if (!lootResult.succeeded || !lootResult.hasLoot) {
+    ctx.messageService.sendServerInfo(playerState.userId, `You fail to picklock the ${entityName}.`);
+    return;
+  }
+
+  let hadOverflow = false;
+  for (const drop of lootResult.drops) {
+    const result = ctx.inventoryService.giveItem(
+      playerState.userId,
+      drop.itemId,
+      drop.amount,
+      drop.isIOU ? 1 : 0
+    );
+    if (result.overflow > 0) {
+      hadOverflow = true;
+    }
+  }
+
+  if (hadOverflow) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Some items were placed on the ground");
+  }
+
+  ctx.messageService.sendServerInfo(playerState.userId, `You successfully picklock the ${entityName}`);
+}
+
+function resolveUnlockAction(
+  ctx: ActionContext,
+  userId: number,
+  worldEntityId: number,
+  worldEntityLootId: number
+): void {
+  const playerState = ctx.playerStatesByUserId.get(userId);
+  if (!playerState) {
+    return;
+  }
+
+  const entityState = ctx.worldEntityStates.get(worldEntityId);
+  if (!entityState || entityState.mapLevel !== playerState.mapLevel) {
+    return;
+  }
+
+  const entityName = entityState.definition.name || entityState.type;
+
+  if (!ctx.worldEntityLootService) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Unlock loot is not available right now.");
+    return;
+  }
+
+  const requirementCheck = ctx.worldEntityLootService.checkLootRequirements(playerState, worldEntityLootId);
+  if (!requirementCheck.passed) {
+    ctx.messageService.sendServerInfo(playerState.userId, "It's locked shut");
+    return;
+  }
+
+  const lootResult = ctx.worldEntityLootService.attemptLoot(
+    playerState,
+    worldEntityLootId,
+    SKILLS.crime,
+    ctx.itemCatalog
+  );
+  if (!lootResult.passedRequirements) {
+    ctx.messageService.sendServerInfo(playerState.userId, "It's locked shut");
+    return;
+  }
+
+  if (lootResult.succeeded) {
+    // Apply "searchEndResult" side effects first (e.g. consume key).
+    ctx.worldEntityLootService.applySearchEndResultPlayerGiveItems(
+      worldEntityLootId,
+      (itemId, amount, isIOU) => ctx.inventoryService.removeItem(playerState.userId, itemId, amount, isIOU)
+    );
+    exhaustEntityLootIfNeeded(ctx, entityState, lootResult.respawnTicks);
+  }
+
+  let hadOverflow = false;
+  for (const drop of lootResult.drops) {
+    const result = ctx.inventoryService.giveItem(
+      playerState.userId,
+      drop.itemId,
+      drop.amount,
+      drop.isIOU ? 1 : 0
+    );
+    if (result.overflow > 0) {
+      hadOverflow = true;
+    }
+  }
+
+  if (hadOverflow) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Some items were placed on the ground.");
+  }
+
+  const lootDef = ctx.worldEntityLootService.getLootDefinition(worldEntityLootId);
+  if (lootDef?.showLootReceivedNotification) {
+    for (const drop of lootResult.drops) {
+      const def = ctx.itemCatalog?.getDefinitionById(drop.itemId);
+      const name = def?.name ?? `Item #${drop.itemId}`;
+      const displayName = capitalizeFirstLetter(name);
+      const message = drop.amount > 1
+        ? `You received ${drop.amount} ${displayName}`
+        : `You received ${withIndefiniteArticle(displayName)}`;
+      ctx.messageService.sendServerInfo(playerState.userId, message, MessageStyle.Magenta);
+    }
+
+    const lootMenuItems = lootResult.drops.map((drop) => [drop.itemId, drop.amount, drop.isIOU ? 1 : 0]);
+    const showLootPayload = buildShowLootMenuPayload({
+      Items: lootMenuItems,
+      Type: 0
+    });
+    ctx.enqueueUserMessage(playerState.userId, 96, showLootPayload);
+  }
+
+  ctx.messageService.sendServerInfo(playerState.userId, `You unlock the ${entityName}.`);
+}
+
+function withIndefiniteArticle(value: string): string {
+  if (!value) return value;
+  const startsWithVowel = /^[aeiou]/i.test(value);
+  return `${startsWithVowel ? "an" : "a"} ${value}`;
+}
+
+function capitalizeFirstLetter(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function schedulePicklockAttempt(
+  ctx: ActionContext,
+  userId: number,
+  worldEntityId: number,
+  sendStartMessage: boolean
+): void {
+  const playerState = ctx.playerStatesByUserId.get(userId);
+  const entityState = ctx.worldEntityStates.get(worldEntityId);
+  if (!playerState || !entityState) {
+    return;
+  }
+
+  // Restart windup when player clicks picklock again.
+  // During automatic retries this is a no-op because delay already completed.
+  ctx.delaySystem.interruptDelay(userId, false);
+
+  const delayStarted = ctx.delaySystem.startDelay({
+    userId,
+    type: DelayType.NonBlocking,
+    ticks: PICKLOCK_DELAY_TICKS,
+    onComplete: (nextUserId) => resolvePicklockAction(ctx, nextUserId, worldEntityId)
+  });
+
+  if (!delayStarted) {
+    return;
+  }
+
+  if (sendStartMessage) {
+    const entityName = entityState.definition.name || entityState.type;
+    ctx.messageService.sendServerInfo(userId, `You attempt to picklock the ${entityName}...`);
+  }
+}
+
+function scheduleUnlockAttempt(
+  ctx: ActionContext,
+  userId: number,
+  worldEntityId: number,
+  worldEntityLootId: number,
+  startMessage: string
+): void {
+  ctx.delaySystem.interruptDelay(userId, false);
+
+  const delayStarted = ctx.delaySystem.startDelay({
+    userId,
+    type: DelayType.NonBlocking,
+    ticks: PICKLOCK_DELAY_TICKS,
+    onComplete: (nextUserId) => resolveUnlockAction(ctx, nextUserId, worldEntityId, worldEntityLootId)
+  });
+
+  if (!delayStarted) {
+    return;
+  }
+
+  ctx.messageService.sendServerInfo(userId, startMessage);
+}
+
+function getWorldEntityLootIdForSearch(entityState: WorldEntityState): number | null {
+  return entityState.definition.worldEntityLootId ?? null;
+}
+
+function getWorldEntityLootIdForPicklock(entityState: WorldEntityState): number | null {
+  return entityState.worldEntityLootIdOverride ?? entityState.definition.worldEntityLootId ?? null;
+}
+
+function getWorldEntityLootIdForUnlock(entityState: WorldEntityState): number | null {
+  return entityState.worldEntityLootIdOverride ?? null;
+}
+
+function exhaustEntityLootIfNeeded(
+  ctx: ActionContext,
+  entityState: WorldEntityState,
+  respawnTicks: number
+): void {
+  if (!Number.isFinite(respawnTicks) || respawnTicks <= 0) {
+    return;
+  }
+
+  if (ctx.resourceExhaustionTracker.isExhausted(entityState.id)) {
+    return;
+  }
+
+  const nearbyPlayers = new Set(
+    ctx.spatialIndex
+      .getPlayersViewingPosition(entityState.mapLevel, entityState.x, entityState.y)
+      .map((player) => player.id)
+  );
+  ctx.resourceExhaustionTracker.markExhausted(entityState.id, nearbyPlayers);
+
+  setTimeout(() => {
+    ctx.resourceExhaustionTracker.markReplenished(entityState.id);
+  }, respawnTicks * getTickMs());
+}
+
+function getTickMs(): number {
+  const parsed = Number(process.env.TICK_MS);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 600;
+  }
+  return Math.floor(parsed);
 }
 
 // =============================================================================

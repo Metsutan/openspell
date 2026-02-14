@@ -33,6 +33,8 @@ import type { ItemAuditService } from "../services/ItemAuditService";
 import type { AntiCheatRealtimeService } from "../services/AntiCheatRealtimeService";
 import type { SpellCatalog } from "../../world/spells/SpellCatalog";
 import type { ExperienceService } from "../services/ExperienceService";
+import type { WorldEntityLootService } from "../services/WorldEntityLootService";
+import type { ResourceExhaustionTracker } from "../systems/ResourceExhaustionTracker";
 
 /**
  * Context passed to client action handlers, providing access to necessary systems
@@ -65,6 +67,7 @@ export interface ActionContext {
   conversationService: ConversationService;
   shopSystem: ShopSystem;
   worldEntityActionService: WorldEntityActionService;
+  worldEntityLootService: WorldEntityLootService | null;
   bankingService: BankingService;
   pickpocketService: PickpocketService | null;
   woodcuttingService: WoodcuttingService | null;
@@ -74,6 +77,7 @@ export interface ActionContext {
   itemInteractionService: ItemInteractionService;
   skillingMenuService: SkillingMenuService;
   eventBus: EventBus;
+  resourceExhaustionTracker: ResourceExhaustionTracker;
   itemCatalog: ItemCatalog | null;
   itemManager: ItemManager | null;
   spellCatalog: SpellCatalog | null;

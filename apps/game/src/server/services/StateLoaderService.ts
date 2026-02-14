@@ -153,6 +153,7 @@ export class StateLoaderService {
         definitionId: definition.id,
         definition,
         type: instance.type,
+        worldEntityLootIdOverride: instance.worldEntityLootIdOverride ?? null,
         mapLevel: instance.mapLevel,
         x: instance.x,
         y: instance.z,

@@ -72,6 +72,7 @@ import { MiningService } from "./services/MiningService";
 import { CookingService } from "./services/CookingService";
 import { ItemInteractionService } from "./services/ItemInteractionService";
 import { SkillingMenuService } from "./services/SkillingMenuService";
+import { WorldEntityLootService } from "./services/WorldEntityLootService";
 import { PacketAuditService } from "./services/PacketAuditService";
 import { ItemAuditService } from "./services/ItemAuditService";
 import { AntiCheatRealtimeService } from "./services/AntiCheatRealtimeService";
@@ -182,6 +183,7 @@ export class GameServer {
   private damageService!: DamageService;
   private experienceService!: ExperienceService;
   private skillingMenuService!: SkillingMenuService;
+  private worldEntityLootService!: WorldEntityLootService | null;
 
   // Graceful shutdown
   private shutdownInProgress = false;
@@ -396,6 +398,14 @@ export class GameServer {
     // Initialize world entity action service
     this.worldEntityActionService = new WorldEntityActionService();
     await this.worldEntityActionService.initialize();
+
+    // Initialize world entity loot service (search/picklock loot definitions)
+    try {
+      this.worldEntityLootService = await WorldEntityLootService.load();
+    } catch (error) {
+      console.error("[GameServer] Failed to load WorldEntityLootService:", error);
+      this.worldEntityLootService = null;
+    }
 
     // Set item catalog for weight calculations in persistence manager
     this.playerPersistence.setItemCatalog(this.itemCatalog);
@@ -1101,6 +1111,7 @@ export class GameServer {
       conversationService: this.conversationService,
       shopSystem: this.shopSystem,
       worldEntityActionService: this.worldEntityActionService,
+      worldEntityLootService: this.worldEntityLootService,
       bankingService: this.bankingService,
       pickpocketService: this.pickpocketService,
       woodcuttingService: this.woodcuttingService,
@@ -1110,6 +1121,7 @@ export class GameServer {
       itemInteractionService: this.itemInteractionService,
       skillingMenuService: this.skillingMenuService,
       eventBus: this.eventBus,
+      resourceExhaustionTracker: this.resourceExhaustionTracker,
       itemCatalog: this.itemCatalog,
       itemManager: this.itemManager,
       spellCatalog: this.spellCatalog,
@@ -1474,20 +1486,32 @@ export class GameServer {
   const ctx = {
     playerStatesByUserId: this.playerStatesByUserId,
     worldEntityStates: this.worldEntityStates,
+    spatialIndex: this.spatialIndex,
+    delaySystem: this.delaySystem,
     pathfindingSystem: this.pathfindingSystem,
     worldEntityActionService: this.worldEntityActionService,
     messageService: this.messageService,
     teleportService: this.teleportService,
     eventBus: this.eventBus,
+    resourceExhaustionTracker: this.resourceExhaustionTracker,
     targetingService: this.targetingService,
     bankingService: this.bankingService,
+    worldEntityLootService: this.worldEntityLootService,
+    inventoryService: this.inventoryService,
     equipmentService: this.equipmentService,
     itemCatalog: this.itemCatalog,
+    experienceService: this.experienceService,
     woodcuttingService: this.woodcuttingService,
     fishingService: this.fishingService,
     harvestingService: this.harvestingService,
     miningService: this.miningService,
     skillingMenuService: this.skillingMenuService,
+    enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => {
+      this.enqueueUserMessage(userId, action, payload);
+    },
+    enqueueBroadcast: (action: number, payload: unknown[]) => {
+      this.enqueueBroadcast(action, payload);
+    }
   };
 
   processPendingEnvironmentActions(ctx);

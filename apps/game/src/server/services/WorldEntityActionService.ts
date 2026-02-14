@@ -31,6 +31,19 @@ export interface PlayerEventAction {
   sideOne?: WorldEntityActionLocation;
   /** Used by MineThroughRocks - position on other side of the rocks */
   sideTwo?: WorldEntityActionLocation;
+  /** Used by PlayerGiveItems - optional message when items are removed */
+  messageToPlayer?: string;
+  /** Used by PlayerGiveItems - item stacks removed from player inventory */
+  playerGiveItems?: Array<{
+    id?: number;
+    itemId?: number;
+    isIOU?: boolean;
+    isiou?: boolean;
+    amt?: number;
+    amount?: number;
+  }>;
+  /** Optional side filter in data; currently not evaluated by server */
+  executeOnDoorSide?: string;
 }
 
 /**

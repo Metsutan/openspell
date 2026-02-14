@@ -58,6 +58,7 @@ export interface WorldEntityInstance {
   id: number;
   type: string;
   definitionId: number;
+  worldEntityLootIdOverride: number | null;
   direction: string;
   mapLevel: MapLevel;
   x: number;
@@ -141,6 +142,7 @@ export class WorldEntityCatalog {
         id: raw._id,
         type: raw.type,
         definitionId: definition.id,
+        worldEntityLootIdOverride: raw.worldEntityLootIdOverride ?? null,
         direction: raw.dir ?? "s",
         mapLevel: raw.lvl as MapLevel,
         x: raw.x,
@@ -264,6 +266,7 @@ interface RawWorldEntityDefinition {
 interface RawWorldEntityInstance {
   _id: number;
   type: string;
+  worldEntityLootIdOverride?: number | null;
   dir?: string;
   lvl: number;
   x: number;
