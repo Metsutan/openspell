@@ -27,6 +27,7 @@ import type { Target } from "../../world/targeting";
 import type { EntityMovementArea } from "../../world/entities/EntityCatalog";
 import { isWithinBounds } from "../../world/SpatialIndex";
 import type { TargetingService } from "../services/TargetingService";
+import { getInstancedNpcOwnerUserId } from "../services/instancedNpcUtils";
 
 export type AggroSystemConfig = {
   npcStates: Map<number, NPCState>;
@@ -166,6 +167,12 @@ export class AggroSystem {
       return false;
     }
 
+    // Instanced NPCs can only aggro their owning player.
+    const ownerUserId = getInstancedNpcOwnerUserId(npc);
+    if (ownerUserId !== null && ownerUserId !== target.id) {
+      return false;
+    }
+
     return true;
   }
 
@@ -202,6 +209,11 @@ export class AggroSystem {
     let bestDistSq = Infinity;
 
     for (const player of nearbyPlayers) {
+      const ownerUserId = getInstancedNpcOwnerUserId(npc);
+      if (ownerUserId !== null && ownerUserId !== player.id) {
+        continue;
+      }
+
       // Skip dead players - NPCs cannot aggro on dead players
       if (player.playerState.currentState === States.PlayerDeadState) {
         continue;

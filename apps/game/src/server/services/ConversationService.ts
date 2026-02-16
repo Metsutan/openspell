@@ -7,16 +7,25 @@ import { GameAction } from "../../protocol/enums/GameAction";
 import { buildReceivedNPCConversationDialoguePayload } from "../../protocol/packets/actions/ReceivedNPCConversationDialogue";
 import { buildEndedNPCConversationPayload } from "../../protocol/packets/actions/EndedNPCConversation";
 import { buildStartedShoppingPayload } from "../../protocol/packets/actions/StartedShopping";
+import { buildSkillCurrentLevelChangedPayload } from "../../protocol/packets/actions/SkillCurrentLevelChanged";
+import { buildChangedAppearancePayload } from "../../protocol/packets/actions/ChangedAppearance";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { States } from "../../protocol/enums/States";
 import type { ConversationCatalog, ConversationDialogue, PlayerEventAction } from "../../world/conversations/ConversationCatalog";
 import type { PlayerState } from "../../world/PlayerState";
+import { isSkillSlug, skillToClientRef } from "../../world/PlayerState";
 import type { NPCState } from "../state/EntityState";
 import type { ShopSystem } from "../systems/ShopSystem";
 import type { TargetingService } from "./TargetingService";
 import type { StateMachine } from "../StateMachine";
+import type { InventoryService } from "./InventoryService";
+import type { MessageService } from "./MessageService";
+import type { ExperienceService } from "./ExperienceService";
 import { RequirementsChecker, type RequirementCheckContext } from "./RequirementsChecker";
 import type { MapLevel } from "../../world/Location";
+import { QuestProgressService } from "./QuestProgressService";
+import type { InstancedNpcService } from "./InstancedNpcService";
+import type { ItemCatalog } from "../../world/items/ItemCatalog";
 
 type EnqueueUserMessageCallback = (userId: number, action: GameAction, payload: unknown[]) => void;
 type EnqueueBroadcastCallback = (action: GameAction, payload: unknown[]) => void;
@@ -28,10 +37,15 @@ export interface ConversationServiceDependencies {
   enqueueBroadcast: EnqueueBroadcastCallback;
   npcStates: Map<number, NPCState>;
   playerStatesByUserId: Map<number, PlayerState>;
+  inventoryService: InventoryService;
+  messageService: MessageService;
+  experienceService: ExperienceService;
+  itemCatalog: ItemCatalog;
   shopSystem: ShopSystem;
   deleteMovementPlan: DeleteMovementPlanCallback;
   targetingService: TargetingService;
   stateMachine: StateMachine;
+  getInstancedNpcService?: () => InstancedNpcService | null;
   teleportService: {
     changeMapLevel: (userId: number, x: number, y: number, mapLevel: MapLevel) => { success: boolean };
   };
@@ -53,9 +67,17 @@ export class ConversationService {
   /** Maps userId to their active conversation */
   private readonly activeConversations = new Map<number, ActiveConversation>();
   private readonly requirementsChecker: RequirementsChecker;
+  private readonly questProgressService: QuestProgressService;
 
   constructor(private readonly deps: ConversationServiceDependencies) {
     this.requirementsChecker = new RequirementsChecker();
+    this.questProgressService = new QuestProgressService({
+      enqueueUserMessage: deps.enqueueUserMessage,
+      messageService: deps.messageService,
+      inventoryService: deps.inventoryService,
+      experienceService: deps.experienceService,
+      itemCatalog: deps.itemCatalog
+    });
   }
 
   /**
@@ -77,7 +99,7 @@ export class ConversationService {
     }
 
     // Get initial dialogue ID
-    const initialDialogueId = this.deps.conversationCatalog.getInitialDialogueId(conversationId);
+    const initialDialogueId = this.resolveInitialDialogueId(userId, conversationId);
     const dialogue = this.deps.conversationCatalog.getDialogue(conversationId, initialDialogueId);
     
     if (!dialogue) {
@@ -122,8 +144,9 @@ export class ConversationService {
       currentDialogueId: initialDialogueId
     });
 
-    // Send initial dialogue to player
-    this.sendDialogue(userId, npcId, conversationId, dialogue, true);
+    // Process initial dialogue through the same flow as subsequent dialogues
+    // so initial nodes can execute actions and continuances consistently.
+    this.advanceToDialogue(userId, npcId, conversationId, initialDialogueId, true);
 
     console.log(`[ConversationService] Started conversation ${conversationId} for player ${userId} with NPC ${npcId}`);
     return true;
@@ -194,7 +217,8 @@ export class ConversationService {
     userId: number,
     npcId: number,
     conversationId: number,
-    nextDialogueId: number
+    nextDialogueId: number,
+    isInitialDialogue: boolean = false
   ): void {
     const dialogue = this.deps.conversationCatalog.getDialogue(conversationId, nextDialogueId);
     if (!dialogue) {
@@ -209,32 +233,33 @@ export class ConversationService {
       active.currentDialogueId = nextDialogueId;
     }
 
-    // Check for auto-continuance
-    if (dialogue.continuanceDialogues && dialogue.continuanceDialogues.length > 0) {
-      // Auto-continue to next dialogue (for now, take first continuance)
-      const continuance = dialogue.continuanceDialogues[0];
-      if (continuance.nextDialogueId !== null) {
-        this.advanceToDialogue(userId, npcId, conversationId, continuance.nextDialogueId);
-        return;
-      }
-    }
-
-    // Determine if conversation will end (no text/options to display)
-    const willEndConversation = !dialogue.npcText && !dialogue.playerConversationOptions;
-
-    // End conversation BEFORE executing actions (so EndedNPCConversation comes before action packets)
-    if (willEndConversation) {
-      this.endConversation(userId);
-    }
-
     // Execute any actions attached to this dialogue
     if (dialogue.playerEventActions) {
       this.executeActions(userId, npcId, dialogue.playerEventActions);
     }
 
+    // Check for auto-continuance after running this dialogue's actions.
+    const nextContinuanceDialogueId =
+      dialogue.continuanceDialogues && dialogue.continuanceDialogues.length > 0
+        ? this.resolveContinuanceDialogueId(userId, dialogue.continuanceDialogues)
+        : null;
+
+    // Determine if conversation should end when there is no visible dialogue and nowhere to continue.
+    const hasDisplayableContent = !!dialogue.npcText || !!dialogue.playerConversationOptions;
+    const shouldEndConversation = !hasDisplayableContent && nextContinuanceDialogueId === null;
+
     // Send dialogue to player (if it has options or text)
-    if (!willEndConversation) {
-      this.sendDialogue(userId, npcId, conversationId, dialogue, false);
+    if (hasDisplayableContent) {
+      this.sendDialogue(userId, npcId, conversationId, dialogue, isInitialDialogue);
+    }
+
+    if (nextContinuanceDialogueId !== null) {
+      this.advanceToDialogue(userId, npcId, conversationId, nextContinuanceDialogueId, false);
+      return;
+    }
+
+    if (shouldEndConversation) {
+      this.endConversation(userId);
     }
   }
 
@@ -262,7 +287,9 @@ export class ConversationService {
       playerOptions = [];
       
       const context: RequirementCheckContext = {
-        playerState
+        playerState,
+        getInstancedNpcConfigIdsForOwner: (ownerUserId) =>
+          this.deps.getInstancedNpcService?.()?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? []
       };
 
       for (const option of dialogue.playerConversationOptions) {
@@ -307,7 +334,25 @@ export class ConversationService {
    * Actions are executed in sequence, then conversation ends.
    */
   private executeActions(userId: number, npcId: number, actions: PlayerEventAction[]): void {
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      console.warn(`[ConversationService] Player ${userId} not found when executing dialogue actions`);
+      return;
+    }
+
     for (const action of actions) {
+      const actionRequirements = action.requirements as unknown[] | null | undefined;
+      if (Array.isArray(actionRequirements) && actionRequirements.length > 0) {
+        const requirementCheck = this.requirementsChecker.checkRequirements(actionRequirements, {
+          playerState,
+          getInstancedNpcConfigIdsForOwner: (ownerUserId) =>
+            this.deps.getInstancedNpcService?.()?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? []
+        });
+        if (!requirementCheck.passed) {
+          continue;
+        }
+      }
+
       switch (action.type) {
         case "StartShopping":
           this.handleStartShopping(userId, npcId, action);
@@ -315,11 +360,23 @@ export class ConversationService {
         case "AdvanceQuest":
           this.handleAdvanceQuest(userId, action);
           break;
+        case "SkillCurrentLevelChanged":
+          this.handleSkillCurrentLevelChanged(userId, action);
+          break;
+        case "SpawnInstancedNPC":
+          this.handleSpawnInstancedNPC(userId, action);
+          break;
         case "GiveItem":
+        case "PlayerGiveItems":
+        case "PlayerReceiveItems":
+        case "PlayerExchangeItems":
           this.handleGiveItem(userId, action);
           break;
         case "TeleportTo":
           this.handleTeleportTo(userId, action);
+          break;
+        case "ForceChangeAppearance":
+          this.handleForceChangeAppearance(userId, action);
           break;
         default:
           console.warn(`[ConversationService] Unknown action type: ${action.type}`);
@@ -373,23 +430,184 @@ export class ConversationService {
 
   /**
    * Handles quest advancement actions.
-   * TODO: Integrate with quest system when implemented.
+   * Updates in-memory quest progress; persistence is handled by PlayerPersistenceManager autosave.
    */
   private handleAdvanceQuest(userId: number, action: PlayerEventAction): void {
-    const questId = action.questid as number | undefined;
-    const checkpoint = action.checkpoint as number | undefined;
-    
-    console.log(`[ConversationService] TODO: Advance quest ${questId} to checkpoint ${checkpoint} for player ${userId}`);
-    // TODO: Implement quest progression
+    const questIdRaw = action.questid;
+    const checkpointRaw = action.checkpoint;
+    const completedRaw = action.completed;
+
+    if (!Number.isInteger(questIdRaw) || !Number.isInteger(checkpointRaw)) {
+      console.warn(
+        `[ConversationService] AdvanceQuest action has invalid quest data for player ${userId}:`,
+        action
+      );
+      return;
+    }
+
+    const questId = questIdRaw as number;
+    const checkpoint = checkpointRaw as number;
+
+    if (questId < 0 || checkpoint < 0) {
+      console.warn(
+        `[ConversationService] AdvanceQuest action has negative values for player ${userId}: questId=${questId}, checkpoint=${checkpoint}`
+      );
+      return;
+    }
+
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      console.warn(`[ConversationService] Player ${userId} not found for AdvanceQuest action`);
+      return;
+    }
+
+    const completed = completedRaw === true;
+    const previous = playerState.getQuestProgress(questId);
+    this.questProgressService.applyQuestProgressToPlayer(playerState, questId, checkpoint, { completed });
+
+    console.log(
+      `[ConversationService] Advanced quest ${questId} to checkpoint ${checkpoint} for player ${userId}` +
+      ` (completed=${completed}, previous=${previous?.checkpoint ?? 0})`
+    );
   }
 
   /**
-   * Handles giving items to player.
-   * TODO: Integrate with inventory system when implemented.
+   * Handles conversation item transfer actions.
+   * Supports legacy "GiveItem" and content-driven:
+   * - PlayerGiveItems: remove from player
+   * - PlayerReceiveItems: give to player
+   * - PlayerExchangeItems: remove then give
    */
   private handleGiveItem(userId: number, action: PlayerEventAction): void {
-    console.log(`[ConversationService] TODO: Give item to player ${userId}`, action);
-    // TODO: Implement item rewards
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      return;
+    }
+
+    const toGive = this.normalizeTransferItems(action.playerGiveItems);
+    const toReceive = this.normalizeTransferItems(action.playerReceiveItems);
+
+    const actionType = String(action.type ?? "");
+    const shouldGive = actionType === "PlayerGiveItems" || actionType === "PlayerExchangeItems";
+    const shouldReceive =
+      actionType === "PlayerReceiveItems" || actionType === "PlayerExchangeItems" || actionType === "GiveItem";
+
+    if (shouldGive && toGive.length > 0 && !this.playerHasInventoryItems(playerState, toGive)) {
+      return;
+    }
+
+    if (shouldGive) {
+      for (const item of toGive) {
+        this.deps.inventoryService.removeItem(userId, item.itemId, item.amount, item.isIOU);
+      }
+    }
+
+    if (shouldReceive) {
+      // Backward compatibility: legacy GiveItem may include only "playerGiveItems".
+      const receiveItems = toReceive.length > 0 ? toReceive : toGive;
+      for (const item of receiveItems) {
+        this.deps.inventoryService.giveItem(userId, item.itemId, item.amount, item.isIOU);
+      }
+    }
+  }
+
+  /**
+   * Handles temporary skill level changes from conversation actions.
+   * amount is applied as a delta to boosted level.
+   * - canincreasepastactuallevel=false => cap upward at actual level (restore behavior)
+   * - canincreasepastactuallevel=true  => allow boosting above actual level
+   */
+  private handleSkillCurrentLevelChanged(userId: number, action: PlayerEventAction): void {
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      console.warn(`[ConversationService] Player ${userId} not found for SkillCurrentLevelChanged action`);
+      return;
+    }
+
+    const rawSkill = action.skill;
+    const rawAmount = action.amount;
+    const rawCanIncreasePastActualLevel =
+      action.canincreasepastactuallevel ?? action.canIncreasePastActualLevel;
+
+    if (typeof rawSkill !== "string" || !isSkillSlug(rawSkill)) {
+      console.warn(`[ConversationService] SkillCurrentLevelChanged has invalid skill for player ${userId}:`, action);
+      return;
+    }
+
+    if (typeof rawAmount !== "number" || !Number.isFinite(rawAmount)) {
+      console.warn(`[ConversationService] SkillCurrentLevelChanged has invalid amount for player ${userId}:`, action);
+      return;
+    }
+
+    const canIncreasePastActualLevel = rawCanIncreasePastActualLevel === true;
+    const currentBoosted = playerState.getSkillBoostedLevel(rawSkill);
+    const actualLevel = playerState.getSkillLevel(rawSkill);
+
+    let nextBoosted = Math.round(currentBoosted + rawAmount);
+    if (!canIncreasePastActualLevel && nextBoosted > actualLevel) {
+      nextBoosted = actualLevel;
+    }
+
+    playerState.setBoostedLevel(rawSkill, nextBoosted);
+
+    const clientSkillRef = skillToClientRef(rawSkill);
+    if (clientSkillRef !== null) {
+      const payload = buildSkillCurrentLevelChangedPayload({
+        Skill: clientSkillRef,
+        CurrentLevel: playerState.getSkillBoostedLevel(rawSkill)
+      });
+      this.deps.enqueueUserMessage(userId, GameAction.SkillCurrentLevelChanged, payload);
+    }
+  }
+
+  /**
+   * Handles spawning instanced NPCs from conversation actions.
+   * Supports both a single numeric id and an array of ids.
+   */
+  private handleSpawnInstancedNPC(userId: number, action: PlayerEventAction): void {
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      return;
+    }
+
+    const instancedNpcService = this.deps.getInstancedNpcService?.() ?? null;
+    if (!instancedNpcService) {
+      console.warn("[ConversationService] SpawnInstancedNPC requested but InstancedNpcService is unavailable");
+      return;
+    }
+
+    const requirements = action.requirements as unknown[] | null | undefined;
+    if (Array.isArray(requirements) && requirements.length > 0) {
+      const requirementCheck = this.requirementsChecker.checkRequirements(requirements, {
+        playerState,
+        getInstancedNpcConfigIdsForOwner: (ownerUserId) =>
+          this.deps.getInstancedNpcService?.()?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? []
+      });
+      if (!requirementCheck.passed) {
+        return;
+      }
+    }
+
+    const rawId = action.id as unknown;
+    const ids = Array.isArray(rawId) ? rawId : [rawId];
+    const normalizedIds = ids
+      .map((id) => Number(id))
+      .filter((configId) => Number.isInteger(configId) && configId > 0);
+
+    if (normalizedIds.length === 0) {
+      return;
+    }
+
+    if (normalizedIds.length > 1) {
+      instancedNpcService.spawnInstancedNpcGroup(normalizedIds, userId);
+      return;
+    }
+
+    const result = instancedNpcService.spawnInstancedNpc(normalizedIds[0], userId);
+    if (!result.ok && result.reason === "already_has_active_instanced_npc") {
+      // Keep consistent behavior with environment action flow.
+      return;
+    }
   }
 
   /**
@@ -416,6 +634,66 @@ export class ConversationService {
     if (!result.success) {
       console.warn(`[ConversationService] Failed to teleport player ${userId}`);
     }
+  }
+
+  /**
+   * Handles forced appearance changes from dialogue actions.
+   * Updates the player's appearance and emits ChangedAppearance to client/broadcast.
+   */
+  private handleForceChangeAppearance(userId: number, action: PlayerEventAction): void {
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      console.warn(`[ConversationService] Player ${userId} not found for ForceChangeAppearance action`);
+      return;
+    }
+
+    const parseAppearanceId = (value: unknown): number | undefined => {
+      if (value === null || value === undefined) {
+        return undefined;
+      }
+      if (!Number.isInteger(value)) {
+        return undefined;
+      }
+      return value as number;
+    };
+
+    const hairStyleId = parseAppearanceId(action.hair);
+    const beardStyleId = parseAppearanceId(action.beard);
+    const shirtId = parseAppearanceId(action.shirt);
+    const legsId = parseAppearanceId(action.pants);
+    const bodyTypeId = parseAppearanceId(action.body);
+
+    const hasAnyChange =
+      hairStyleId !== undefined ||
+      beardStyleId !== undefined ||
+      shirtId !== undefined ||
+      legsId !== undefined ||
+      bodyTypeId !== undefined;
+
+    if (!hasAnyChange) {
+      return;
+    }
+
+    playerState.updateAppearance({
+      hairStyleId,
+      beardStyleId,
+      shirtId,
+      legsId,
+      bodyTypeId
+    });
+
+    const payload = buildChangedAppearancePayload({
+      EntityID: userId,
+      HairID: playerState.appearance.hairStyleId,
+      BeardID: playerState.appearance.beardStyleId,
+      ShirtID: playerState.appearance.shirtId,
+      BodyID: playerState.appearance.bodyTypeId,
+      PantsID: playerState.appearance.legsId
+    });
+
+    // Update local player immediately and broadcast for nearby observers.
+    this.deps.enqueueUserMessage(userId, GameAction.ChangedAppearance, payload);
+    this.deps.enqueueBroadcast(GameAction.ChangedAppearance, payload);
   }
 
   /**
@@ -472,5 +750,116 @@ export class ConversationService {
    */
   getActiveConversation(userId: number): ActiveConversation | undefined {
     return this.activeConversations.get(userId);
+  }
+
+  private resolveInitialDialogueId(userId: number, conversationId: number): number {
+    const conversation = this.deps.conversationCatalog.getConversationById(conversationId);
+    if (!conversation || conversation.initialConversationDialogues.length === 0) {
+      return 0;
+    }
+
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      return conversation.initialConversationDialogues[0].id;
+    }
+
+    // Evaluate in file order: first passing branch wins, matching if/else semantics.
+    for (const candidate of conversation.initialConversationDialogues) {
+      const requirements = candidate.requirements;
+      if (!Array.isArray(requirements) || requirements.length === 0) {
+        return candidate.id;
+      }
+
+      const requirementCheck = this.requirementsChecker.checkRequirements(requirements, {
+        playerState,
+        getInstancedNpcConfigIdsForOwner: (ownerUserId) =>
+          this.deps.getInstancedNpcService?.()?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? []
+      });
+      if (requirementCheck.passed) {
+        return candidate.id;
+      }
+    }
+
+    return conversation.initialConversationDialogues[0].id;
+  }
+
+  private resolveContinuanceDialogueId(
+    userId: number,
+    continuances: { requirements: unknown[] | null; nextDialogueId: number | null }[]
+  ): number | null {
+    const playerState = this.deps.playerStatesByUserId.get(userId);
+    if (!playerState) {
+      return continuances[0]?.nextDialogueId ?? null;
+    }
+
+    // Evaluate in file order: first passing branch wins.
+    for (const continuance of continuances) {
+      const requirements = continuance.requirements;
+      if (!Array.isArray(requirements) || requirements.length === 0) {
+        return continuance.nextDialogueId ?? null;
+      }
+
+      const requirementCheck = this.requirementsChecker.checkRequirements(requirements, {
+        playerState,
+        getInstancedNpcConfigIdsForOwner: (ownerUserId) =>
+          this.deps.getInstancedNpcService?.()?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? []
+      });
+      if (requirementCheck.passed) {
+        return continuance.nextDialogueId ?? null;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizeTransferItems(raw: unknown): Array<{ itemId: number; amount: number; isIOU: 0 | 1 }> {
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    const normalized: Array<{ itemId: number; amount: number; isIOU: 0 | 1 }> = [];
+    for (const entry of raw) {
+      const item = entry as {
+        id?: unknown;
+        itemId?: unknown;
+        amt?: unknown;
+        amount?: unknown;
+        isIOU?: unknown;
+        isiou?: unknown;
+      };
+      const itemId = Number(item.id ?? item.itemId);
+      const amount = Number(item.amt ?? item.amount);
+      const isIOU = item.isIOU === true || item.isiou === true ? 1 : 0;
+      if (!Number.isInteger(itemId) || itemId <= 0) continue;
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      normalized.push({ itemId, amount: Math.floor(amount), isIOU });
+    }
+
+    return normalized;
+  }
+
+  private playerHasInventoryItems(
+    playerState: PlayerState,
+    items: Array<{ itemId: number; amount: number; isIOU: 0 | 1 }>
+  ): boolean {
+    const required = new Map<string, number>();
+    for (const item of items) {
+      const key = `${item.itemId}:${item.isIOU}`;
+      required.set(key, (required.get(key) ?? 0) + item.amount);
+    }
+
+    const owned = new Map<string, number>();
+    for (const slot of playerState.inventory) {
+      if (!slot) continue;
+      const key = `${slot[0]}:${slot[2]}`;
+      owned.set(key, (owned.get(key) ?? 0) + slot[1]);
+    }
+
+    for (const [key, amount] of required.entries()) {
+      if ((owned.get(key) ?? 0) < amount) {
+        return false;
+      }
+    }
+    return true;
   }
 }

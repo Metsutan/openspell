@@ -167,6 +167,25 @@ async function ensureInitialPlayerInventory(db, userId, persistenceId) {
   }
 }
 
+/**
+ * Ensure a user has default appearance values.
+ */
+async function ensureInitialPlayerAppearanceForUser(db, userId, persistenceId) {
+  await db.playerAppearance.upsert({
+    where: { userId_persistenceId: { userId, persistenceId } },
+    update: {},
+    create: {
+      userId,
+      persistenceId,
+      hairStyleId: 1,
+      beardStyleId: 1,
+      shirtId: 1,
+      bodyTypeId: 0,
+      legsId: 5
+    }
+  });
+}
+
 async function resolveDefaultPersistenceId(db) {
   // Look for the first active world by sortOrder (serverId 100 is the Docker default)
   // This ensures the admin user gets the correct persistenceId regardless of which worlds exist
@@ -338,6 +357,9 @@ async function main() {
     
     await ensureInitialPlayerInventory(prisma, adminUser.id, persistenceId);
     console.log('  ✓ Inventory initialized');
+
+    await ensureInitialPlayerAppearanceForUser(prisma, adminUser.id, persistenceId);
+    console.log('  ✓ Appearance initialized');
     
     console.log('Admin user player data initialized successfully!');
   } catch (error) {

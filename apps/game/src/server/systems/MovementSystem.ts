@@ -146,6 +146,12 @@ export class MovementSystem {
       const playerState = this.config.playerStates.get(entityRef.id);
       if (!playerState) return false;
 
+      // Defensive guard: if the player changed map levels (teleport/door) while this plan
+      // was queued, this plan is stale and must not continue stepping.
+      if (playerState.mapLevel !== plan.mapLevel) {
+        return false;
+      }
+
       // Capture old position before updating
       const oldPosition = {
         mapLevel: playerState.mapLevel,

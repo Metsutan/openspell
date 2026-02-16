@@ -39,8 +39,6 @@ Please always remember to take backups, download, and keep a hold of anything pr
 | `Follow` | Pathfinding works, execute is empty TODO |
 | `TradeWith` | Pathfinding works, execute is empty TODO |
 | `Moderate` | Pathfinding works, execute is empty TODO |
-| `Inspect` | Not in action registry |
-| `Cancel` | Not in action registry |
 | `AddEntity` | Admin tool - not implemented |
 | `EditEntity` | Admin tool - not implemented |
 

@@ -11,6 +11,7 @@ import type { MapLevel } from "../../world/Location";
 import type { LineOfSightSystem } from "../../world/LineOfSight";
 import type { SpatialIndexManager } from "../systems/SpatialIndexManager";
 import type { NPCState, WorldEntityState } from "../state/EntityState";
+import type { GroundItemState } from "../state/EntityState";
 import { WorldEntityCatalog } from "../../world/entities/WorldEntityCatalog";
 import type { ConversationService } from "../services/ConversationService";
 import type { ShopSystem } from "../systems/ShopSystem";
@@ -35,6 +36,7 @@ import type { SpellCatalog } from "../../world/spells/SpellCatalog";
 import type { ExperienceService } from "../services/ExperienceService";
 import type { WorldEntityLootService } from "../services/WorldEntityLootService";
 import type { ResourceExhaustionTracker } from "../systems/ResourceExhaustionTracker";
+import type { InstancedNpcService } from "../services/InstancedNpcService";
 
 /**
  * Context passed to client action handlers, providing access to necessary systems
@@ -53,6 +55,7 @@ export interface ActionContext {
   // System references
   playerStatesByUserId: Map<number, PlayerState>;
   npcStates: Map<number, NPCState>;
+  groundItemStates: Map<number, GroundItemState>;
   worldEntityStates: Map<number, WorldEntityState>;
   spatialIndex: SpatialIndexManager;
   world: World;
@@ -68,6 +71,7 @@ export interface ActionContext {
   shopSystem: ShopSystem;
   worldEntityActionService: WorldEntityActionService;
   worldEntityLootService: WorldEntityLootService | null;
+  instancedNpcService: InstancedNpcService | null;
   bankingService: BankingService;
   pickpocketService: PickpocketService | null;
   woodcuttingService: WoodcuttingService | null;

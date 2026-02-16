@@ -9,7 +9,8 @@ import {
   connectDb,
   disconnectDb,
   sendWorldHeartbeat,
-  recomputeHiscores
+  recomputeHiscores,
+  removeOnlinePresenceByServerId
 } from "../db";
 import { GameAction } from "../protocol/enums/GameAction";
 import { ClientActionTypes, isClientActionType, type ClientActionType } from "../protocol/enums/ClientActionType";
@@ -70,9 +71,11 @@ import { FishingService } from "./services/FishingService";
 import { HarvestingService } from "./services/HarvestingService";
 import { MiningService } from "./services/MiningService";
 import { CookingService } from "./services/CookingService";
+import { EnchantingService } from "./services/EnchantingService";
 import { ItemInteractionService } from "./services/ItemInteractionService";
 import { SkillingMenuService } from "./services/SkillingMenuService";
 import { WorldEntityLootService } from "./services/WorldEntityLootService";
+import { InstancedNpcService } from "./services/InstancedNpcService";
 import { PacketAuditService } from "./services/PacketAuditService";
 import { ItemAuditService } from "./services/ItemAuditService";
 import { AntiCheatRealtimeService } from "./services/AntiCheatRealtimeService";
@@ -179,11 +182,13 @@ export class GameServer {
   private harvestingService!: HarvestingService | null;
   private miningService!: MiningService | null;
   private cookingService!: CookingService;
+  private enchantingService!: EnchantingService;
   private itemInteractionService!: ItemInteractionService;
   private damageService!: DamageService;
   private experienceService!: ExperienceService;
   private skillingMenuService!: SkillingMenuService;
   private worldEntityLootService!: WorldEntityLootService | null;
+  private instancedNpcService!: InstancedNpcService | null;
 
   // Graceful shutdown
   private shutdownInProgress = false;
@@ -466,7 +471,8 @@ export class GameServer {
       spatialIndex: this.spatialIndex,
       eventBus: this.eventBus,
       enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
-      enqueueBroadcast: (action, payload) => this.enqueueBroadcast(action, payload)
+      enqueueBroadcast: (action, payload) => this.enqueueBroadcast(action, payload),
+      cancelMovementPlanForPlayer: (userId) => this.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: userId })
     });
 
     this.bankingService = new BankingService({
@@ -547,10 +553,15 @@ export class GameServer {
       enqueueBroadcast: (action, payload) => this.enqueueBroadcast(action, payload),
       npcStates: this.npcStates,
       playerStatesByUserId: this.playerStatesByUserId,
+      inventoryService: this.inventoryService,
+      messageService: this.messageService,
+      experienceService: this.experienceService,
+      itemCatalog: this.itemCatalog,
       shopSystem: this.shopSystem,
       deleteMovementPlan: (entityRef) => this.pathfindingSystem.deleteMovementPlan(entityRef),
       targetingService: this.targetingService,
       stateMachine: this.stateMachine,
+      getInstancedNpcService: () => this.instancedNpcService ?? null,
       teleportService: this.teleportService
     });
 
@@ -574,11 +585,20 @@ export class GameServer {
       packetAudit: this.packetAudit
     });
 
+    this.enchantingService = new EnchantingService({
+      inventoryService: this.inventoryService,
+      messageService: this.messageService,
+      experienceService: this.experienceService,
+      itemCatalog: this.itemCatalog,
+      enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action as GameAction, payload)
+    });
+
     this.itemInteractionService = new ItemInteractionService({
       inventoryService: this.inventoryService,
       messageService: this.messageService,
       itemCatalog: this.itemCatalog,
       cookingService: this.cookingService,
+      enchantingService: this.enchantingService,
       experienceService: this.experienceService,
       worldEntityCatalog: this.worldEntityCatalog,
       playerStatesByUserId: this.playerStatesByUserId,
@@ -769,8 +789,29 @@ export class GameServer {
     this.stateLoaderService.loadGroundItemStates(this.groundItemStates);
     this.stateLoaderService.loadWorldEntityStates(this.worldEntityStates);
 
+    try {
+      this.instancedNpcService = await InstancedNpcService.load({
+        entityCatalog: this.entityCatalog,
+        npcStates: this.npcStates,
+        spatialIndex: this.spatialIndex,
+        eventBus: this.eventBus,
+        targetingService: this.targetingService,
+        getPlayerState: (userId) => this.playerStatesByUserId.get(userId) ?? null,
+        cancelMovementPlan: (entityRef) => this.pathfindingSystem.deleteMovementPlan(entityRef),
+        enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action as GameAction, payload)
+      });
+      this.deathSystem.setInstancedNpcService(this.instancedNpcService);
+    } catch (error) {
+      console.error("[GameServer] Failed to load InstancedNpcService:", error);
+      this.instancedNpcService = null;
+      this.deathSystem.setInstancedNpcService(null);
+    }
+
     if (this.dbEnabled) {
       await connectDb();
+
+      // Clear stale presence for this shard from previous unclean exits.
+      await this.cleanupServerOnlinePresence("startup");
 
       // CRITICAL: Preload skill ID cache at startup so shutdown doesn't have to wait for it
       console.log('[server] Preloading skill ID cache for fast shutdown saves...');
@@ -807,6 +848,7 @@ export class GameServer {
     this.environmentSystem.reset();
     this.eventBus.clear();
     this.playerPersistence.stopAutosaveLoop();
+    await this.cleanupServerOnlinePresence("stop");
     await disconnectDb();
     await new Promise<void>((resolve) => this.server.close(() => resolve()));
   }
@@ -860,6 +902,8 @@ export class GameServer {
 
     // Death System - Process respawns (right after combat)
     this.deathSystem.processRespawns();
+
+    this.instancedNpcService?.update();
 
     // Pending Action System - Process environment actions (doors, etc.)
     this.processEnvironmentActions(); //todo: implement health and state regen.
@@ -1007,6 +1051,9 @@ export class GameServer {
         }
       }
 
+      // Despawn any instanced NPCs owned by this player and clear per-session kill tracking.
+      this.instancedNpcService?.handlePlayerLogout(userId);
+
       // Remove from spatial index
       this.spatialIndex.removePlayer(userId);
 
@@ -1097,6 +1144,7 @@ export class GameServer {
       currentTick: this.tick,
       playerStatesByUserId: this.playerStatesByUserId,
       npcStates: this.npcStates,
+      groundItemStates: this.groundItemStates,
       worldEntityStates: this.worldEntityStates,
       spatialIndex: this.spatialIndex,
       world: this.world,
@@ -1112,6 +1160,7 @@ export class GameServer {
       shopSystem: this.shopSystem,
       worldEntityActionService: this.worldEntityActionService,
       worldEntityLootService: this.worldEntityLootService,
+      instancedNpcService: this.instancedNpcService,
       bankingService: this.bankingService,
       pickpocketService: this.pickpocketService,
       woodcuttingService: this.woodcuttingService,
@@ -1373,6 +1422,9 @@ export class GameServer {
         }
       }
 
+      // Best-effort final cleanup for stale rows on this shard.
+      await this.cleanupServerOnlinePresence("shutdown");
+
       // Disconnect database
       await disconnectDb();
       console.log('[shutdown] Database disconnected');
@@ -1462,6 +1514,22 @@ export class GameServer {
       });
   }
 
+  private async cleanupServerOnlinePresence(phase: "startup" | "shutdown" | "stop"): Promise<void> {
+    if (!this.dbEnabled) return;
+    try {
+      const deleted = await removeOnlinePresenceByServerId(this.serverId);
+      if (deleted > 0) {
+        console.log(`[presence] Cleared ${deleted} stale online row(s) for server ${this.serverId} during ${phase}`);
+      }
+    } catch (err) {
+      // Non-fatal: login protection still has heartbeat-aware fallbacks.
+      console.warn(
+        `[presence] Failed to clear online rows for server ${this.serverId} during ${phase}:`,
+        (err as Error)?.message ?? err
+      );
+    }
+  }
+
 
 
   // ============================================================================
@@ -1485,11 +1553,14 @@ export class GameServer {
   // Note: socket/userId not needed since processor handles all players
   const ctx = {
     playerStatesByUserId: this.playerStatesByUserId,
+    currentTick: this.tick,
+    groundItemStates: this.groundItemStates,
     worldEntityStates: this.worldEntityStates,
     spatialIndex: this.spatialIndex,
     delaySystem: this.delaySystem,
     pathfindingSystem: this.pathfindingSystem,
     worldEntityActionService: this.worldEntityActionService,
+    instancedNpcService: this.instancedNpcService,
     messageService: this.messageService,
     teleportService: this.teleportService,
     eventBus: this.eventBus,

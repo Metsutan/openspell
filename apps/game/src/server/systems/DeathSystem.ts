@@ -42,6 +42,7 @@ import { SKILLS as SkillsEnum } from "../../world/PlayerState";
 import type { MapLevel } from "../../world/Location";
 import type { MonsterDropService } from "../services/MonsterDropService";
 import type { PlayerDeathDropService } from "../services/PlayerDeathDropService";
+import type { InstancedNpcService } from "../services/InstancedNpcService";
 import type { DelaySystem } from "./DelaySystem";
 import {
   createNPCRemovedEvent,
@@ -98,6 +99,8 @@ export interface DeathSystemConfig {
   playerDeathDropService: PlayerDeathDropService;
   /** Delay system for clearing active delays on death */
   delaySystem: DelaySystem;
+  /** Optional instanced NPC service for kill callbacks */
+  instancedNpcService?: InstancedNpcService | null;
   /** Optional custom respawn area (uses DEFAULT_RESPAWN_AREA if not provided) */
   respawnArea?: RespawnArea;
 }
@@ -122,6 +125,10 @@ interface DeadNPC {
   killerUserId: number | null;
   /** Whether loot has been dropped for this NPC */
   lootDropped: boolean;
+  /** Loot table override for instanced NPCs */
+  lootOverrideId: number | null;
+  /** Whether this NPC should respawn after death */
+  shouldRespawn: boolean;
 }
 
 /**
@@ -162,6 +169,10 @@ export class DeathSystem {
   private static readonly PLAYER_DEATH_DELAY_TICKS = 4;
 
   constructor(private readonly config: DeathSystemConfig) {}
+
+  public setInstancedNpcService(service: InstancedNpcService | null): void {
+    this.config.instancedNpcService = service;
+  }
 
   /**
    * Main update called once per server tick.
@@ -228,7 +239,7 @@ export class DeathSystem {
 
       // Get killer information for loot visibility
       const killerRef = dyingNpcsWithKillers.get(npcId);
-      const killerUserId = killerRef?.type === EntityType.Player ? killerRef.id : null;
+      const killerUserId = npc.instanced?.ownerUserId ?? (killerRef?.type === EntityType.Player ? killerRef.id : null);
 
       // Get respawn time from definition (default to 50 ticks = ~30 seconds if not specified)
       const respawnLength = npc.definition.combat?.respawnLength ?? 50;
@@ -270,11 +281,14 @@ export class DeathSystem {
         maxHitpoints,
         deathPosition,
         killerUserId,
-        lootDropped: false
+        lootDropped: false,
+        lootOverrideId: npc.instanced?.lootOverrideId ?? null,
+        shouldRespawn: npc.instanced === null
       });
 
       // Don't emit NPCRemovedEvent yet - wait for death animation delay
       // The event will be emitted in updateDeathAnimations() after the delay
+      this.config.instancedNpcService?.handleInstancedNpcKilled(npc);
     }
   }
 
@@ -379,7 +393,8 @@ export class DeathSystem {
           deadNpc.deathPosition.mapLevel,
           deadNpc.deathPosition.x,
           deadNpc.deathPosition.y,
-          deadNpc.killerUserId
+          deadNpc.killerUserId,
+          deadNpc.lootOverrideId
         );
         deadNpc.lootDropped = true;
       }
@@ -393,6 +408,10 @@ export class DeathSystem {
         deadNpc.deathPosition,
         "died"
       ));
+
+      if (!deadNpc.shouldRespawn) {
+        this.deadNpcs.delete(npcId);
+      }
     }
   }
 
@@ -404,6 +423,9 @@ export class DeathSystem {
 
     // Decrement respawn timers and collect NPCs ready to respawn
     for (const [npcId, deadNpc] of this.deadNpcs.entries()) {
+      if (!deadNpc.shouldRespawn) {
+        continue;
+      }
       deadNpc.respawningTicks--;
 
       if (deadNpc.respawningTicks <= 0) {

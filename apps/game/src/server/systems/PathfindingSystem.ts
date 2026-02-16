@@ -23,7 +23,7 @@ import { isCardinallyAdjacent } from "../../world/SpatialIndex";
 import type { PathingGrid } from "../../world/WorldModel";
 import type { WorldModel } from "../../world/WorldModel";
 import type { LineOfSightSystem } from "../../world/LineOfSight";
-import { getPlayerAttackRange, isWithinRange } from "../actions/utils/combatMode";
+import { MAGIC_RANGE_DEFAULT, getPlayerAttackRange, isWithinRange } from "../actions/utils/combatMode";
 import type { SpellCatalog } from "../../world/spells/SpellCatalog";
 
 /**
@@ -57,6 +57,8 @@ export type PathfindingSystemConfig = {
 
 export class PathfindingSystem {
   constructor(private readonly config: PathfindingSystemConfig) {}
+
+  private static readonly DEFAULT_NPC_RANGED_ATTACK_RANGE = 5;
 
   /**
    * Updates player movement planning (pathfinding).
@@ -249,10 +251,15 @@ export class PathfindingSystem {
       return;
     }
 
-    // Get NPC's attack range from definition (default to melee)
-    const configuredRange = npc.definition.combat?.range ?? 0;
-    const isRanged = configuredRange > 0;
-    const attackRange = isRanged ? configuredRange : 1;
+    const targetRef = npc.aggroTarget!;
+    const npcMagicSpellId = this.getNpcAutoCastSpellId(npc, targetRef);
+    const isMagic = npcMagicSpellId !== null;
+    const isRanged = !isMagic && this.isNpcRangedAttacker(npc);
+    const attackRange = isMagic
+      ? this.getNpcMagicAttackRange(npcMagicSpellId)
+      : isRanged
+        ? this.getNpcRangedAttackRange(npc)
+        : 1;
 
     // Calculate Chebyshev distance (max of dx, dy)
     const dx = Math.abs(npc.x - targetPos.x);
@@ -260,8 +267,8 @@ export class PathfindingSystem {
     const distance = Math.max(dx, dy);
 
     // Check if within attack range
-    const withinRange = isRanged 
-      ? (distance > 0 && distance <= attackRange)
+    const withinRange = (isMagic || isRanged)
+      ? isWithinRange(npc.x, npc.y, targetPos.x, targetPos.y, attackRange)
       : isCardinallyAdjacent(npc.x, npc.y, targetPos.x, targetPos.y);
 
     if (withinRange) {
@@ -269,14 +276,15 @@ export class PathfindingSystem {
       const hasLOS = this.checkLineOfSight(npc.x, npc.y, targetPos.x, targetPos.y, npc.mapLevel);
       
       if (hasLOS) {
-        // Within range AND has LOS - enter/stay in combat state
-        if (npc.currentState !== States.MeleeCombatState && npc.currentState !== States.RangeCombatState) {
-          // Cancel any movement plan
-          if (this.config.movementPlans.has(entityKey)) {
-            this.config.movementPlans.delete(entityKey);
-          }
-          this.config.stateMachine.setState(entityRef, isRanged ? States.RangeCombatState : States.MeleeCombatState);
-        } else {}
+        // Within range AND has LOS - stop moving and enter/stay in combat state.
+        // Important: always clear plan so caster NPCs don't keep stepping to melee.
+        if (this.config.movementPlans.has(entityKey)) {
+          this.config.movementPlans.delete(entityKey);
+        }
+        const desiredCombatState = (isMagic || isRanged) ? States.RangeCombatState : States.MeleeCombatState;
+        if (npc.currentState !== desiredCombatState) {
+          this.config.stateMachine.setState(entityRef, desiredCombatState);
+        }
         return;
       }
       
@@ -565,5 +573,46 @@ export class PathfindingSystem {
 
     const wildernessLevel = WildernessService.getWildernessLevel(player.x, player.y, player.mapLevel);
     return WildernessService.canAttackByCombatLevel(player.combatLevel, target.combatLevel, wildernessLevel);
+  }
+
+  private isNpcRangedAttacker(npc: NPCState): boolean {
+    const combat = npc.definition.combat;
+    if (!combat) {
+      return false;
+    }
+    const hasExplicitRangedStats = (combat.range ?? 1) > 1 || (combat.rangeBonus ?? 1) > 1;
+    const hasProjectile = npc.definition.appearance.projectile !== null && npc.definition.appearance.projectile !== undefined;
+    return hasExplicitRangedStats || hasProjectile;
+  }
+
+  private getNpcRangedAttackRange(npc: NPCState): number {
+    const configured = npc.definition.combat?.attackRange;
+    if (typeof configured === "number" && Number.isFinite(configured)) {
+      return Math.max(1, Math.floor(configured));
+    }
+    return PathfindingSystem.DEFAULT_NPC_RANGED_ATTACK_RANGE;
+  }
+
+  private getNpcAutoCastSpellId(npc: NPCState, targetRef: EntityRef): number | null {
+    if (targetRef.type !== EntityType.Player) {
+      return null;
+    }
+    const firstSpellId = npc.definition.combat?.autoCastSpellIds?.[0];
+    if (typeof firstSpellId !== "number" || !Number.isInteger(firstSpellId) || firstSpellId <= 0) {
+      return null;
+    }
+    const spellDef = this.config.spellCatalog?.getDefinitionById(firstSpellId);
+    if (!spellDef || (spellDef.type !== "combat" && spellDef.type !== "status")) {
+      return null;
+    }
+    return firstSpellId;
+  }
+
+  private getNpcMagicAttackRange(spellId: number): number {
+    const configured = this.config.spellCatalog?.getDefinitionById(spellId)?.range;
+    if (typeof configured === "number" && Number.isFinite(configured) && configured > 0) {
+      return Math.floor(configured);
+    }
+    return MAGIC_RANGE_DEFAULT;
   }
 }

@@ -9,7 +9,7 @@ import type { EventBus } from "../events/EventBus";
 import type { World } from "../../world/World";
 import type { PlayerState } from "../../world/PlayerState";
 import type { PlayerPersistenceManager } from "./PlayerPersistenceManager";
-import type { LoginService } from "./LoginService";
+import { LoginFailedError, type LoginService } from "./LoginService";
 import type { MapLevel } from "../../world/Location";
 import { InventoryService } from "./InventoryService";
 import type { BankingService } from "./BankingService";
@@ -154,6 +154,10 @@ export class ConnectionService {
 
       return { userId, username, emailVerified, socket };
     } catch (err) {
+      if (err instanceof LoginFailedError) {
+        socket.emit(GameAction.LoginFailed.toString(), [{ code: err.code, msg: err.msg }]);
+        return null;
+      }
       socket.emit(GameAction.LoginFailed.toString(), [String((err as Error)?.message ?? err)]);
       return null;
     }

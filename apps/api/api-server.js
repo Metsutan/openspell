@@ -3291,6 +3291,33 @@ app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
       return sendGameError(-302, 'Password incorrect');
     }
 
+    // Prevent duplicate login attempts across all game servers.
+    // We must enforce this before issuing a login token so the client
+    // does not proceed to open a socket only to fail later.
+    const existingOnlineUser = await prisma.onlineUser.findUnique({
+      where: { userId: user.id },
+      select: { id: true, serverId: true }
+    });
+    if (existingOnlineUser) {
+      const onlineWorld = await prisma.world.findUnique({
+        where: { serverId: existingOnlineUser.serverId },
+        select: { lastHeartbeat: true }
+      });
+      const isStalePresence = isHeartbeatStale(
+        onlineWorld?.lastHeartbeat ?? null,
+        WORLD_HEARTBEAT_TIMEOUT_SEC
+      );
+
+      if (isStalePresence) {
+        await prisma.onlineUser.delete({ where: { id: existingOnlineUser.id } });
+      } else {
+        return sendGameError(
+          -303,
+          'Your account is currently logged in, please try again in about a minute'
+        );
+      }
+    }
+
     // Lazy initialization: Ensure player has data for this world's persistenceId
     // This handles the case where a new world is created after the user registered,
     // or if a player is logging into a world for the first time.

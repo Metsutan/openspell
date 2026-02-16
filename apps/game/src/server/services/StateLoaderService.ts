@@ -68,7 +68,8 @@ export class StateLoaderService {
         aggroRadius,
         aggroTarget: null,
         aggroDroppedTargetId: null,
-        combatDelay: 0
+        combatDelay: 0,
+        instanced: null
       };
       
       npcStates.set(state.id, state);

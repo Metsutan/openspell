@@ -16,6 +16,7 @@ import { buildMovementPathAdjacent, buildMovementPathWithinRange } from "../util
 import { getPlayerAttackRange, getPlayerCombatMode, isWithinRange } from "../utils/combatMode";
 import { checkAdjacentToNPC } from "./shared";
 import { buildStartedShoppingPayload } from "../../../protocol/packets/actions/StartedShopping";
+import { canPlayerInteractWithNpc } from "../../services/instancedNpcUtils";
 
 /**
  * Main router for NPC actions.
@@ -162,6 +163,13 @@ function handleAttackNPC(
     return;
   }
 
+  if (!canPlayerInteractWithNpc(playerState.userId, npcState)) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You cannot attack that.");
+    ctx.targetingService.clearPlayerTarget(playerState.userId);
+    playerState.pendingAction = null;
+    return;
+  }
+
   const combatMode = getPlayerCombatMode(playerState);
   const attackRange = getPlayerAttackRange(playerState, ctx.spellCatalog);
 
@@ -290,6 +298,13 @@ function handlePickpocketNPC(
 
 function executeAttackNPC(ctx: ActionContext, playerState: PlayerState, npcState: NPCState): void {
   console.log(`[executeAttackNPC] Player ${playerState.userId} attacking NPC ${npcState.id}`);
+
+  if (!canPlayerInteractWithNpc(playerState.userId, npcState)) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You cannot attack that.");
+    ctx.targetingService.clearPlayerTarget(playerState.userId);
+    playerState.pendingAction = null;
+    return;
+  }
   
   // TODO: Implement attack logic
   ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.NPC, id: npcState.id });
@@ -485,6 +500,12 @@ export function handleNPCMovementComplete(
       executeTalkToNPC(ctx, playerState, npcState);
       break;
     case Action.Attack:
+      if (!canPlayerInteractWithNpc(playerState.userId, npcState)) {
+        ctx.messageService.sendServerInfo(playerState.userId, "You cannot attack that.");
+        playerState.pendingAction = null;
+        ctx.targetingService.clearPlayerTarget(playerState.userId);
+        return;
+      }
       executeAttackNPC(ctx, playerState, npcState);
       break;
     case Action.Shop:

@@ -82,7 +82,8 @@ const RESOURCE_XP_SKILLS: Set<SkillSlug> = new Set([
 const CREATED_ITEM_XP_SKILLS: Set<SkillSlug> = new Set([
   SKILLS.crafting,
   SKILLS.smithing,
-  SKILLS.potionmaking
+  SKILLS.potionmaking,
+  SKILLS.enchanting
 ]);
 
 export interface ExperienceServiceConfig {

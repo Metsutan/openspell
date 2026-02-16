@@ -117,6 +117,33 @@ export class LineOfSightSystem {
   }
 
   /**
+   * Checks whether melee movement/adjacent striking is blocked between two tiles.
+   * Uses movement/pathing blockers (walls/fences), not projectile blockers.
+   */
+  isMeleeBlocked(
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    mapLevel: MapLevel
+  ): boolean {
+    const grid = this.getPathingGrid(mapLevel);
+    if (!grid) {
+      return false;
+    }
+
+    const from = worldToGrid(Math.floor(fromX), Math.floor(fromY), grid);
+    const to = worldToGrid(Math.floor(toX), Math.floor(toY), grid);
+
+    return grid.isMovementBlocked(
+      from.x,
+      from.y,
+      to.x,
+      to.y
+    );
+  }
+
+  /**
    * REMOVED: Old entity iteration method (replaced with PathingGrid).
    * 
    * The LOS system now uses pre-computed projectile blocking flags from PathingGrid

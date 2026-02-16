@@ -11,6 +11,7 @@ import { getPlayerCombatMode, isWithinRange, MAGIC_RANGE_DEFAULT } from "./utils
 import { getStatusSpellEffect } from "../../world/spells/statusSpellEffects";
 import type { NPCState } from "../state/EntityState";
 import type { ActionContext, ActionHandler } from "./types";
+import { canPlayerInteractWithNpc } from "../services/instancedNpcUtils";
 
 export const handleCastSingleCombatOrStatusSpell: ActionHandler = (ctx, actionData) => {
   if (ctx.userId === null) return;
@@ -75,6 +76,9 @@ export const handleCastSingleCombatOrStatusSpell: ActionHandler = (ctx, actionDa
     }
   } else if (!target.state.definition.combat) {
     logInvalid("npc_no_combat", { targetId });
+    return;
+  } else if (!canPlayerInteractWithNpc(ctx.userId, target.state)) {
+    ctx.messageService.sendServerInfo(ctx.userId, "You cannot attack that.");
     return;
   }
 

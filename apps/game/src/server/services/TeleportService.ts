@@ -14,6 +14,7 @@ export interface TeleportServiceDependencies {
   eventBus: EventBus;
   enqueueUserMessage: (userId: number, action: GameAction, payload: unknown[]) => void;
   enqueueBroadcast: (action: GameAction, payload: unknown[]) => void;
+  cancelMovementPlanForPlayer?: (userId: number) => void;
 }
 
 export interface TeleportOptions {
@@ -81,6 +82,9 @@ export class TeleportService {
         return validation;
       }
     }
+
+    // Teleports are instantaneous relocation; stale movement plans must be dropped.
+    this.deps.cancelMovementPlanForPlayer?.(userId);
 
     // Capture old position before updating
     const oldPosition: Position = {

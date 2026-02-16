@@ -6,6 +6,7 @@ import type { InventoryService } from "./InventoryService";
 import type { MessageService } from "./MessageService";
 import type { ExperienceService } from "./ExperienceService";
 import type { CookingService } from "./CookingService";
+import type { EnchantingService } from "./EnchantingService";
 import { GameAction } from "../../protocol/enums/GameAction";
 import { buildCreatedUseItemOnItemActionItemsPayload } from "../../protocol/packets/actions/CreatedUseItemOnItemActionItems";
 import { buildCreatedItemPayload } from "../../protocol/packets/actions/CreatedItem";
@@ -27,6 +28,7 @@ export interface ItemInteractionServiceDependencies {
   itemCatalog: ItemCatalog;
   experienceService: ExperienceService;
   cookingService: CookingService | null;
+  enchantingService: EnchantingService | null;
   worldEntityCatalog: WorldEntityCatalog | null;
   playerStatesByUserId: Map<number, PlayerState>;
   delaySystem: DelaySystem;
@@ -132,6 +134,7 @@ export class ItemInteractionService {
     this.buildItemEntityActionMap();
     this.buildItemOnItemActionMap();
     this.registerCookingHandlers();
+    this.registerEnchantingHandlers();
     this.buildItemOnEntityRecipeMap();
   }
 
@@ -267,6 +270,13 @@ export class ItemInteractionService {
     if (!this.deps.cookingService) return;
     this.registerWorldEntityAction("cooking", ({ playerState, itemId, entityState }) => {
       this.deps.cookingService?.startCooking(playerState, itemId, entityState);
+    });
+  }
+
+  private registerEnchantingHandlers(): void {
+    if (!this.deps.enchantingService) return;
+    this.registerWorldEntityAction("enchanting", ({ playerState, itemId, entityState }) => {
+      this.deps.enchantingService?.startEnchanting(playerState, itemId, entityState);
     });
   }
 

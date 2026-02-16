@@ -4,7 +4,7 @@
  * Architecture:
  * - Runs after MovementSystem (entities are in final positions for this tick)
  * - Checks all aggro'd NPCs and all players targeting NPCs
- * - Validates adjacency (Chebyshev distance of 1) with LOS for melee
+ * - Validates adjacency (Chebyshev distance of 1) + movement edge clearance for melee
  * - Validates range (up to 5 tiles) with LOS for ranged weapons
  * - Processes combat cooldowns (combatDelay)
  * - Delegates damage calculation and broadcasting to DamageService
@@ -43,11 +43,12 @@ import type { InventoryService } from "../services/InventoryService";
 import type { EquipmentService } from "../services/EquipmentService";
 import type { ItemManager } from "../../world/systems/ItemManager";
 import type { SpellCatalog } from "../../world/spells/SpellCatalog";
-import { getPlayerAttackRange, getPlayerCombatMode, isWithinRange } from "../actions/utils/combatMode";
+import { MAGIC_RANGE_DEFAULT, getPlayerAttackRange, getPlayerCombatMode, isWithinRange } from "../actions/utils/combatMode";
 import { buildToggledAutoCastPayload } from "../../protocol/packets/actions/ToggledAutoCast";
 import { buildCastedSingleCombatOrStatusSpellPayload } from "../../protocol/packets/actions/CastedSingleCombatOrStatusSpell";
 import { GameAction } from "../../protocol/enums/GameAction";
 import { getStatusSpellEffect } from "../../world/spells/statusSpellEffects";
+import { canPlayerInteractWithNpc, getInstancedNpcOwnerUserId } from "../services/instancedNpcUtils";
 
 export interface CombatSystemConfig {
   playerStates: Map<number, PlayerState>;
@@ -71,6 +72,8 @@ const STAFF_SCROLL_OVERRIDES: Record<number, number> = {
   436: 176, // water staff provides water scrolls
   437: 177  // nature staff provides nature scrolls
 };
+const DEFAULT_NPC_RANGED_ATTACK_RANGE = 5;
+const DEFAULT_NPC_RANGED_PROJECTILE_ID = 335;
 
 /**
  * System for handling combat between entities.
@@ -204,6 +207,16 @@ export class CombatSystem {
         continue;
       }
 
+      if (!canPlayerInteractWithNpc(player.userId, targetNpc)) {
+        this.config.messageService.sendServerInfo(player.userId, "You cannot attack that.");
+        this.config.targetingService.clearPlayerTarget(player.userId);
+        this.config.stateMachine.setState(
+          { type: EntityType.Player, id: player.userId },
+          States.IdleState
+        );
+        continue;
+      }
+
       // Check if player has a ranged weapon equipped
       const combatMode = getPlayerCombatMode(player);
       const attackRange = getPlayerAttackRange(player, this.config.spellCatalog);
@@ -212,15 +225,17 @@ export class CombatSystem {
         if (!this.isAdjacent(player.x, player.y, targetNpc.x, targetNpc.y)) {
           continue;
         }
+        if (!this.canMeleeReachTarget(player.x, player.y, targetNpc.x, targetNpc.y, player.mapLevel)) {
+          continue;
+        }
       } else {
         if (!isWithinRange(player.x, player.y, targetNpc.x, targetNpc.y, attackRange)) {
           continue;
         }
-      }
-
-      // Check line of sight (required for both melee and ranged)
-      if (!this.hasLineOfSight(player.x, player.y, targetNpc.x, targetNpc.y, player.mapLevel)) {
-        continue;
+        // Line of sight is required for ranged/magic attacks.
+        if (!this.hasLineOfSight(player.x, player.y, targetNpc.x, targetNpc.y, player.mapLevel)) {
+          continue;
+        }
       }
 
       // Execute attack (handles damage, XP, death tracking, delay reset)
@@ -279,7 +294,7 @@ export class CombatSystem {
    * Processes combat for all NPCs with aggro targets.
    * Called in game loop after NPC movement.
    * 
-   * NPCs use their combat.range from definition (default 1 for melee).
+   * NPCs default to melee and only use ranged when explicitly configured.
    */
   public processNpcCombat(): void {
     // First pass: Decrement combat delay for ALL NPCs (regardless of aggro target)
@@ -295,6 +310,15 @@ export class CombatSystem {
       // Skip NPCs not in combat
       if (!npc.aggroTarget) continue;
 
+      const instancedOwnerUserId = getInstancedNpcOwnerUserId(npc);
+      if (
+        instancedOwnerUserId !== null &&
+        (npc.aggroTarget.type !== EntityType.Player || npc.aggroTarget.id !== instancedOwnerUserId)
+      ) {
+        this.config.targetingService.clearNpcTarget(npc.id, false);
+        continue;
+      }
+
       // Check if NPC can attack this tick (delay already decremented above)
       if (npc.combatDelay > 0) continue;
 
@@ -305,25 +329,33 @@ export class CombatSystem {
         continue;
       }
 
-      // Get NPC's attack range from definition (default to melee)
-      const configuredRange = npc.definition.combat?.range ?? 0;
-      const isRanged = configuredRange > 0;
-      const attackRange = isRanged ? configuredRange : 1;
+      // NPCs with auto-cast combat spells use magic against players.
+      const npcMagicSpellId = this.getNpcAutoCastSpellId(npc, npc.aggroTarget);
+      const isMagic = npcMagicSpellId !== null;
+      // NPCs otherwise default to melee unless ranged is explicitly configured.
+      const isRanged = !isMagic && this.isNpcRangedAttacker(npc);
+      const attackRange = isMagic
+        ? this.getNpcMagicAttackRange(npcMagicSpellId)
+        : isRanged
+          ? this.getNpcRangedAttackRange(npc)
+          : 1;
 
       // Check range based on NPC's combat range
-      if (isRanged) {
+      if (isMagic || isRanged) {
         if (!isWithinRange(npc.x, npc.y, targetPosition.x, targetPosition.y, attackRange)) {
+          continue;
+        }
+        // Line of sight is required for ranged and magic attacks.
+        if (!this.hasLineOfSight(npc.x, npc.y, targetPosition.x, targetPosition.y, npc.mapLevel)) {
           continue;
         }
       } else {
         if (!this.isAdjacent(npc.x, npc.y, targetPosition.x, targetPosition.y)) {
           continue;
         }
-      }
-
-      // Check line of sight (required for both melee and ranged)
-      if (!this.hasLineOfSight(npc.x, npc.y, targetPosition.x, targetPosition.y, npc.mapLevel)) {
-        continue;
+        if (!this.canMeleeReachTarget(npc.x, npc.y, targetPosition.x, targetPosition.y, npc.mapLevel)) {
+          continue;
+        }
       }
 
       // Get target entity for damage calculation
@@ -338,7 +370,7 @@ export class CombatSystem {
 
       // Execute attack (handles damage, XP, death tracking, delay reset)
       const attackerRef: EntityRef = { type: EntityType.NPC, id: npc.id };
-      this.executeAttack(npc, target, attackerRef, npc.aggroTarget);
+      this.executeAttack(npc, target, attackerRef, npc.aggroTarget, npcMagicSpellId);
 
       // Auto-retaliate: If target is a player with AutoRetaliate enabled, target the attacker
       if (npc.aggroTarget && npc.aggroTarget.type === EntityType.Player) {
@@ -380,6 +412,23 @@ export class CombatSystem {
     const dx = Math.abs(x1 - x2);
     const dy = Math.abs(y1 - y2);
     return dx <= 1 && dy <= 1 && (dx > 0 || dy > 0);
+  }
+
+  /**
+   * Checks if melee can actually reach across an adjacent edge.
+   * Prevents melee attacks through movement blockers (fences/walls).
+   */
+  private canMeleeReachTarget(
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    mapLevel: MapLevel
+  ): boolean {
+    if (!this.config.losSystem) {
+      return true;
+    }
+    return !this.config.losSystem.isMeleeBlocked(fromX, fromY, toX, toY, mapLevel);
   }
 
 
@@ -437,6 +486,66 @@ export class CombatSystem {
   }
 
   /**
+   * Returns true only when an NPC is explicitly configured to use ranged attacks.
+   * NPCs default to melee.
+   */
+  private isNpcRangedAttacker(npc: NPCState): boolean {
+    const combat = npc.definition.combat;
+    if (!combat) {
+      return false;
+    }
+
+    const hasExplicitRangedStats = (combat.range ?? 1) > 1 || (combat.rangeBonus ?? 1) > 1;
+    const hasProjectile = npc.definition.appearance.projectile !== null && npc.definition.appearance.projectile !== undefined;
+    return hasExplicitRangedStats || hasProjectile;
+  }
+
+  /**
+   * Gets ranged attack distance for an NPC.
+   * Uses explicit combat.attackRange when present, otherwise defaults to 5 tiles.
+   */
+  private getNpcRangedAttackRange(npc: NPCState): number {
+    const configured = npc.definition.combat?.attackRange;
+    if (typeof configured === "number" && Number.isFinite(configured)) {
+      return Math.max(1, Math.floor(configured));
+    }
+    return DEFAULT_NPC_RANGED_ATTACK_RANGE;
+  }
+
+  /**
+   * Returns the first valid NPC auto-cast spell ID for NPC->player combat only.
+   */
+  private getNpcAutoCastSpellId(npc: NPCState, targetRef: EntityRef): number | null {
+    if (targetRef.type !== EntityType.Player) {
+      return null;
+    }
+
+    const firstSpellId = npc.definition.combat?.autoCastSpellIds?.[0];
+    if (typeof firstSpellId !== "number" || !Number.isInteger(firstSpellId) || firstSpellId <= 0) {
+      return null;
+    }
+
+    const spellDef = this.config.spellCatalog?.getDefinitionById(firstSpellId);
+    if (!spellDef || (spellDef.type !== "combat" && spellDef.type !== "status")) {
+      return null;
+    }
+
+    return firstSpellId;
+  }
+
+  /**
+   * Gets magic attack distance for an NPC spell.
+   * Uses spell range when present, otherwise falls back to magic default.
+   */
+  private getNpcMagicAttackRange(spellId: number): number {
+    const configured = this.config.spellCatalog?.getDefinitionById(spellId)?.range;
+    if (typeof configured === "number" && Number.isFinite(configured) && configured > 0) {
+      return Math.floor(configured);
+    }
+    return MAGIC_RANGE_DEFAULT;
+  }
+
+  /**
    * Executes an attack from one entity to another.
    * Handles damage calculation, capping, broadcasting, XP awards, and death tracking.
    * Works for any combination: Player->NPC, NPC->Player, Player->Player, NPC->NPC.
@@ -450,7 +559,8 @@ export class CombatSystem {
     attacker: PlayerState | NPCState,
     target: PlayerState | NPCState,
     attackerRef: EntityRef,
-    targetRef: EntityRef
+    targetRef: EntityRef,
+    npcMagicSpellId: number | null = null
   ): void {
     if (this.isEntityDead(attacker, attackerRef) || this.isEntityDead(target, targetRef)) {
       return;
@@ -498,14 +608,21 @@ export class CombatSystem {
         rawDamage = this.config.damageService.calculateDamage(attacker, target);
       }
     } else {
-      const npcRange = attacker.definition.combat?.range ?? 0;
-      if (npcRange > 0) {
-        projectileItemId = attacker.definition.appearance.projectile ?? null;
+      if (npcMagicSpellId !== null) {
+        magicSpellId = npcMagicSpellId;
+        rawDamage = this.config.damageService.calculateMagicSpellDamage(attacker, target, npcMagicSpellId);
+        isMagicAttack = true;
+      } else if (this.isNpcRangedAttacker(attacker)) {
+        isRangedAttack = true;
+        projectileItemId = attacker.definition.appearance.projectile ?? DEFAULT_NPC_RANGED_PROJECTILE_ID;
         rawDamage = this.config.damageService.calculateRangeDamage(attacker, target);
       } else {
         rawDamage = this.config.damageService.calculateDamage(attacker, target);
       }
     }
+
+    // Instanced NPC idle should reset on real combat attempts, including 0-damage hits.
+    this.resetInstancedNpcIdleTicksOnAttack(attacker, target);
     
     // Cap damage to target's current health (can't deal more damage than they have HP)
     const currentHp = this.getCurrentHitpoints(target);
@@ -543,7 +660,7 @@ export class CombatSystem {
     }
 
     // Broadcast damage to nearby players (use actual damage dealt)
-    if ((isRangedAttack || (!('userId' in attacker) && (attacker.definition.combat?.range ?? 0) > 0)) && projectileItemId !== null) {
+    if (isRangedAttack && projectileItemId !== null) {
       this.config.damageService.broadcastProjectile(
         projectileItemId,
         attackerRef,
@@ -708,6 +825,7 @@ export class CombatSystem {
     // Get target NPC
     const targetNpc = this.config.npcStates.get(targetNpcId);
     if (!targetNpc) return false;
+    if (!canPlayerInteractWithNpc(player.userId, targetNpc)) return false;
 
     const combatMode = getPlayerCombatMode(player);
     const attackRange = getPlayerAttackRange(player, this.config.spellCatalog);
@@ -715,15 +833,16 @@ export class CombatSystem {
       if (!this.isAdjacent(player.x, player.y, targetNpc.x, targetNpc.y)) {
         return false;
       }
+      if (!this.canMeleeReachTarget(player.x, player.y, targetNpc.x, targetNpc.y, player.mapLevel)) {
+        return false;
+      }
     } else {
       if (!isWithinRange(player.x, player.y, targetNpc.x, targetNpc.y, attackRange)) {
         return false;
       }
-    }
-
-    // Check line of sight (required for both melee and ranged)
-    if (!this.hasLineOfSight(player.x, player.y, targetNpc.x, targetNpc.y, player.mapLevel)) {
-      return false;
+      if (!this.hasLineOfSight(player.x, player.y, targetNpc.x, targetNpc.y, player.mapLevel)) {
+        return false;
+      }
     }
 
     // All checks passed - perform immediate attack!
@@ -827,14 +946,16 @@ export class CombatSystem {
       if (!this.isAdjacent(attacker.x, attacker.y, targetPlayer.x, targetPlayer.y)) {
         return;
       }
+      if (!this.canMeleeReachTarget(attacker.x, attacker.y, targetPlayer.x, targetPlayer.y, attacker.mapLevel)) {
+        return;
+      }
     } else {
       if (!isWithinRange(attacker.x, attacker.y, targetPlayer.x, targetPlayer.y, attackRange)) {
         return;
       }
-    }
-
-    if (!this.hasLineOfSight(attacker.x, attacker.y, targetPlayer.x, targetPlayer.y, attacker.mapLevel)) {
-      return;
+      if (!this.hasLineOfSight(attacker.x, attacker.y, targetPlayer.x, targetPlayer.y, attacker.mapLevel)) {
+        return;
+      }
     }
 
     const attackerRef: EntityRef = { type: EntityType.Player, id: attacker.userId };
@@ -936,6 +1057,18 @@ export class CombatSystem {
     }
 
     return true;
+  }
+
+  private resetInstancedNpcIdleTicksOnAttack(
+    attacker: PlayerState | NPCState,
+    target: PlayerState | NPCState
+  ): void {
+    if (!("userId" in attacker) && attacker.instanced) {
+      attacker.instanced.idleTicks = 0;
+    }
+    if (!("userId" in target) && target.instanced) {
+      target.instanced.idleTicks = 0;
+    }
   }
 
 }

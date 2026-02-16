@@ -246,17 +246,6 @@ export class CookingService {
     const didBurn = willBurnItem(playerLevel, cookableItem, session.method);
     const outputItemId = didBurn ? cookableItem.burntItemId : cookableItem.cookedItemId;
 
-    const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
-      userId,
-      outputItemId,
-      0
-    );
-    if (availableCapacity < 1) {
-      this.config.messageService.sendServerInfo(userId, "Your inventory is full.");
-      this.endSession(userId);
-      return;
-    }
-
     const removeResult = this.config.inventoryService.removeItem(userId, cookableItem.rawItemId, 1);
     if (removeResult.removed < 1) {
       this.config.messageService.sendServerInfo(userId, "You don't have that item.");

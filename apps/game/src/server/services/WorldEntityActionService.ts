@@ -27,6 +27,10 @@ export interface PlayerEventAction {
   insideLocation?: WorldEntityActionLocation;
   /** Used by GoThroughDoor - position on other side of the door */
   outsideLocation?: WorldEntityActionLocation;
+  /** Used by GoThroughDoor - whether requirements apply in both directions */
+  checkRequirementsFromBothSides?: boolean;
+  /** Used by GoThroughDoor - if true, allows only outside -> inside traversal */
+  doesLockAfterEntering?: boolean;
   /** Used by MineThroughRocks - position on one side of the rocks */
   sideOne?: WorldEntityActionLocation;
   /** Used by MineThroughRocks - position on other side of the rocks */
@@ -44,6 +48,10 @@ export interface PlayerEventAction {
   }>;
   /** Optional side filter in data; currently not evaluated by server */
   executeOnDoorSide?: string;
+  /** Used by SpawnInstancedNPC */
+  id?: number;
+  spawnOnDoorSide?: string | null;
+  requirements?: Requirement[] | null;
 }
 
 /**

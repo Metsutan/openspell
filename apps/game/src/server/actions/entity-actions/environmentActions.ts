@@ -31,6 +31,7 @@ import type { RequirementCheckContext } from "../../services/RequirementsChecker
 import { SKILLS, isSkillSlug } from "../../../world/PlayerState";
 import { DelayType } from "../../systems/DelaySystem";
 import { buildShowLootMenuPayload } from "../../../protocol/packets/actions/ShowLootMenu";
+import type { WorldEntityAction } from "../../services/WorldEntityActionService";
 
 // =============================================================================
 // Constants
@@ -388,6 +389,51 @@ function executeEnvironmentAction(
 /**
  * Executes override behavior from worldentityactions.4.carbon.
  */
+function shouldCheckRequirementsForOverrideAction(
+  actionConfig: WorldEntityAction,
+  playerState: PlayerState
+): boolean {
+  const doorActions = actionConfig.playerEventActions.filter(
+    (eventAction) => eventAction.type === "GoThroughDoor"
+  );
+
+  // Non-door overrides should always enforce requirements.
+  if (doorActions.length === 0) {
+    return true;
+  }
+
+  const { x: px, y: py, mapLevel: pl } = playerState;
+
+  for (const eventAction of doorActions) {
+    if (!eventAction.insideLocation || !eventAction.outsideLocation) {
+      continue;
+    }
+
+    const isAtInside =
+      px === eventAction.insideLocation.x &&
+      py === eventAction.insideLocation.y &&
+      pl === eventAction.insideLocation.lvl;
+    const isAtOutside =
+      px === eventAction.outsideLocation.x &&
+      py === eventAction.outsideLocation.y &&
+      pl === eventAction.outsideLocation.lvl;
+
+    if (!isAtInside && !isAtOutside) {
+      continue;
+    }
+
+    // checkRequirementsFromBothSides=false means only check when entering (outside -> inside).
+    if (eventAction.checkRequirementsFromBothSides === false && isAtInside) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // If we cannot determine side, keep default strict behavior.
+  return true;
+}
+
 function executeOverrideAction(
   ctx: ActionContext,
   playerState: PlayerState,
@@ -402,71 +448,80 @@ function executeOverrideAction(
     return;
   }
 
-  // Check requirements - player has walked up to the entity and is now trying to use it
-  const context: RequirementCheckContext = {
-    playerState
-  };
+  // Check requirements - player has walked up to the entity and is now trying to use it.
+  // For directional doors, we can skip requirement checks when exiting from inside.
+  const shouldCheckRequirements = shouldCheckRequirementsForOverrideAction(actionConfig, playerState);
+  if (shouldCheckRequirements) {
+    const getInstancedNpcConfigIdsForOwner = (ownerUserId: number): number[] =>
+      ctx.instancedNpcService?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? [];
+    const context: RequirementCheckContext = {
+      playerState,
+      groundItemStates: ctx.groundItemStates,
+      currentTick: ctx.currentTick,
+      getInstancedNpcConfigIdsForOwner
+    };
 
-  const requirementCheck = ctx.worldEntityActionService.checkActionRequirements(actionConfig, context);
-  if (!requirementCheck.passed) {
-    // Player tried to use the entity but doesn't meet requirements
-    // Use custom message from action config, or fall back to action-specific defaults
-    let failureMessage;
-    let detailedFailureMessage: string = requirementCheck.failureReason ?? "";
-    
-    if (!failureMessage) {
-      // Default messages based on action type
-      switch (actionName) {
-        case "open":
-        case "close":
-          failureMessage = "It's locked.";
-          break;
-        case "enter":
-        case "exit":
-          failureMessage = "It doesn't budge.";
-          break;
-        case "mine":
-        case "mine_through":
-          failureMessage = "You are not skilled enough to mine this.";
-          break;
-        case "chop":
-          failureMessage = "You are not skilled enough to chop this.";
-          break;
-        case "fish":
-          failureMessage = "You are not skilled enough to fish here.";
-          break;
-        case "climb":
-        case "climb_over":
-        case "climb_same_map_level":
-          failureMessage = "You cannot climb this.";
-          break;
-        case "go_through":
-          failureMessage = "You cannot pass through.";
-          break;
-        case "unlock":
-          failureMessage = "You don't have the key.";
-          break;
-        case "picklock":
-          failureMessage = "You are not skilled enough to pick this lock.";
-          break;
-        case "search":
-          failureMessage = "You cannot search this.";
-          break;
-        case "touch":
-          failureMessage = "Nothing happens.";
-          break;
-        default:
-          // Fall back to detailed requirement failure reason
-          failureMessage = requirementCheck.failureReason || "You don't meet the requirements.";
+    const requirementCheck = ctx.worldEntityActionService.checkActionRequirements(actionConfig, context);
+    if (!requirementCheck.passed) {
+      // Player tried to use the entity but doesn't meet requirements
+      // Use custom message from action config, or fall back to action-specific defaults
+      let failureMessage;
+      let detailedFailureMessage: string = requirementCheck.failureReason ?? "";
+      
+      if (!failureMessage) {
+        // Default messages based on action type
+        switch (actionName) {
+          case "open":
+          case "close":
+            failureMessage = "It's locked.";
+            break;
+          case "enter":
+          case "exit":
+            failureMessage = "It doesn't budge.";
+            break;
+          case "mine":
+          case "mine_through":
+            failureMessage = "You are not skilled enough to mine this.";
+            break;
+          case "chop":
+            failureMessage = "You are not skilled enough to chop this.";
+            break;
+          case "fish":
+            failureMessage = "You are not skilled enough to fish here.";
+            break;
+          case "climb":
+          case "climb_over":
+          case "climb_same_map_level":
+            failureMessage = "You cannot climb this.";
+            break;
+          case "go_through":
+            failureMessage = "You cannot pass through.";
+            break;
+          case "unlock":
+            failureMessage = "You don't have the key.";
+            break;
+          case "picklock":
+            failureMessage = "You are not skilled enough to pick this lock.";
+            break;
+          case "search":
+            failureMessage = "You cannot search this.";
+            break;
+          case "touch":
+            failureMessage = "Nothing happens.";
+            break;
+          default:
+            // Fall back to detailed requirement failure reason
+            failureMessage = requirementCheck.failureReason || "You don't meet the requirements.";
+        }
       }
+      
+      ctx.messageService.sendServerInfo(playerState.userId, failureMessage);
+      ctx.messageService.sendServerInfo(playerState.userId, detailedFailureMessage);
+      console.log(
+        `[executeOverrideAction] Player ${playerState.userId} failed requirements for ${actionName} on entity ${entityState.id}: ${failureMessage}`
+      );
+      return;
     }
-    
-    ctx.messageService.sendServerInfo(playerState.userId, failureMessage);
-    ctx.messageService.sendServerInfo(playerState.userId, detailedFailureMessage);
-    console.log(
-      `[executeOverrideAction] Player ${playerState.userId} failed requirements for ${actionName} on entity ${entityState.id}: ${failureMessage}`
-    );
-    return;
   }
 
   for (const eventAction of actionConfig.playerEventActions) {
@@ -487,7 +542,14 @@ function executeOverrideAction(
         break;
 
       case "GoThroughDoor":
-        executeGoThroughDoor(ctx, playerState, entityState, eventAction.insideLocation, eventAction.outsideLocation);
+        executeGoThroughDoor(
+          ctx,
+          playerState,
+          entityState,
+          eventAction.insideLocation,
+          eventAction.outsideLocation,
+          eventAction.doesLockAfterEntering
+        );
         break;
 
       case "MineThroughRocks":
@@ -501,6 +563,49 @@ function executeOverrideAction(
       case "PlayerGiveItems":
         executePlayerGiveItemsEvent(ctx, playerState.userId, eventAction as any);
         break;
+      case "StartBanking":
+        // Mirror default Action.BankAt behavior for scripted world-entity actions.
+        ctx.bankingService.openBank(playerState.userId, entityState.id).catch((err) => {
+          console.error(`[banking] Error opening bank for user ${playerState.userId}:`, err);
+          ctx.messageService.sendServerInfo(playerState.userId, "Unable to access the bank at this time.");
+        });
+        break;
+      case "SpawnInstancedNPC": {
+        if (!ctx.instancedNpcService) {
+          console.warn("[executeOverrideAction] SpawnInstancedNPC requested but service is unavailable");
+          break;
+        }
+        const configId = Number((eventAction as any).id);
+        if (!Number.isInteger(configId) || configId <= 0) {
+          console.warn(`[executeOverrideAction] Invalid SpawnInstancedNPC id: ${(eventAction as any).id}`);
+          break;
+        }
+
+        const eventRequirements = (eventAction as any).requirements;
+        if (Array.isArray(eventRequirements) && eventRequirements.length > 0) {
+          const syntheticAction: WorldEntityAction = {
+            targetAction: "SpawnInstancedNPC",
+            requirements: eventRequirements,
+            playerEventActions: []
+          };
+          const eventReqCheck = ctx.worldEntityActionService.checkActionRequirements(syntheticAction, {
+            playerState,
+            groundItemStates: ctx.groundItemStates,
+            currentTick: ctx.currentTick,
+            getInstancedNpcConfigIdsForOwner: (ownerUserId) =>
+              ctx.instancedNpcService?.getActiveInstancedNpcConfigIdsForOwner(ownerUserId) ?? []
+          });
+          if (!eventReqCheck.passed) {
+            break;
+          }
+        }
+
+        const spawnResult = ctx.instancedNpcService.spawnInstancedNpc(configId, playerState.userId);
+        if (!spawnResult.ok && spawnResult.reason === "already_has_active_instanced_npc") {
+          ctx.messageService.sendServerInfo(playerState.userId, "Nothing interesting happens.");
+        }
+        break;
+      }
 
       default:
         console.warn(`[executeOverrideAction] Unknown event type: ${eventAction.type}`);
@@ -1249,7 +1354,8 @@ function executeGoThroughDoor(
   playerState: PlayerState,
   entityState: WorldEntityState,
   insideLocation: WorldEntityActionLocation | undefined,
-  outsideLocation: WorldEntityActionLocation | undefined
+  outsideLocation: WorldEntityActionLocation | undefined,
+  doesLockAfterEntering?: boolean
 ): void {
   if (!insideLocation || !outsideLocation) {
     ctx.messageService.sendServerInfo(playerState.userId, "The door seems stuck");
@@ -1266,11 +1372,33 @@ function executeGoThroughDoor(
     return;
   }
 
+  if (doesLockAfterEntering === true && isAtInside) {
+    ctx.messageService.sendServerInfo(playerState.userId, "It's locked from this side.");
+    return;
+  }
+
   const destination = isAtInside ? outsideLocation : insideLocation;
 
   console.log(`[executeGoThroughDoor] Player ${playerState.userId} through door to (${destination.x}, ${destination.y})`);
 
+  // Cross-level transitions must use TeleportService so the client receives map-level sync.
+  if ((destination.lvl as MapLevel) !== pl) {
+    const result = ctx.teleportService.changeMapLevel(
+      playerState.userId,
+      destination.x,
+      destination.y,
+      destination.lvl as MapLevel
+    );
+    if (!result.success) {
+      ctx.messageService.sendServerInfo(playerState.userId, "The door seems stuck");
+    }
+    return;
+  }
+
   const oldPosition = { x: px, y: py, mapLevel: pl };
+
+  // Instant relocation can leave behind a stale movement plan from pre-transition pathing.
+  ctx.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: playerState.userId });
 
   // Update player position (this also sets the dirty flag for persistence)
   playerState.updateLocation(destination.lvl as MapLevel, destination.x, destination.y);
@@ -1394,7 +1522,24 @@ function executeMineThroughRocks(
   // Send message
   ctx.messageService.sendServerInfo(playerState.userId, "You mine your way through the rocks");
 
+  // Cross-level transitions must use TeleportService so the client receives map-level sync.
+  if ((destination.lvl as MapLevel) !== pl) {
+    const result = ctx.teleportService.changeMapLevel(
+      playerState.userId,
+      destination.x,
+      destination.y,
+      destination.lvl as MapLevel
+    );
+    if (!result.success) {
+      ctx.messageService.sendServerInfo(playerState.userId, "Unable to mine through.");
+    }
+    return;
+  }
+
   const oldPosition = { x: px, y: py, mapLevel: pl };
+
+  // Instant relocation can leave behind a stale movement plan from pre-transition pathing.
+  ctx.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: playerState.userId });
 
   // Update player position (this also sets the dirty flag for persistence)
   playerState.updateLocation(destination.lvl as MapLevel, destination.x, destination.y);

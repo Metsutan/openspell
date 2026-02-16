@@ -23,6 +23,16 @@ import type { Target } from "../../world/targeting/Target";
  */
 export type NPCCombatStat = "hitpoints" | "accuracy" | "strength" | "defense" | "range" | "magic";
 
+export interface InstancedNpcRuntimeState {
+  configId: number;
+  ownerUserId: number;
+  maxIdleTicks: number;
+  idleTicks: number;
+  lootOverrideId: number | null;
+  linkedInstanceNPCDeadGroup: number[] | null;
+  playerEventActionsWhenKilled: unknown[] | null;
+}
+
 export interface NPCState extends SpatialEntity {
   id: number;
   definitionId: number;
@@ -59,6 +69,8 @@ export interface NPCState extends SpatialEntity {
    * then the NPC can attack again. 
    */
   combatDelay: number;
+  /** Runtime metadata for per-player instanced NPCs. Null for world NPCs. */
+  instanced: InstancedNpcRuntimeState | null;
 }
 
 export function getNpcBaseCombatStat(npc: NPCState, stat: NPCCombatStat): number {

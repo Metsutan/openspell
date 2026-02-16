@@ -1,5 +1,6 @@
 import { PlayerState, SKILLS, SkillSlug, EQUIPMENT_SLOTS, EquipmentSlot } from "../../world/PlayerState";
 import type { InventoryItem, BankItem } from "../../world/PlayerState";
+import type { GroundItemState } from "../state/EntityState";
 
 /**
  * Base requirement interface - all requirement types extend this
@@ -38,6 +39,7 @@ export interface EquippedItemRequirement extends BaseRequirement {
   equipmenttype: string | null; // Equipment slot (e.g., "helmet", "weapon") or null for any
   itemids: number[] | null; // Array of acceptable item IDs or null for any
   isequipped: boolean | null; // true = must be equipped, false = must not be equipped, null = check if any items equipped
+  anyitemequipped?: boolean | null; // true = any slot must be equipped, false = all slots must be empty
 }
 
 /**
@@ -63,6 +65,40 @@ export interface InventoryItemRequirement extends BaseRequirement {
 }
 
 /**
+ * Available inventory space requirement - checks how many inventory slots are empty (null)
+ */
+export interface AvailableInventorySpaceRequirement extends BaseRequirement {
+  type: "availableinventoryspace";
+  availableslotsneeded: number;
+  operator?: "===" | ">=" | "<=" | ">" | "<" | "!=";
+}
+
+/**
+ * Player appearance requirement - checks specific appearance IDs on player appearance slots
+ */
+export interface PlayerAppearanceRequirement extends BaseRequirement {
+  type: "playerappearance";
+  appearancetype: string;
+  appearanceids: number | number[];
+  booleanoperator?: "or" | "and" | null;
+  operator?: "===" | ">=" | "<=" | ">" | "<" | "!=";
+}
+
+/**
+ * Currently spawned instanced NPC requirement.
+ * - instancednpcids=[] or null => checks if player has any active instanced NPCs
+ * - instancednpcids=[...] => checks if player has any active NPCs with those instanced config IDs
+ *
+ * By default this requirement passes only when there are none active (hasSpawned === false).
+ * This matches common gating like "player needs to not have any instanced npcs spawned in".
+ */
+export interface CurrentlySpawnedInstancedNpcRequirement extends BaseRequirement {
+  type: "currentlyspawnedinstancednpc";
+  instancednpcids?: number[] | null;
+  shouldbe?: boolean;
+}
+
+/**
  * Union type of all requirement types
  */
 export type Requirement =
@@ -70,7 +106,10 @@ export type Requirement =
   | SkillRequirement
   | EquippedItemRequirement
   | PlayerOwnsItemRequirement
-  | InventoryItemRequirement;
+  | InventoryItemRequirement
+  | AvailableInventorySpaceRequirement
+  | PlayerAppearanceRequirement
+  | CurrentlySpawnedInstancedNpcRequirement;
 
 /**
  * Result of a requirement check
@@ -85,6 +124,9 @@ export interface RequirementCheckResult {
  */
 export interface RequirementCheckContext {
   playerState: PlayerState;
+  groundItemStates?: Map<number, GroundItemState>;
+  currentTick?: number;
+  getInstancedNpcConfigIdsForOwner?: (userId: number) => number[];
 }
 
 /**
@@ -130,6 +172,12 @@ export class RequirementsChecker {
         return this.checkPlayerOwnsItemRequirement(requirement, context);
       case "inventoryitem":
         return this.checkInventoryItemRequirement(requirement, context);
+      case "availableinventoryspace":
+        return this.checkAvailableInventorySpaceRequirement(requirement, context);
+      case "playerappearance":
+        return this.checkPlayerAppearanceRequirement(requirement, context);
+      case "currentlyspawnedinstancednpc":
+        return this.checkCurrentlySpawnedInstancedNpcRequirement(requirement, context);
       default:
         console.warn(`[RequirementsChecker] Unknown requirement type:`, requirement);
         return {
@@ -153,25 +201,30 @@ export class RequirementsChecker {
     // Handle array of checkpoints with boolean operator
     if (Array.isArray(requirement.checkpoint)) {
       const checkpoints = requirement.checkpoint;
-      const operator = requirement.booleanoperator || "or";
+      const combineOperator = requirement.booleanoperator || "or";
+      const compareOperator = requirement.operator || "===";
+      const comparisons = checkpoints.map((checkpoint) =>
+        this.compareNumbers(currentCheckpoint, compareOperator, checkpoint)
+      );
 
-      if (operator === "or") {
-        // Player must be at any of the checkpoints
-        const atCheckpoint = checkpoints.includes(currentCheckpoint);
-        if (!atCheckpoint) {
+      if (combineOperator === "or") {
+        const passed = comparisons.some(Boolean);
+        if (!passed) {
           return {
             passed: false,
-            failureReason: `${requirement.desc} (quest ${requirement.questid}, need checkpoint ${checkpoints.join(" or ")}, at ${currentCheckpoint})`,
+            failureReason:
+              `${requirement.desc} (quest ${requirement.questid}, need checkpoint ${compareOperator} one of [` +
+              `${checkpoints.join(", ")}], at ${currentCheckpoint})`,
           };
         }
-      } else if (operator === "and") {
-        // This is unusual but handle it - player must somehow satisfy all checkpoints?
-        // For now, just check if at the highest checkpoint
-        const maxCheckpoint = Math.max(...checkpoints);
-        if (currentCheckpoint < maxCheckpoint) {
+      } else if (combineOperator === "and") {
+        const passed = comparisons.every(Boolean);
+        if (!passed) {
           return {
             passed: false,
-            failureReason: `${requirement.desc} (quest ${requirement.questid}, need all checkpoints ${checkpoints.join(" and ")})`,
+            failureReason:
+              `${requirement.desc} (quest ${requirement.questid}, need checkpoint ${compareOperator} all of [` +
+              `${checkpoints.join(", ")}], at ${currentCheckpoint})`,
           };
         }
       }
@@ -234,6 +287,26 @@ export class RequirementsChecker {
     context: RequirementCheckContext
   ): RequirementCheckResult {
     const { playerState } = context;
+    const hasAnyEquipped = EQUIPMENT_SLOTS.some(
+      (slot) => playerState.getEquipment(slot) !== null
+    );
+
+    // Explicit "any item equipped" check from content definitions.
+    if (typeof requirement.anyitemequipped === "boolean") {
+      if (requirement.anyitemequipped && !hasAnyEquipped) {
+        return {
+          passed: false,
+          failureReason: `${requirement.desc} (no items equipped)`,
+        };
+      }
+      if (!requirement.anyitemequipped && hasAnyEquipped) {
+        return {
+          passed: false,
+          failureReason: `${requirement.desc} (has items equipped)`,
+        };
+      }
+      return { passed: true };
+    }
 
     // Special case: check if NO items are equipped
     if (
@@ -241,11 +314,6 @@ export class RequirementsChecker {
       requirement.itemids === null &&
       requirement.isequipped === null
     ) {
-      // Check if any items are equipped
-      const hasAnyEquipped = EQUIPMENT_SLOTS.some(
-        (slot) => playerState.getEquipment(slot) !== null
-      );
-
       if (hasAnyEquipped) {
         return {
           passed: false,
@@ -294,10 +362,6 @@ export class RequirementsChecker {
     }
 
     // Check if any items are equipped (generic check)
-    const hasAnyEquipped = EQUIPMENT_SLOTS.some(
-      (slot) => playerState.getEquipment(slot) !== null
-    );
-
     if (requirement.isequipped === false && hasAnyEquipped) {
       return {
         passed: false,
@@ -316,7 +380,7 @@ export class RequirementsChecker {
   }
 
   /**
-   * Checks player owns item requirement (bank + inventory + equipment)
+   * Checks player owns item requirement (bank + inventory + equipment + visible ground items)
    */
   private checkPlayerOwnsItemRequirement(
     requirement: PlayerOwnsItemRequirement,
@@ -344,6 +408,14 @@ export class RequirementsChecker {
     if (playerState.bank) {
       totalOwned += this.countItemInBank(playerState.bank, targetItemId);
     }
+
+    // Count visible dropped items on the same map level.
+    // This supports requirements like "you must not already have a key on the ground".
+    totalOwned += this.countVisibleGroundItemsForPlayer(
+      context,
+      targetItemId,
+      checkIOU
+    );
 
     if (!this.compareNumbers(totalOwned, operator, targetAmount)) {
       return {
@@ -379,6 +451,127 @@ export class RequirementsChecker {
       return {
         passed: false,
         failureReason: `${requirement.desc} (has ${inventoryCount} in inventory, need ${operator} ${targetAmount})`,
+      };
+    }
+
+    return { passed: true };
+  }
+
+  /**
+   * Checks available inventory space requirement (empty/null slots only)
+   */
+  private checkAvailableInventorySpaceRequirement(
+    requirement: AvailableInventorySpaceRequirement,
+    context: RequirementCheckContext
+  ): RequirementCheckResult {
+    const { playerState } = context;
+    const availableSlots = playerState.countEmptySlots();
+    const requiredSlots = requirement.availableslotsneeded;
+    const operator = requirement.operator || ">=";
+
+    if (!this.compareNumbers(availableSlots, operator, requiredSlots)) {
+      return {
+        passed: false,
+        failureReason:
+          `${requirement.desc} (has ${availableSlots} available slots, need ${operator} ${requiredSlots})`,
+      };
+    }
+
+    return { passed: true };
+  }
+
+  /**
+   * Checks player appearance requirement against one or more appearance IDs.
+   */
+  private checkPlayerAppearanceRequirement(
+    requirement: PlayerAppearanceRequirement,
+    context: RequirementCheckContext
+  ): RequirementCheckResult {
+    const { playerState } = context;
+    const currentAppearanceValue = this.getAppearanceValueByType(playerState, requirement.appearancetype);
+    if (currentAppearanceValue === null) {
+      return {
+        passed: false,
+        failureReason: `${requirement.desc} (unknown appearance type: ${requirement.appearancetype})`,
+      };
+    }
+
+    const operator = requirement.operator || "===";
+    const appearanceIds = Array.isArray(requirement.appearanceids)
+      ? requirement.appearanceids.filter((id) => Number.isFinite(id))
+      : [requirement.appearanceids];
+
+    if (appearanceIds.length === 0) {
+      return {
+        passed: false,
+        failureReason: `${requirement.desc} (no valid appearance IDs provided)`,
+      };
+    }
+
+    if (appearanceIds.length === 1) {
+      const targetId = appearanceIds[0];
+      if (!this.compareNumbers(currentAppearanceValue, operator, targetId)) {
+        return {
+          passed: false,
+          failureReason:
+            `${requirement.desc} (${requirement.appearancetype}=${currentAppearanceValue}, need ${operator} ${targetId})`,
+        };
+      }
+      return { passed: true };
+    }
+
+    const combineOperator = requirement.booleanoperator || "or";
+    const comparisons = appearanceIds.map((targetId) =>
+      this.compareNumbers(currentAppearanceValue, operator, targetId)
+    );
+    const passed = combineOperator === "and"
+      ? comparisons.every(Boolean)
+      : comparisons.some(Boolean);
+
+    if (!passed) {
+      return {
+        passed: false,
+        failureReason:
+          `${requirement.desc} (${requirement.appearancetype}=${currentAppearanceValue}, need ${operator} ` +
+          `${combineOperator} [${appearanceIds.join(", ")}])`,
+      };
+    }
+
+    return { passed: true };
+  }
+
+  private checkCurrentlySpawnedInstancedNpcRequirement(
+    requirement: CurrentlySpawnedInstancedNpcRequirement,
+    context: RequirementCheckContext
+  ): RequirementCheckResult {
+    const { playerState, getInstancedNpcConfigIdsForOwner } = context;
+    if (!getInstancedNpcConfigIdsForOwner) {
+      return {
+        passed: false,
+        failureReason: `${requirement.desc} (instanced npc state unavailable)`,
+      };
+    }
+
+    const activeConfigIds = getInstancedNpcConfigIdsForOwner(playerState.userId);
+    const targetIds = Array.isArray(requirement.instancednpcids)
+      ? requirement.instancednpcids.filter((id) => Number.isInteger(id))
+      : [];
+
+    let hasSpawned = false;
+    if (targetIds.length === 0) {
+      hasSpawned = activeConfigIds.length > 0;
+    } else {
+      const activeSet = new Set<number>(activeConfigIds);
+      hasSpawned = targetIds.some((id) => activeSet.has(id));
+    }
+
+    const shouldBeSpawned = requirement.shouldbe === true;
+    const passed = hasSpawned === shouldBeSpawned;
+    if (!passed) {
+      const expectedText = shouldBeSpawned ? "have" : "not have";
+      return {
+        passed: false,
+        failureReason: `${requirement.desc} (player must ${expectedText} matching currently spawned instanced NPCs)`,
       };
     }
 
@@ -435,6 +628,58 @@ export class RequirementsChecker {
   }
 
   /**
+   * Helper: Count ground items visible to this player on their current map level.
+   */
+  private countVisibleGroundItemsForPlayer(
+    context: RequirementCheckContext,
+    itemId: number,
+    checkIOU: boolean
+  ): number {
+    const { playerState, groundItemStates, currentTick } = context;
+    if (!groundItemStates || groundItemStates.size === 0) {
+      return 0;
+    }
+
+    let count = 0;
+    for (const item of groundItemStates.values()) {
+      if (!item.isPresent) continue;
+      if (item.itemId !== itemId) continue;
+      if (item.mapLevel !== playerState.mapLevel) continue;
+      if (item.isIOU !== checkIOU) continue;
+      if (!this.isGroundItemVisibleToPlayer(item, playerState.userId, currentTick)) continue;
+      count += item.amount;
+    }
+    return count;
+  }
+
+  private isGroundItemVisibleToPlayer(
+    item: GroundItemState,
+    userId: number,
+    currentTick?: number
+  ): boolean {
+    // Already globally visible.
+    if (item.visibleToUserId === null) {
+      return true;
+    }
+
+    // Private drop visible to owner.
+    if (item.visibleToUserId === userId) {
+      return true;
+    }
+
+    // If the item should have become globally visible by now, treat it as visible.
+    if (
+      item.visibleToAllAtTick !== null &&
+      currentTick !== undefined &&
+      currentTick >= item.visibleToAllAtTick
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Helper: Compare numbers with operator
    */
   private compareNumbers(
@@ -460,6 +705,29 @@ export class RequirementsChecker {
       default:
         console.warn(`[RequirementsChecker] Unknown operator: ${operator}`);
         return false;
+    }
+  }
+
+  private getAppearanceValueByType(playerState: PlayerState, appearanceType: string): number | null {
+    const normalized = appearanceType.toLowerCase().trim();
+    switch (normalized) {
+      case "hair":
+      case "hairstyle":
+        return playerState.appearance.hairStyleId;
+      case "beard":
+      case "beardstyle":
+        return playerState.appearance.beardStyleId;
+      case "shirt":
+        return playerState.appearance.shirtId;
+      case "body":
+      case "bodytype":
+        return playerState.appearance.bodyTypeId;
+      case "pants":
+      case "legs":
+      case "legsid":
+        return playerState.appearance.legsId;
+      default:
+        return null;
     }
   }
 

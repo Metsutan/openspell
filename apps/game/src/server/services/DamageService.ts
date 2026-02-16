@@ -51,15 +51,25 @@ export class DamageService {
     const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
+      console.log(
+        `[DamageService] ranged atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=false damage=0`
+      );
       return 0;
     }
 
     const maxHit = this.calculateRangedMaxHit(attacker);
     if (maxHit <= 0) {
+      console.log(
+        `[DamageService] ranged atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=0`
+      );
       return 0;
     }
 
-    return Math.floor(Math.random() * maxHit) + 1;
+    const damage = Math.floor(Math.random() * maxHit) + 1;
+    console.log(
+      `[DamageService] ranged atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=${damage}`
+    );
+    return damage;
   }
 
   /**
@@ -76,6 +86,39 @@ export class DamageService {
   }
 
   /**
+   * Calculates magic spell damage with hit chance.
+   * Uses magic attack roll (magic level + magic bonus) against magic defense roll.
+   */
+  calculateMagicSpellDamage(
+    attacker: PlayerState | NPCState,
+    target: PlayerState | NPCState,
+    spellId: number
+  ): number {
+    const spell = this.config.spellCatalog?.getDefinitionById(spellId);
+    const maxDamage = spell?.maxDamage ?? 0;
+    if (maxDamage <= 0) {
+      return 0;
+    }
+
+    const attackRoll = this.calculateMagicAttackRoll(attacker);
+    const defenseRoll = this.calculateMagicDefenseRoll(target);
+    const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
+    const hitRoll = Math.random();
+    if (hitRoll > hitChance) {
+      console.log(
+        `[DamageService] magic atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=false damage=0`
+      );
+      return 0;
+    }
+
+    const damage = Math.floor(Math.random() * maxDamage) + 1;
+    console.log(
+      `[DamageService] magic atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxDamage} damage=${damage}`
+    );
+    return damage;
+  }
+
+  /**
    * Calculates damage dealt by an attacker to a target.
    * Rolls for hit using accuracy vs defense, then rolls damage if hit succeeds.
    * 
@@ -89,11 +132,11 @@ export class DamageService {
    * 4. Roll to see if attack hits - Light: random check
    * 5. Early exit if miss (returns 0)
    * 6. Calculate maximum hit - Heavy: iterates equipment for strength bonuses
-   * 7. Roll damage between 1 and maxHit
+   * 7. Roll damage between 0 and maxHit (OSRS-style)
    * 
    * @param attacker The entity dealing damage
    * @param target The entity receiving damage
-   * @returns Damage amount (0 if miss, 1-maxHit if hit)
+   * @returns Damage amount (0 if miss, 0-maxHit if hit)
    */
   calculateDamage(
     attacker: PlayerState | NPCState,
@@ -113,20 +156,32 @@ export class DamageService {
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
       // Miss! Early exit saves maxHit calculation
+      console.log(
+        `[DamageService] melee atkRoll=${accuracyRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=false damage=0`
+      );
       return 0;
     }
 
     // Calculate maximum possible hit (only if attack lands)
     const maxHit = this.getMaximumHit(attacker);
-    if (maxHit <= 0) return 0;
+    if (maxHit <= 0) {
+      console.log(
+        `[DamageService] melee atkRoll=${accuracyRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=0`
+      );
+      return 0;
+    }
     
-    // Hit! Roll damage between 1 and maxHit
-    return Math.floor(Math.random() * maxHit) + 1;
+    // Hit! Roll damage between 0 and maxHit (inclusive), OSRS-style
+    const damage = Math.floor(Math.random() * (maxHit + 1));
+    console.log(
+      `[DamageService] melee atkRoll=${accuracyRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=${damage}`
+    );
+    return damage;
   }
 
   /**
    * Calculates the maximum hit for an attacker.
-   * Formula: floor(0.5 + effectiveStrength * (totalStrengthBonus + 64) / 640)
+   * Formula: floor((effectiveStrength * (totalStrengthBonus + 64) + 320) / 640)
    * 
    * @param attacker The entity attacking
    * @returns Maximum hit (floor of base damage)
@@ -135,7 +190,7 @@ export class DamageService {
     const effectiveStrength = this.getEffectiveStrength(attacker);
     const totalStrengthBonus = this.getTotalStrengthBonus(attacker);
     
-    const baseDamage = 1 + effectiveStrength * (totalStrengthBonus + 64) / 640;
+    const baseDamage = (effectiveStrength * (totalStrengthBonus + 64) + 320) / 640;
     return Math.floor(baseDamage);
   }
 
@@ -178,8 +233,8 @@ export class DamageService {
    * Calculates hit chance based on accuracy roll vs defense roll.
    * 
    * Formula:
-   * - If attackRoll > defenseRoll: 1 - ((defenseRoll + 2) / (2 * attackRoll + 1))
-   * - Otherwise: attackRoll / (2 * defenseRoll + 1)
+   * - If attackRoll > defenseRoll: 1 - ((defenseRoll + 2) / (2 * (attackRoll + 1)))
+   * - Otherwise: attackRoll / (2 * (defenseRoll + 1))
    * 
    * @param attackRoll Attacker's accuracy roll
    * @param defenseRoll Target's defense roll
@@ -187,9 +242,9 @@ export class DamageService {
    */
   private calculateHitChance(attackRoll: number, defenseRoll: number): number {
     if (attackRoll > defenseRoll) {
-      return 1 - ((defenseRoll + 2) / (2 * attackRoll + 1));
+      return 1 - ((defenseRoll + 2) / (2 * (attackRoll + 1)));
     } else {
-      return attackRoll / (2 * defenseRoll + 1);
+      return attackRoll / (2 * (defenseRoll + 1));
     }
   }
 
@@ -327,6 +382,35 @@ export class DamageService {
     return maxHitByAmmo[projectileId] ?? null;
   }
 
+  private calculateMagicAttackRoll(attacker: PlayerState | NPCState): number {
+    if ("userId" in attacker) {
+      // Player: E_a = M_lvl * P_e + 8 (P_e = 1, no prayers)
+      const magicLevel = attacker.getSkillBoostedLevel("magic");
+      const effectiveLevel = magicLevel + 8;
+      return Math.floor(effectiveLevel * (attacker.magicBonus + 64));
+    }
+    // Monster: E_a = M_lvl + 9
+    const magicLevel = attacker.magicLevel;
+    const effectiveLevel = magicLevel + 9;
+    const magicBonus = attacker.definition.combat?.magicBonus ?? 0;
+    return Math.floor(effectiveLevel * (magicBonus + 64));
+  }
+  
+  private calculateMagicDefenseRoll(target: PlayerState | NPCState): number {
+    if ("userId" in target) {
+      // Player: E_d = M_lvl * 0.7 + D_lvl * 0.3 + 8, using rangeBonus as magic def
+      const magicLevel = target.getSkillBoostedLevel("magic");
+      const defenseLevel = target.getSkillBoostedLevel("defense");
+      const effectiveLevel = Math.floor(magicLevel * 0.7 + defenseLevel * 0.3) + 8;
+      return Math.floor(effectiveLevel * (target.rangeBonus + 64));
+    }
+    // Monster: E_d = M_lvl + 9, uses magic defense bonus (magicBonus here)
+    const magicLevel = target.magicLevel;
+    const effectiveLevel = magicLevel + 9;
+    const magicDefBonus = target.definition.combat?.rangeBonus ?? 0;
+    return Math.floor(effectiveLevel * (magicDefBonus + 64));
+  }
+
   /**
    * Calculates effective strength for an attacker.
    * Formula: floor(floor(floor(strength + tempBuffs) * percentageBonuses) + styleBonus + 8)
@@ -362,22 +446,25 @@ export class DamageService {
 
   /**
    * Gets the style bonus for strength based on combat style setting.
-   * Returns 3 if CombatStyle === Strength, otherwise 1.
+   * Returns:
+   * - 3 for aggressive (strength-only)
+   * - 1 for controlled (mixed styles containing strength)
+   * - 0 otherwise
+   * NPCs use +1.
    * 
    * @param attacker The entity attacking
-   * @returns Style bonus (3 for Strength style, 1 otherwise)
+   * @returns Style bonus for effective strength
    */
   private getStrengthStyleBonus(attacker: PlayerState | NPCState): number {
-    // Only players have combat style settings
-    if ('userId' in attacker) {
-      const combatStyle = attacker.settings[PlayerSetting.CombatStyle];
-      if (combatStyle === CombatStyleValues.Strength) {
-        return 3;
-      }
+    if (!('userId' in attacker)) {
+      return 1;
     }
-    
-    // NPCs and players with other styles get +1
-    return 1;
+    const combatStyle = attacker.settings[PlayerSetting.CombatStyle];
+    const hasStrength = (combatStyle & CombatStyleValues.Strength) === CombatStyleValues.Strength;
+    if (!hasStrength) {
+      return 0;
+    }
+    return combatStyle === CombatStyleValues.Strength ? 3 : 1;
   }
 
   /**
@@ -415,22 +502,25 @@ export class DamageService {
 
   /**
    * Gets the style bonus for accuracy based on combat style setting.
-   * Returns 3 if CombatStyle === Accurate, otherwise 1.
+   * Returns:
+   * - 3 for accurate (accurate-only)
+   * - 1 for controlled (mixed styles containing accurate)
+   * - 0 otherwise
+   * NPCs use +1.
    * 
    * @param attacker The entity attacking
-   * @returns Style bonus (3 for Accurate style, 1 otherwise)
+   * @returns Style bonus for effective accuracy
    */
   private getAccuracyStyleBonus(attacker: PlayerState | NPCState): number {
-    // Only players have combat style settings
-    if ('userId' in attacker) {
-      const combatStyle = attacker.settings[PlayerSetting.CombatStyle];
-      if (combatStyle === CombatStyleValues.Accurate) {
-        return 3;
-      }
+    if (!('userId' in attacker)) {
+      return 1;
     }
-    
-    // NPCs and players with other styles get +1
-    return 1;
+    const combatStyle = attacker.settings[PlayerSetting.CombatStyle];
+    const hasAccurate = (combatStyle & CombatStyleValues.Accurate) === CombatStyleValues.Accurate;
+    if (!hasAccurate) {
+      return 0;
+    }
+    return combatStyle === CombatStyleValues.Accurate ? 3 : 1;
   }
 
   /**
@@ -470,22 +560,25 @@ export class DamageService {
 
   /**
    * Gets the style bonus for defense based on combat style setting.
-   * Returns 3 if CombatStyle === Defense, otherwise 1.
+   * Returns:
+   * - 3 for defensive (defense-only)
+   * - 1 for controlled (mixed styles containing defense)
+   * - 0 otherwise
+   * NPCs use +1.
    * 
    * @param target The entity defending
-   * @returns Style bonus (3 for Defense style, 1 otherwise)
+   * @returns Style bonus for effective defense
    */
   private getDefenseStyleBonus(target: PlayerState | NPCState): number {
-    // Only players have combat style settings
-    if ('userId' in target) {
-      const combatStyle = target.settings[PlayerSetting.CombatStyle];
-      if (combatStyle === CombatStyleValues.Defense) {
-        return 3;
-      }
+    if (!('userId' in target)) {
+      return 1;
     }
-    
-    // NPCs and players with other styles get +1
-    return 1;
+    const combatStyle = target.settings[PlayerSetting.CombatStyle];
+    const hasDefense = (combatStyle & CombatStyleValues.Defense) === CombatStyleValues.Defense;
+    if (!hasDefense) {
+      return 0;
+    }
+    return combatStyle === CombatStyleValues.Defense ? 3 : 1;
   }
 
   /**

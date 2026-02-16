@@ -204,6 +204,7 @@ function heuristicXY(x: number, y: number, goal: Point): number {
 
 // Reuse heap too (avoid per-search allocation)
 let OPEN_HEAP: MinHeapIndex | null = null;
+let OPEN_HEAP_WS: ScoresWorkspace | null = null;
 
 /**
  * Performs A* pathfinding search with optional radius limit.
@@ -236,7 +237,13 @@ function performAstarSearch(
     const ws = ASTAR_WS;
     beginRun(ws);
 
-    if (!OPEN_HEAP) OPEN_HEAP = new MinHeapIndex((idx) => ws.fScore[idx]);
+    // The heap comparator closes over `ws`. If workspace changes (e.g. switching
+    // between 1024x1024 and 480x480 map grids), we must rebuild the heap so it
+    // reads fScore from the current workspace.
+    if (!OPEN_HEAP || OPEN_HEAP_WS !== ws) {
+        OPEN_HEAP = new MinHeapIndex((idx) => ws.fScore[idx]);
+        OPEN_HEAP_WS = ws;
+    }
     const openSet = OPEN_HEAP;
     openSet.clear();
 

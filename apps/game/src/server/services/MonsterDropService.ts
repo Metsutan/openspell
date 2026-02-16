@@ -307,7 +307,8 @@ export class MonsterDropService {
     mapLevel: MapLevel,
     x: number,
     y: number,
-    killerUserId: number | null
+    killerUserId: number | null,
+    lootTableIdOverride: number | null = null
   ): LootDrop[] {
     // Get NPC definition to find loot table ID
     const npcDef = this.config.entityCatalog.getDefinitionById(npcDefinitionId);
@@ -315,7 +316,7 @@ export class MonsterDropService {
       return [];
     }
 
-    const lootTableId = npcDef.combat.lootTableId;
+    const lootTableId = lootTableIdOverride ?? npcDef.combat.lootTableId;
     if (lootTableId === 0 || lootTableId === undefined) {
       // No loot table configured
       return [];
@@ -433,9 +434,10 @@ export class MonsterDropService {
     mapLevel: MapLevel,
     x: number,
     y: number,
-    killerUserId: number | null
+    killerUserId: number | null,
+    lootTableIdOverride: number | null = null
   ): void {
-    const drops = this.generateLoot(npcDefinitionId, mapLevel, x, y, killerUserId);
+    const drops = this.generateLoot(npcDefinitionId, mapLevel, x, y, killerUserId, lootTableIdOverride);
     
     if (drops.length > 0) {
       const npcDef = this.config.entityCatalog.getDefinitionById(npcDefinitionId);

@@ -14,7 +14,8 @@ import {
   serializePlayerAbilities,
   serializePlayerSettings,
   type EquipmentSlot,
-  type FullInventory
+  type FullInventory,
+  type PlayerAppearance
 } from "../../world/PlayerState";
 import { NormalizedPlayerStateWrites, type PlayerStateSnapshotDTO } from "../dtos";
 import { States } from "../../protocol/enums/States";
@@ -352,6 +353,31 @@ export class PlayerPersistenceManager {
         }
       });
 
+      await tx.playerAppearance.upsert({
+        where: {
+          userId_persistenceId: {
+            userId: playerState.userId,
+            persistenceId
+          }
+        },
+        update: {
+          hairStyleId: playerState.appearance.hairStyleId,
+          beardStyleId: playerState.appearance.beardStyleId,
+          shirtId: playerState.appearance.shirtId,
+          bodyTypeId: playerState.appearance.bodyTypeId,
+          legsId: playerState.appearance.legsId
+        },
+        create: {
+          userId: playerState.userId,
+          persistenceId,
+          hairStyleId: playerState.appearance.hairStyleId,
+          beardStyleId: playerState.appearance.beardStyleId,
+          shirtId: playerState.appearance.shirtId,
+          bodyTypeId: playerState.appearance.bodyTypeId,
+          legsId: playerState.appearance.legsId
+        }
+      });
+
       // Save skills to PlayerSkill table (primary storage)
       for (const slug of SKILL_SLUGS) {
         if (slug === 'overall') continue; // Skip overall, it's calculated
@@ -647,7 +673,7 @@ export class PlayerPersistenceManager {
     }
 
     const inventory = await this.loadPlayerInventory(userId, persistenceKey);
-    const appearance = createDefaultAppearance();
+    const appearance = await this.loadPlayerAppearance(userId, persistenceKey);
     const abilityRow = await prisma.playerAbility.findUnique({
       where: {
         userId_persistenceId: {
@@ -720,6 +746,37 @@ export class PlayerPersistenceManager {
     }
 
     return inventory;
+  }
+
+  private async loadPlayerAppearance(userId: number, persistenceId: number): Promise<PlayerAppearance> {
+    const prisma = getPrisma();
+    const fallback = createDefaultAppearance();
+    const row = await prisma.playerAppearance.upsert({
+      where: {
+        userId_persistenceId: {
+          userId,
+          persistenceId
+        }
+      },
+      update: {},
+      create: {
+        userId,
+        persistenceId,
+        hairStyleId: fallback.hairStyleId,
+        beardStyleId: fallback.beardStyleId,
+        shirtId: fallback.shirtId,
+        bodyTypeId: fallback.bodyTypeId,
+        legsId: fallback.legsId
+      }
+    });
+
+    return {
+      hairStyleId: Number.isInteger(row.hairStyleId) ? row.hairStyleId : fallback.hairStyleId,
+      beardStyleId: Number.isInteger(row.beardStyleId) ? row.beardStyleId : fallback.beardStyleId,
+      shirtId: Number.isInteger(row.shirtId) ? row.shirtId : fallback.shirtId,
+      bodyTypeId: Number.isInteger(row.bodyTypeId) ? row.bodyTypeId : fallback.bodyTypeId,
+      legsId: Number.isInteger(row.legsId) ? row.legsId : fallback.legsId
+    };
   }
 
   /**

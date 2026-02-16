@@ -5,6 +5,16 @@ import { type PlayerState, type SkillSlug, type EquipmentSlot, serializePlayerAb
 import type { EquipmentStack } from "../../world/items/EquipmentStack";
 import type { InGameClock } from "../../world/InGameClock";
 
+export class LoginFailedError extends Error {
+  constructor(
+    public readonly code: number,
+    public readonly msg: string
+  ) {
+    super(msg);
+    this.name = "LoginFailedError";
+  }
+}
+
 export interface LoginResult {
   userId: number;
   username: string;
@@ -51,6 +61,17 @@ export class LoginService {
     if (!row) throw new Error("Invalid login token");
     if (row.usedAt) throw new Error("Login token already used");
     if (row.expiresAt.getTime() <= Date.now()) throw new Error("Login token expired");
+
+    const existingOnlineUser = await prisma.onlineUser.findUnique({
+      where: { userId: row.userId },
+      select: { id: true }
+    });
+    if (existingOnlineUser) {
+      throw new LoginFailedError(
+        -303,
+        "Your account is currently logged in, please try again in about a minute"
+      );
+    }
 
     const nowMs = Date.now();
     
@@ -138,6 +159,7 @@ export class LoginService {
       const v = playerState.equipment[slot];
       return v === undefined ? null : v;
     };
+    const questCheckpoints = this.buildQuestCheckpointArray(playerState.questProgress);
 
     return buildLoggedInPayload({
       EntityID: params.accountId,
@@ -203,7 +225,7 @@ export class LoginService {
       AthleticsExp: getXp("athletics"),
       AthleticsCurrLvl: getLvl("athletics"),
 
-      QuestCheckpoints: [0, 0, 0, 0],
+      QuestCheckpoints: questCheckpoints,
       IsEmailConfirmed: params.emailVerified,
       LastLoginIP: params.lastLogin.ip ?? "",
       LastLoginBrowser: params.lastLogin.browser ?? "",
@@ -215,5 +237,28 @@ export class LoginService {
       Abilities: serializePlayerAbilities(playerState.abilities),
       Settings: serializePlayerSettings(playerState.settings)
     });
+  }
+
+  /**
+   * Builds checkpoint array where quest ID is the array index.
+   * Example: quest 0 => checkpoint 1, quest 3 => checkpoint 15 => [1, 0, 0, 15]
+   */
+  private buildQuestCheckpointArray(
+    questProgress: Map<number, { questId: number; checkpoint: number; completed: boolean }>
+  ): number[] {
+    let maxQuestId = 3; // Keep at least 4 entries for backwards compatibility
+    for (const questId of questProgress.keys()) {
+      if (Number.isInteger(questId) && questId > maxQuestId) {
+        maxQuestId = questId;
+      }
+    }
+
+    const checkpoints = new Array<number>(maxQuestId + 1).fill(0);
+    for (const [questId, progress] of questProgress.entries()) {
+      if (!Number.isInteger(questId) || questId < 0) continue;
+      checkpoints[questId] = Number.isFinite(progress.checkpoint) ? Math.max(0, progress.checkpoint) : 0;
+    }
+
+    return checkpoints;
   }
 }

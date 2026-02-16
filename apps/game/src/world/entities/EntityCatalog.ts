@@ -40,6 +40,11 @@ export interface EntityCombatStats {
   respawnLength: number;
   lootTableId: number;
   autoCastSpellIds?: number[];
+  /**
+   * Optional ranged attack distance override (tiles).
+   * If omitted, ranged NPCs use CombatSystem default.
+   */
+  attackRange?: number;
 }
 
 export interface EntityAppearance {

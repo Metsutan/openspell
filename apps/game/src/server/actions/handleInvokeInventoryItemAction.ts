@@ -7,6 +7,7 @@ import { buildInvokedInventoryItemActionPayload } from "../../protocol/packets/a
 import { buildRemovedItemFromInventoryAtSlotPayload } from "../../protocol/packets/actions/RemovedItemFromInventoryAtSlot";
 import { buildAddedItemAtInventorySlotPayload } from "../../protocol/packets/actions/AddedItemAtInventorySlot";
 import { buildSkillCurrentLevelChangedPayload } from "../../protocol/packets/actions/SkillCurrentLevelChanged";
+import { buildShowSkillCurrentLevelIncreasedOrDecreasedMessagePayload } from "../../protocol/packets/actions/ShowSkillCurrentLevelIncreasedOrDecreasedMessage";
 import { GameAction } from "../../protocol/enums/GameAction";
 import type { ActionContext, ActionHandler } from "./types";
 import type { ItemOnItemAction, ItemOnItemActionItem } from "../../world/items/ItemCatalog";
@@ -16,6 +17,7 @@ import { PlayerState, EQUIPMENT_SLOTS, SKILLS, isSkillSlug, skillToClientRef, ty
 import { applyWeightChange } from "../../world/systems/WeightCalculator";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { createEntityHitpointsChangedEvent } from "../events/GameEvents";
+import { DelayType } from "../systems/DelaySystem";
 
 /**
  * Handles inventory item action invocations (e.g., eat food, equip weapon, drop, etc.)
@@ -229,6 +231,179 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     console.log(`[handleInvokeInventoryItemAction] User ${ctx.userId} ${actionLabel} item ${itemId} (slot ${slot})`);
   };
 
+  const handleNotImplementedAction = (actionLabel: string) => {
+    const message = `The ${actionLabel} action is not implemented yet.`;
+    ctx.messageService.sendServerInfo(ctx.userId!, message);
+
+    const failurePayload = buildInvokedInventoryItemActionPayload({
+      Action: payload.Action,
+      MenuType: payload.MenuType,
+      Slot: payload.Slot,
+      ItemID: payload.ItemID,
+      Amount: payload.Amount,
+      IsIOU: payload.IsIOU,
+      Success: false,
+      Data: null
+    });
+    ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, failurePayload);
+
+    console.warn(`[handleInvokeInventoryItemAction] ${actionLabel} action not implemented`);
+  };
+
+  const handleRubAction = () => {
+    const sendRubResponse = (success: boolean) => {
+      const responsePayload = buildInvokedInventoryItemActionPayload({
+        Action: payload.Action,
+        MenuType: payload.MenuType,
+        Slot: payload.Slot,
+        ItemID: payload.ItemID,
+        Amount: payload.Amount,
+        IsIOU: payload.IsIOU,
+        Success: success,
+        Data: null
+      });
+      ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, responsePayload);
+    };
+
+    if (payload.MenuType !== MenuType.Inventory) {
+      logInvalid("rub_invalid_menu", { menuType: payload.MenuType });
+      sendRubResponse(false);
+      return;
+    }
+
+    const slot = Number(payload.Slot);
+    if (!Number.isInteger(slot) || slot < 0 || slot >= 28) {
+      logInvalid("rub_invalid_slot", { slot });
+      sendRubResponse(false);
+      return;
+    }
+
+    const inventoryItem = playerState.inventory[slot];
+    if (!inventoryItem) {
+      logInvalid("rub_empty_slot", { slot });
+      sendRubResponse(false);
+      return;
+    }
+
+    const [itemId, _amount, isIOU] = inventoryItem;
+    const expectedItemId = Number(payload.ItemID);
+    if (itemId !== expectedItemId) {
+      logInvalid("rub_item_mismatch", { slot, expectedItemId, itemId });
+      sendRubResponse(false);
+      return;
+    }
+
+    if (isIOU === 1) {
+      logInvalid("rub_iou", { slot, itemId });
+      sendRubResponse(false);
+      return;
+    }
+
+    const FIRST_CELADON_ORB_ID = 408;
+    const DORMANT_CELADON_ORB_ID = 413;
+    if (itemId < FIRST_CELADON_ORB_ID || itemId > DORMANT_CELADON_ORB_ID) {
+      logInvalid("rub_invalid_item", { itemId });
+      sendRubResponse(false);
+      return;
+    }
+
+    // Restart this non-blocking windup if player rubs again.
+    ctx.delaySystem.interruptDelay(ctx.userId!, false);
+
+    const delayStarted = ctx.delaySystem.startDelay({
+      userId: ctx.userId!,
+      type: DelayType.NonBlocking,
+      ticks: 1,
+      onComplete: (delayedUserId) => {
+        ctx.messageService.sendServerInfo(delayedUserId, "You Rub the Celadon Orb...");
+
+        const resolveDelayStarted = ctx.delaySystem.startDelay({
+          userId: delayedUserId,
+          type: DelayType.NonBlocking,
+          ticks: 2,
+          onComplete: (resolvedUserId) => {
+            const delayedPlayerState = ctx.playerStatesByUserId.get(resolvedUserId);
+            if (!delayedPlayerState) return;
+
+            const delayedInventoryItem = delayedPlayerState.inventory[slot];
+            if (!delayedInventoryItem) {
+              logInvalid("rub_delay_empty_slot", { slot, expectedItemId: itemId });
+              sendRubResponse(false);
+              return;
+            }
+
+            const [delayedItemId, _delayedAmount, delayedIsIOU] = delayedInventoryItem;
+            if (delayedItemId !== itemId || delayedIsIOU === 1) {
+              logInvalid("rub_delay_item_mismatch", { slot, expectedItemId: itemId, delayedItemId, delayedIsIOU });
+              sendRubResponse(false);
+              return;
+            }
+
+            if (delayedItemId === DORMANT_CELADON_ORB_ID) {
+              ctx.messageService.sendServerInfo(resolvedUserId, "But nothing happened");
+              sendRubResponse(false);
+              return;
+            }
+
+            const decrementResult = ctx.inventoryService.decrementItemAtSlot(resolvedUserId, slot, delayedItemId, 1, delayedIsIOU);
+            if (!decrementResult || decrementResult.removed <= 0) {
+              logInvalid("rub_remove_failed", { slot, itemId: delayedItemId });
+              sendRubResponse(false);
+              return;
+            }
+
+            const nextOrbId = delayedItemId + 1;
+            ctx.inventoryService.giveItem(resolvedUserId, nextOrbId, 1, 0);
+
+            const defenseState = delayedPlayerState.getSkillState(SKILLS.defense);
+            const baseLevel = defenseState.level;
+            const previousCurrentLevel = defenseState.boostedLevel;
+            const delta = Math.ceil(baseLevel * 0.2);
+            const newBoosted = Math.max(previousCurrentLevel, baseLevel + delta);
+
+            if (newBoosted !== previousCurrentLevel) {
+              delayedPlayerState.setBoostedLevel(SKILLS.defense, newBoosted);
+            }
+
+            const clientRef = skillToClientRef(SKILLS.defense);
+            if (clientRef !== null) {
+              const skillPayload = buildSkillCurrentLevelChangedPayload({
+                Skill: clientRef,
+                CurrentLevel: newBoosted
+              });
+              ctx.enqueueUserMessage(resolvedUserId, GameAction.SkillCurrentLevelChanged, skillPayload);
+
+              const increasedMessagePayload = buildShowSkillCurrentLevelIncreasedOrDecreasedMessagePayload({
+                Skill: clientRef,
+                Level: baseLevel,
+                PreviousCurrentLevel: previousCurrentLevel,
+                CurrentLevel: newBoosted
+              });
+              ctx.enqueueUserMessage(
+                resolvedUserId,
+                GameAction.ShowSkillCurrentLevelIncreasedOrDecreasedMessage,
+                increasedMessagePayload
+              );
+            }
+
+            sendRubResponse(true);
+            console.log(`[handleInvokeInventoryItemAction] User ${resolvedUserId} rubbed orb ${delayedItemId} -> ${nextOrbId} and gained defense boost`);
+          }
+        });
+
+        if (!resolveDelayStarted) {
+          logInvalid("rub_resolve_delay_failed", { slot, itemId });
+          sendRubResponse(false);
+        }
+      }
+    });
+
+    if (!delayStarted) {
+      logInvalid("rub_delay_failed", { slot, itemId });
+      sendRubResponse(false);
+    }
+  };
+
   // Switch on the item action type
   switch (payload.Action) {
     case ItemAction.drop: {
@@ -295,7 +470,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     }
 
     case ItemAction.use:
-      // TODO: Implement use action
+      handleNotImplementedAction("use");
       break;
 
     case ItemAction.equip: {
@@ -492,7 +667,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.open:
-      // TODO: Implement open action
+      handleNotImplementedAction("open");
       break;
 
     case ItemAction.check_price: {
@@ -853,38 +1028,38 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.offer:
-      // TODO: Implement offer action
+      handleNotImplementedAction("offer");
       break;
     case ItemAction.revoke:
-      // TODO: Implement revoke action
+      handleNotImplementedAction("revoke");
       break;
 
     case ItemAction.create:
-      // TODO: Implement create action
+      handleNotImplementedAction("create");
       break;
 
     case ItemAction.rub:
-      // TODO: Implement rub action
+      handleRubAction();
       break;
 
     case ItemAction.dropx:
-      // TODO: Implement dropx action (drop X amount)
+      handleNotImplementedAction("dropx");
       break;
 
     case ItemAction.look_at:
-      // TODO: Implement look_at action
+      handleNotImplementedAction("look at");
       break;
 
     case ItemAction.dig:
-      // TODO: Implement dig action
+      handleNotImplementedAction("dig");
       break;
 
     case ItemAction.discard:
-      // TODO: Implement discard action
+      handleNotImplementedAction("discard");
       break;
 
     case ItemAction.blow:
-      // TODO: Implement blow action
+      handleNotImplementedAction("blow");
       break;
 
     case ItemAction.disassemble:

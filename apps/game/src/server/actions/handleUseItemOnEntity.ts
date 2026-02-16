@@ -9,9 +9,21 @@ import { buildMovementPathAdjacent } from "./utils/pathfinding";
 import { checkAdjacentToEnvironment, checkAdjacentToNPC } from "./entity-actions/shared";
 
 const DEFAULT_INTERACTION_MESSAGE = "Nothing interesting happens.";
+const CELADON_RECHARGE_OBJECT_ID = 88;
+const FULLY_CHARGED_CELADON_ORB_ID = 408;
+const LAST_CELADON_ORB_ID = 413;
 
 export const handleUseItemOnEntity: ActionHandler = (ctx, actionData) => {
   const payload = decodeUseItemOnEntityPayload(actionData);
+  const logInvalid = (reason: string, details?: Record<string, unknown>) => {
+    ctx.packetAudit?.logInvalidPacket({
+      userId: ctx.userId,
+      packetName: "UseItemOnEntity",
+      reason,
+      payload,
+      details
+    });
+  };
 
   if (!ctx.userId) {
     console.warn("[handleUseItemOnEntity] No userId - action ignored");
@@ -30,11 +42,13 @@ export const handleUseItemOnEntity: ActionHandler = (ctx, actionData) => {
   const entityType = Number(payload.EntityID);
 
   if (!Number.isInteger(itemId) || !Number.isInteger(entityType) || !Number.isInteger(entityId)) {
+    logInvalid("invalid_payload", { itemId, entityType, entityId });
     console.warn("[handleUseItemOnEntity] Invalid payload:", payload);
     return;
   }
 
   if (!playerState.hasItem(itemId)) {
+    logInvalid("item_missing_in_inventory", { itemId });
     ctx.messageService.sendServerInfo(playerState.userId, "You don't have that item.");
     return;
   }
@@ -43,25 +57,37 @@ export const handleUseItemOnEntity: ActionHandler = (ctx, actionData) => {
     case EntityType.Environment: {
       const entityState = ctx.worldEntityStates.get(entityId);
       if (!entityState) {
+        logInvalid("environment_missing", { entityId });
         ctx.messageService.sendServerInfo(playerState.userId, "That doesn't exist anymore.");
         return;
       }
       if (entityState.mapLevel !== playerState.mapLevel) {
+        logInvalid("environment_wrong_map", {
+          entityId,
+          entityMapLevel: entityState.mapLevel,
+          playerMapLevel: playerState.mapLevel
+        });
         return;
       }
-      handleItemOnEnvironment(ctx, playerState, itemId, entityState);
+      handleItemOnEnvironment(ctx, playerState, itemId, entityState, logInvalid);
       break;
     }
     case EntityType.NPC: {
       const npcState = ctx.npcStates.get(entityId);
       if (!npcState) {
+        logInvalid("npc_missing", { entityId });
         ctx.messageService.sendServerInfo(playerState.userId, "They aren't here.");
         return;
       }
       if (npcState.mapLevel !== playerState.mapLevel) {
+        logInvalid("npc_wrong_map", {
+          entityId,
+          entityMapLevel: npcState.mapLevel,
+          playerMapLevel: playerState.mapLevel
+        });
         return;
       }
-      handleItemOnNpc(ctx, playerState, itemId, npcState);
+      handleItemOnNpc(ctx, playerState, itemId, npcState, logInvalid);
       break;
     }
     case EntityType.Item:
@@ -77,10 +103,46 @@ function handleItemOnEnvironment(
   ctx: ActionContext,
   playerState: PlayerState,
   itemId: number,
-  entityState: WorldEntityState
+  entityState: WorldEntityState,
+  logInvalid: (reason: string, details?: Record<string, unknown>) => void
 ): void {
+  const handleCeladonOrbRecharge = (): boolean => {
+    if (entityState.definitionId !== CELADON_RECHARGE_OBJECT_ID) {
+      return false;
+    }
+
+    if (itemId < FULLY_CHARGED_CELADON_ORB_ID || itemId > LAST_CELADON_ORB_ID) {
+      return false;
+    }
+
+    if (itemId === FULLY_CHARGED_CELADON_ORB_ID) {
+      ctx.messageService.sendServerInfo(playerState.userId, "Your Celadon Orb is already fully charged");
+      return true;
+    }
+
+    const removed = ctx.inventoryService.removeItem(playerState.userId, itemId, 1, 0);
+    if (removed.removed < 1) {
+      ctx.messageService.sendServerInfo(playerState.userId, "You don't have that item.");
+      return true;
+    }
+
+    const added = ctx.inventoryService.giveItem(playerState.userId, FULLY_CHARGED_CELADON_ORB_ID, 1, 0);
+    if (added.added < 1) {
+      // Restore original orb if replacement fails for any reason.
+      ctx.inventoryService.giveItem(playerState.userId, itemId, 1, 0);
+      ctx.messageService.sendServerInfo(playerState.userId, "Nothing interesting happens.");
+      return true;
+    }
+
+    ctx.messageService.sendServerInfo(playerState.userId, "You recharge your Celadon Orb");
+    return true;
+  };
+
   const executeInteraction = () => {
     ctx.targetingService.clearPlayerTarget(playerState.userId);
+    if (handleCeladonOrbRecharge()) {
+      return;
+    }
     ctx.itemInteractionService.handleItemOnWorldEntity(playerState, itemId, entityState);
   };
 
@@ -108,6 +170,14 @@ function handleItemOnEnvironment(
   );
 
   if (!path || path.length <= 1) {
+    logInvalid("environment_not_reachable", {
+      entityId: entityState.id,
+      entityDefinitionId: entityState.definitionId,
+      playerX: playerState.x,
+      playerY: playerState.y,
+      entityX: entityState.x,
+      entityY: entityState.y
+    });
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach that.");
     ctx.targetingService.clearPlayerTarget(playerState.userId);
     return;
@@ -119,6 +189,14 @@ function handleItemOnEnvironment(
   ctx.pathfindingSystem.scheduleMovementPlan(entityRef, playerState.mapLevel, path, speed, () => {
     const inPosition = checkAdjacentToEnvironment(ctx, playerState, entityState, false, allowDiagonal);
     if (!inPosition) {
+      logInvalid("environment_not_adjacent_on_execute", {
+        entityId: entityState.id,
+        entityDefinitionId: entityState.definitionId,
+        playerX: playerState.x,
+        playerY: playerState.y,
+        entityX: entityState.x,
+        entityY: entityState.y
+      });
       ctx.messageService.sendServerInfo(playerState.userId, "Can't reach that.");
       ctx.targetingService.clearPlayerTarget(playerState.userId);
       return;
@@ -131,7 +209,8 @@ function handleItemOnNpc(
   ctx: ActionContext,
   playerState: PlayerState,
   itemId: number,
-  npcState: NPCState
+  npcState: NPCState,
+  logInvalid: (reason: string, details?: Record<string, unknown>) => void
 ): void {
   const executeInteraction = () => {
     ctx.targetingService.clearPlayerTarget(playerState.userId);
@@ -161,6 +240,13 @@ function handleItemOnNpc(
   );
 
   if (!path || path.length <= 1) {
+    logInvalid("npc_not_reachable", {
+      npcId: npcState.id,
+      playerX: playerState.x,
+      playerY: playerState.y,
+      npcX: npcState.x,
+      npcY: npcState.y
+    });
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them.");
     ctx.targetingService.clearPlayerTarget(playerState.userId);
     return;
@@ -172,6 +258,13 @@ function handleItemOnNpc(
   ctx.pathfindingSystem.scheduleMovementPlan(entityRef, playerState.mapLevel, path, speed, () => {
     const inPosition = checkAdjacentToNPC(ctx, playerState, npcState);
     if (!inPosition) {
+      logInvalid("npc_not_adjacent_on_execute", {
+        npcId: npcState.id,
+        playerX: playerState.x,
+        playerY: playerState.y,
+        npcX: npcState.x,
+        npcY: npcState.y
+      });
       ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them.");
       ctx.targetingService.clearPlayerTarget(playerState.userId);
       return;

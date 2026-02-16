@@ -62,6 +62,19 @@ export async function removeOnlinePresence(userId: number): Promise<void> {
   await prisma.onlineUser.deleteMany({ where: { userId } });
 }
 
+/**
+ * Removes all online presence rows for a specific game server shard.
+ * Useful during server startup/shutdown to clear stale presence after crashes.
+ */
+export async function removeOnlinePresenceByServerId(serverId: number): Promise<number> {
+  const prisma = getPrisma();
+  const parsedServerId = parseServerId(serverId);
+  const result = await prisma.onlineUser.deleteMany({
+    where: { serverId: parsedServerId }
+  });
+  return result.count;
+}
+
 export async function savePlayerStateSnapshot(params: {
   userId: number;
   persistenceId: number;

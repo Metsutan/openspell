@@ -547,6 +547,46 @@ export class PathingGrid {
       const fromIdx = fromY * width + fromX;
       return (this.projectileFlags[fromIdx] & (1 << direction)) !== 0;
     }
+
+    /**
+     * Checks if movement is blocked when moving from (fromX, fromY) to (toX, toY).
+     *
+     * Uses pathfinding flags (not projectile flags), so this reflects whether melee
+     * can actually step/strike across an edge (e.g., fence/wall blocking movement).
+     *
+     * @returns true if movement is blocked, false if passable
+     */
+    isMovementBlocked(fromX: number, fromY: number, toX: number, toY: number): boolean {
+      const width = this.width;
+      const height = this.getHeight();
+
+      if (fromX < 0 || fromY < 0 || fromX >= width || fromY >= height) return true;
+      if (toX < 0 || toY < 0 || toX >= width || toY >= height) return true;
+
+      const toIdx = toY * width + toX;
+      if (this.flags[toIdx] === 0xff) return true;
+
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+
+      let direction: PathingDirection | null = null;
+
+      if (dx === 0 && dy === 1) direction = PathingDirection.North;
+      else if (dx === 0 && dy === -1) direction = PathingDirection.South;
+      else if (dx === 1 && dy === 0) direction = PathingDirection.East;
+      else if (dx === -1 && dy === 0) direction = PathingDirection.West;
+      else if (dx === 1 && dy === 1) direction = PathingDirection.NorthEast;
+      else if (dx === 1 && dy === -1) direction = PathingDirection.SouthEast;
+      else if (dx === -1 && dy === -1) direction = PathingDirection.SouthWest;
+      else if (dx === -1 && dy === 1) direction = PathingDirection.NorthWest;
+      else {
+        // Non-adjacent movement should be validated through pathfinding.
+        return true;
+      }
+
+      const fromIdx = fromY * width + fromX;
+      return (this.flags[fromIdx] & (1 << direction)) !== 0;
+    }
   
     /**
      * Blocks a single direction from a tile (if in bounds).
