@@ -7,9 +7,6 @@ export type PlayerEnteredChunkPayload = {
   EntityTypeID: unknown;
   PlayerType: unknown;
   Username: unknown;
-  CombatLevel: unknown;
-  HitpointsLevel: unknown;
-  CurrentHitpointsLevel: unknown;
   MapLevel: unknown;
   X: unknown;
   Y: unknown;
@@ -28,6 +25,9 @@ export type PlayerEnteredChunkPayload = {
   EquipmentBackPackID: unknown;
   EquipmentGlovesID: unknown;
   EquipmentProjectileID: unknown;
+  CombatLevel: unknown;
+  HitpointsLevel: unknown;
+  CurrentHitpointsLevel: unknown;
   CurrentState: unknown;
   MentalClarity: unknown;
 };
@@ -40,9 +40,6 @@ export function decodePlayerEnteredChunkPayload(payload: unknown): PlayerEntered
     EntityTypeID: arr[PlayerEnteredChunkFields.EntityTypeID] as any,
     PlayerType: arr[PlayerEnteredChunkFields.PlayerType] as any,
     Username: arr[PlayerEnteredChunkFields.Username] as any,
-    CombatLevel: arr[PlayerEnteredChunkFields.CombatLevel] as any,
-    HitpointsLevel: arr[PlayerEnteredChunkFields.HitpointsLevel] as any,
-    CurrentHitpointsLevel: arr[PlayerEnteredChunkFields.CurrentHitpointsLevel] as any,
     MapLevel: arr[PlayerEnteredChunkFields.MapLevel] as any,
     X: arr[PlayerEnteredChunkFields.X] as any,
     Y: arr[PlayerEnteredChunkFields.Y] as any,
@@ -61,6 +58,9 @@ export function decodePlayerEnteredChunkPayload(payload: unknown): PlayerEntered
     EquipmentBackPackID: arr[PlayerEnteredChunkFields.EquipmentBackPackID] as any,
     EquipmentGlovesID: arr[PlayerEnteredChunkFields.EquipmentGlovesID] as any,
     EquipmentProjectileID: arr[PlayerEnteredChunkFields.EquipmentProjectileID] as any,
+    CombatLevel: arr[PlayerEnteredChunkFields.CombatLevel] as any,
+    HitpointsLevel: arr[PlayerEnteredChunkFields.HitpointsLevel] as any,
+    CurrentHitpointsLevel: arr[PlayerEnteredChunkFields.CurrentHitpointsLevel] as any,
     CurrentState: arr[PlayerEnteredChunkFields.CurrentState] as any,
     MentalClarity: arr[PlayerEnteredChunkFields.MentalClarity] as any,
   };
@@ -72,9 +72,6 @@ export function buildPlayerEnteredChunkPayload(data: PlayerEnteredChunkPayload):
   arr[PlayerEnteredChunkFields.EntityTypeID] = data.EntityTypeID;
   arr[PlayerEnteredChunkFields.PlayerType] = data.PlayerType;
   arr[PlayerEnteredChunkFields.Username] = data.Username;
-  arr[PlayerEnteredChunkFields.CombatLevel] = data.CombatLevel;
-  arr[PlayerEnteredChunkFields.HitpointsLevel] = data.HitpointsLevel;
-  arr[PlayerEnteredChunkFields.CurrentHitpointsLevel] = data.CurrentHitpointsLevel;
   arr[PlayerEnteredChunkFields.MapLevel] = data.MapLevel;
   arr[PlayerEnteredChunkFields.X] = data.X;
   arr[PlayerEnteredChunkFields.Y] = data.Y;
@@ -93,6 +90,9 @@ export function buildPlayerEnteredChunkPayload(data: PlayerEnteredChunkPayload):
   arr[PlayerEnteredChunkFields.EquipmentBackPackID] = data.EquipmentBackPackID;
   arr[PlayerEnteredChunkFields.EquipmentGlovesID] = data.EquipmentGlovesID;
   arr[PlayerEnteredChunkFields.EquipmentProjectileID] = data.EquipmentProjectileID;
+  arr[PlayerEnteredChunkFields.CombatLevel] = data.CombatLevel;
+  arr[PlayerEnteredChunkFields.HitpointsLevel] = data.HitpointsLevel;
+  arr[PlayerEnteredChunkFields.CurrentHitpointsLevel] = data.CurrentHitpointsLevel;
   arr[PlayerEnteredChunkFields.CurrentState] = data.CurrentState;
   arr[PlayerEnteredChunkFields.MentalClarity] = data.MentalClarity;
   return arr;

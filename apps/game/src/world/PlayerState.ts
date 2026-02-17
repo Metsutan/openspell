@@ -326,6 +326,17 @@ export function getLevelForExp(xp: number): number {
   return 1;
 }
 
+/**
+ * Returns the XP required for the given level, using the EXP_AT_LEVEL table.
+ * If the given level is out of range, returns 0 for levels below 1,
+ * and the final value in EXP_AT_LEVEL for levels above the maximum.
+ */
+export function getXpForLevel(level: number): number {
+  if (level <= 0) return 0;
+  if (level >= EXP_AT_LEVEL.length) return EXP_AT_LEVEL[EXP_AT_LEVEL.length - 1];
+  return EXP_AT_LEVEL[level];
+}
+
 export function isSkillSlug(value: unknown): value is SkillSlug {
   return typeof value === "string" && (SKILL_SLUGS as readonly string[]).includes(value as SkillSlug);
 }
@@ -410,6 +421,7 @@ export class PlayerState {
   public autoCastSpellId: number | null = null; // Selected auto-cast spell (ephemeral, not persisted)
   public singleCastSpellId: number | null = null; // Single-cast spell queued for next magic attack
   public readonly questProgress: Map<number, QuestProgress>; // Quest progress tracking (questId -> progress)
+  public needsInitialAppearanceSetup = false; // Ephemeral: set for first-spawn login flow only
   
   // Cached equipment bonuses (recalculated on equip/unequip)
   public accuracyBonus: number = 0; // Total accuracy bonus from all equipped items

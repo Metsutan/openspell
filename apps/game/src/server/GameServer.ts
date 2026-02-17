@@ -26,6 +26,8 @@ import { EquipmentService } from "./services/EquipmentService";
 import { LoginService } from "./services/LoginService";
 import { MessageService } from "./services/MessageService";
 import { TargetingService } from "./services/TargetingService";
+import { TradingService } from "./services/TradingService";
+import { ChangeAppearanceService } from "./services/ChangeAppearanceService";
 import { TeleportService } from "./services/TeleportService";
 import { ConnectionService } from "./services/ConnectionService";
 import { StateLoaderService } from "./services/StateLoaderService";
@@ -50,6 +52,7 @@ import { ResourceExhaustionTracker } from "./systems/ResourceExhaustionTracker";
 import { AggroSystem } from "./systems/AggroSystem";
 import { PathfindingSystem, type MovementPlan } from "./systems/PathfindingSystem";
 import { MovementSystem } from "./systems/MovementSystem";
+import { FollowSystem } from "./systems/FollowSystem";
 import { AbilitySystem } from "./systems/AbilitySystem";
 import { RegenerationSystem } from "./systems/RegenerationSystem";
 import { ShopSystem } from "./systems/ShopSystem";
@@ -76,6 +79,7 @@ import { ItemInteractionService } from "./services/ItemInteractionService";
 import { SkillingMenuService } from "./services/SkillingMenuService";
 import { WorldEntityLootService } from "./services/WorldEntityLootService";
 import { InstancedNpcService } from "./services/InstancedNpcService";
+import { ShakingService } from "./services/ShakingService";
 import { PacketAuditService } from "./services/PacketAuditService";
 import { ItemAuditService } from "./services/ItemAuditService";
 import { AntiCheatRealtimeService } from "./services/AntiCheatRealtimeService";
@@ -160,6 +164,7 @@ export class GameServer {
   private readonly aggroSystem: AggroSystem;
   private readonly pathfindingSystem: PathfindingSystem;
   private readonly movementSystem: MovementSystem;
+  private readonly followSystem: FollowSystem;
   private readonly abilitySystem: AbilitySystem;
   private readonly regenerationSystem: RegenerationSystem;
   private readonly packetAudit: PacketAuditService | null;
@@ -181,6 +186,7 @@ export class GameServer {
   private fishingService!: FishingService | null;
   private harvestingService!: HarvestingService | null;
   private miningService!: MiningService | null;
+  private shakingService!: ShakingService | null;
   private cookingService!: CookingService;
   private enchantingService!: EnchantingService;
   private itemInteractionService!: ItemInteractionService;
@@ -200,6 +206,8 @@ export class GameServer {
   private loginService!: LoginService;
   private messageService!: MessageService;
   private targetingService!: TargetingService;
+  private tradingService!: TradingService;
+  private changeAppearanceService!: ChangeAppearanceService;
   private teleportService!: TeleportService;
   private connectionService!: ConnectionService;
   private stateLoaderService!: StateLoaderService;
@@ -255,6 +263,14 @@ export class GameServer {
         this.antiCheatRealtime?.recordItemPickup({
           pickerUserId: input.pickerUserId,
           dropperUserId: input.dropperUserId ?? null,
+          itemId: input.itemId,
+          amount: input.amount
+        });
+      },
+      onTradeItemTransfer: (input) => {
+        this.antiCheatRealtime?.recordTradeTransfer({
+          fromUserId: input.fromUserId,
+          toUserId: input.toUserId,
           itemId: input.itemId,
           amount: input.amount
         });
@@ -334,6 +350,21 @@ export class GameServer {
       worldModel: null, // Will be set in start()
       pathingLayerByMapLevel: PATHING_LAYER_BY_MAP_LEVEL,
       losSystem: null // Will be set in start()
+    });
+
+    this.followSystem = new FollowSystem({
+      playerStates: this.playerStatesByUserId,
+      targetingService: this.targetingService,
+      getTradingService: () => this.tradingService,
+      pathfindingSystem: this.pathfindingSystem,
+      movementSystem: this.movementSystem,
+      stateMachine: this.stateMachine,
+      getMessageService: () => this.messageService,
+      getSpellCatalog: () => this.spellCatalog,
+      hasLineOfSight: (fromX, fromY, toX, toY, mapLevel) => {
+        if (!this.losSystem) return true;
+        return this.losSystem.checkLOS(fromX, fromY, toX, toY, mapLevel as MapLevel).hasLOS;
+      }
     });
 
     this.abilitySystem = new AbilitySystem({
@@ -465,6 +496,28 @@ export class GameServer {
     });
 
     // Note: targetingService is now initialized in constructor before AggroSystem
+    this.tradingService = new TradingService({
+      playerStatesByUserId: this.playerStatesByUserId,
+      targetingService: this.targetingService,
+      delaySystem: this.delaySystem,
+      inventoryService: this.inventoryService,
+      itemCatalog: this.itemCatalog!,
+      stateMachine: this.stateMachine,
+      messageService: this.messageService,
+      enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
+      getLineOfSightSystem: () => this.losSystem,
+      packetAudit: this.packetAudit,
+      itemAudit: this.itemAudit
+    });
+
+    this.changeAppearanceService = new ChangeAppearanceService({
+      playerStatesByUserId: this.playerStatesByUserId,
+      inventoryService: this.inventoryService,
+      messageService: this.messageService,
+      stateMachine: this.stateMachine,
+      enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
+      enqueueBroadcast: (action, payload) => this.enqueueBroadcast(action, payload)
+    });
 
     this.teleportService = new TeleportService({
       playerStatesByUserId: this.playerStatesByUserId,
@@ -523,6 +576,7 @@ export class GameServer {
       inventoryService: this.inventoryService,
       bankingService: this.bankingService,
       skillingMenuService: this.skillingMenuService,
+      changeAppearanceService: this.changeAppearanceService,
       equipmentService: this.equipmentService,
       delaySystem: this.delaySystem,
       enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
@@ -561,6 +615,7 @@ export class GameServer {
       deleteMovementPlan: (entityRef) => this.pathfindingSystem.deleteMovementPlan(entityRef),
       targetingService: this.targetingService,
       stateMachine: this.stateMachine,
+      changeAppearanceService: this.changeAppearanceService,
       getInstancedNpcService: () => this.instancedNpcService ?? null,
       teleportService: this.teleportService
     });
@@ -653,6 +708,19 @@ export class GameServer {
       this.pickpocketService = null;
     }
 
+    // Initialize shake service for tree shaking actions
+    this.shakingService = new ShakingService({
+      playerStatesByUserId: this.playerStatesByUserId,
+      worldEntityStates: this.worldEntityStates,
+      targetingService: this.targetingService,
+      stateMachine: this.stateMachine,
+      delaySystem: this.delaySystem,
+      messageService: this.messageService,
+      itemManager: this.itemManager,
+      itemAudit: this.itemAudit,
+      enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload)
+    });
+
     // Initialize woodcutting service for chopping trees
     try {
       this.woodcuttingService = await WoodcuttingService.load({
@@ -667,7 +735,8 @@ export class GameServer {
         stateMachine: this.stateMachine,
         playerStatesByUserId: this.playerStatesByUserId,
         worldEntityStates: this.worldEntityStates,
-        enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload)
+        enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
+        shakingService: this.shakingService
       });
 
       // Initialize woodcutting system for tick-based processing
@@ -883,8 +952,14 @@ export class GameServer {
     // Pathfinding System - Players (event-driven, so this is a placeholder)
     this.pathfindingSystem.updatePlayers();
 
+    // Follow System (phase 0) - prevent stale follower plans from moving early
+    this.followSystem.prepareForTick();
+
     // Movement System - Players
     this.movementSystem.updatePlayers();
+
+    // Follow System (phase 1) - followers move after leaders in same tick
+    this.followSystem.update();
 
     // Combat System - Player Combat (happens immediately after player movement)
     // This ensures players can attack immediately upon arrival before NPCs react
@@ -1043,6 +1118,7 @@ export class GameServer {
       // Clear targeting
       this.targetingService.clearPlayerTargetOnDisconnect(userId);
       this.targetingService.clearAllNPCsTargetingPlayer(userId);
+      this.tradingService?.onPlayerDisconnected(userId);
 
       // Clear any NPCs that were targeting this player
       for (const npc of this.npcStates.values()) {
@@ -1155,6 +1231,8 @@ export class GameServer {
       inventoryService: this.inventoryService,
       equipmentService: this.equipmentService,
       targetingService: this.targetingService,
+      tradingService: this.tradingService,
+      changeAppearanceService: this.changeAppearanceService,
       teleportService: this.teleportService,
       conversationService: this.conversationService,
       shopSystem: this.shopSystem,
@@ -1167,6 +1245,7 @@ export class GameServer {
       fishingService: this.fishingService,
       harvestingService: this.harvestingService,
       miningService: this.miningService,
+      shakingService: this.shakingService,
       itemInteractionService: this.itemInteractionService,
       skillingMenuService: this.skillingMenuService,
       eventBus: this.eventBus,
@@ -1226,6 +1305,9 @@ export class GameServer {
         // Delegate to MessageService
         // Safe to access here since state transitions happen after initialization
         this.messageService.sendServerInfo(userId, message);
+      },
+      onPlayerExitedTradingState: (userId: number) => {
+        this.tradingService?.onPlayerExitedTradingState(userId);
       },
       getWoodcuttingService: () => {
         // Return woodcutting service (may be null if not loaded)
@@ -1576,6 +1658,7 @@ export class GameServer {
     fishingService: this.fishingService,
     harvestingService: this.harvestingService,
     miningService: this.miningService,
+    shakingService: this.shakingService,
     skillingMenuService: this.skillingMenuService,
     enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => {
       this.enqueueUserMessage(userId, action, payload);

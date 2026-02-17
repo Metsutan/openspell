@@ -7,6 +7,7 @@ import {
   createDefaultSkills,
   createEmptyInventory,
   getLevelForExp,
+  getXpForLevel,
   isEquipmentSlot,
   isSkillSlug,
   parsePlayerAbilities,
@@ -629,6 +630,7 @@ export class PlayerPersistenceManager {
         }
       }
     });
+    const isFirstSpawnForPersistence = !locRow;
     if (!locRow) {
       await prisma.playerLocation.create({
         data: { userId, persistenceId: persistenceKey, mapLevel: MAP_LEVELS.Overworld, x: 78, y: -93 }
@@ -655,6 +657,10 @@ export class PlayerPersistenceManager {
         ? Math.max(0, r.boostedLevel ?? actualLevel)
         : actualLevel; // Default to actual level if not set
       skills[slug] = { level: actualLevel, boostedLevel, xp: xpNum };
+    }
+    if (isFirstSpawnForPersistence) {
+      // Ensure first-time spawn starts with 10 HP as expected by client/game design.
+      skills.hitpoints = { level: 10, boostedLevel: 10, xp: getXpForLevel(10) };
     }
 
     const equipment = createDefaultEquipment();
@@ -724,7 +730,10 @@ export class PlayerPersistenceManager {
     
     // Initialize combat level based on combat skills
     playerState.updateCombatLevel(DefaultPacketBuilder.calculateCombatLevel(playerState));
-    
+
+    // Trigger one-time initial character customization for brand-new spawns.
+    playerState.needsInitialAppearanceSetup = isFirstSpawnForPersistence;
+
     playerState.markClean();
 
     return playerState;

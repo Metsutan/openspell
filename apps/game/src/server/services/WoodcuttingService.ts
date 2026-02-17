@@ -39,6 +39,7 @@ import type { ItemCatalog } from "../../world/items/ItemCatalog";
 import type { EquipmentService } from "./EquipmentService";
 import type { VisibilitySystem } from "../systems/VisibilitySystem";
 import type { ExperienceService } from "./ExperienceService";
+import type { ShakingService } from "./ShakingService";
 import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildObtainedResourcePayload } from "../../protocol/packets/actions/ObtainedResource";
@@ -166,6 +167,7 @@ export interface WoodcuttingServiceConfig {
     playerStatesByUserId: Map<number, PlayerState>;
     worldEntityStates: Map<number, WorldEntityState>;
     enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => void;
+    shakingService?: ShakingService | null;
 }
 
 /** Active woodcutting session */
@@ -512,6 +514,7 @@ export class WoodcuttingService {
         // Mark tree as exhausted and notify nearby players
         const exhaustionTracker = this.config.visibilitySystem.getResourceExhaustionTracker();
         exhaustionTracker.markExhausted(tree.id, nearbyPlayers);
+        this.config.shakingService?.onTreeExhausted(tree.id);
 
         // Schedule replenishment
         setTimeout(() => {
@@ -523,6 +526,7 @@ export class WoodcuttingService {
 
             // Mark tree as replenished and notify all witnesses
             exhaustionTracker.markReplenished(tree.id);
+            this.config.shakingService?.onTreeReplenished(tree.id);
 
             console.log(`[WoodcuttingService] Tree ${tree.id} respawned with ${resources} resources`);
         }, respawnTicks * 600); // 600ms per tick

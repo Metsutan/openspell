@@ -58,6 +58,20 @@ export class MovementSystem {
   }
 
   /**
+   * Updates movement for a specific set of players only.
+   * Useful for phased movement passes (e.g. follow pass after normal movement).
+   */
+  updatePlayersByIds(playerIds: ReadonlySet<number>): void {
+    if (playerIds.size === 0 || this.config.movementPlans.size === 0) return;
+
+    for (const [entityKey, plan] of Array.from(this.config.movementPlans.entries())) {
+      if (plan.entityRef.type !== EntityType.Player) continue;
+      if (!playerIds.has(plan.entityRef.id)) continue;
+      this.advanceMovementPlan(entityKey, plan);
+    }
+  }
+
+  /**
    * Updates NPC movement.
    * Executes movement plans for all NPCs.
    * Should be called once per server tick after PathfindingSystem.updateNPCs().

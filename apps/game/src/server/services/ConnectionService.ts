@@ -15,6 +15,7 @@ import { InventoryService } from "./InventoryService";
 import type { BankingService } from "./BankingService";
 import type { DelaySystem } from "../systems/DelaySystem";
 import type { SkillingMenuService } from "./SkillingMenuService";
+import type { ChangeAppearanceService } from "./ChangeAppearanceService";
 
 export interface ConnectionServiceDependencies {
   dbEnabled: boolean;
@@ -28,6 +29,7 @@ export interface ConnectionServiceDependencies {
   inventoryService: InventoryService;
   bankingService: BankingService;
   skillingMenuService: SkillingMenuService;
+  changeAppearanceService: ChangeAppearanceService;
   delaySystem: DelaySystem;
   equipmentService: any; // Using 'any' to avoid circular dependency with EquipmentService
   enqueueUserMessage: (userId: number, action: GameAction, payload: unknown[]) => void;
@@ -72,7 +74,8 @@ export class ConnectionService {
       }
 
       // Verify login token
-      const { userId, username, emailVerified, lastLogin, serverId, persistenceId } = await this.deps.loginService.verifyLogin(login.Token as string);
+      const { userId, username, emailVerified, isFirstGameLogin, lastLogin, serverId, persistenceId } =
+        await this.deps.loginService.verifyLogin(login.Token as string);
 
       // Check user ban after verifying login token (so we have userId)
       if (this.deps.dbEnabled) {
@@ -148,6 +151,13 @@ export class ConnectionService {
       // Send initial weight packet
       if (playerState) {
         this.deps.inventoryService.sendWeightUpdate(userId, playerState);
+      }
+
+      if (isFirstGameLogin) {
+        this.deps.changeAppearanceService.startChangeAppearance(userId, {
+          isFirstTime: true,
+          chargeCoinsOnSubmit: false
+        });
       }
 
       console.log(`[Connection] Player ${username} (${userId}) logged in`);

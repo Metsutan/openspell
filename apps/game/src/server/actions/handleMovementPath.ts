@@ -1,6 +1,8 @@
 import { EntityType } from "../../protocol/enums/EntityType";
+import { GameAction } from "../../protocol/enums/GameAction";
 import { PlayerSetting } from "../../protocol/enums/PlayerSetting";
 import { States } from "../../protocol/enums/States";
+import { buildPathfindingFailedPayload } from "../../protocol/packets/actions/PathfindingFailed";
 import { decodeSendMovementPathPayload } from "../../protocol/packets/actions/SendMovementPath";
 import { MapLevel } from "../../world/Location";
 import type { EntityRef } from "../events/GameEvents";
@@ -62,6 +64,11 @@ export const handleMovementPath: ActionHandler = (ctx, actionData) => {
   
   if (!path || path.length <= 1) {
     ctx.pathfindingSystem.cancelMovementPlan(entityRef);
+    ctx.enqueueUserMessage(
+      playerState.userId,
+      GameAction.PathfindingFailed,
+      buildPathfindingFailedPayload({ EntityID: -1 })
+    );
     return;
   }
 

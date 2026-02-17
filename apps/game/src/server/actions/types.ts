@@ -37,6 +37,9 @@ import type { ExperienceService } from "../services/ExperienceService";
 import type { WorldEntityLootService } from "../services/WorldEntityLootService";
 import type { ResourceExhaustionTracker } from "../systems/ResourceExhaustionTracker";
 import type { InstancedNpcService } from "../services/InstancedNpcService";
+import type { TradingService } from "../services/TradingService";
+import type { ChangeAppearanceService } from "../services/ChangeAppearanceService";
+import type { ShakingService } from "../services/ShakingService";
 
 /**
  * Context passed to client action handlers, providing access to necessary systems
@@ -78,6 +81,7 @@ export interface ActionContext {
   fishingService: FishingService | null;
   harvestingService: HarvestingService | null;
   miningService: MiningService | null;
+  shakingService: ShakingService | null;
   itemInteractionService: ItemInteractionService;
   skillingMenuService: SkillingMenuService;
   eventBus: EventBus;
@@ -89,6 +93,8 @@ export interface ActionContext {
   itemAudit: ItemAuditService | null;
   antiCheatRealtime: AntiCheatRealtimeService | null;
   experienceService: ExperienceService;
+  tradingService: TradingService;
+  changeAppearanceService: ChangeAppearanceService;
   /** Line of sight system for checking projectile paths and visibility */
   losSystem: LineOfSightSystem | null;
   worldEntityCatalog: WorldEntityCatalog | null;

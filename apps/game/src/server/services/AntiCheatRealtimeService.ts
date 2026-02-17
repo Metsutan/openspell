@@ -214,75 +214,24 @@ export class AntiCheatRealtimeService {
   }): void {
     if (!this.shouldRun()) return;
     if (!input.dropperUserId || input.dropperUserId === input.pickerUserId) return;
-
-    const now = Date.now();
-    const unitValue = this.getItemUnitValue(input.itemId);
-    const transferValue = unitValue * input.amount;
-    const pairKey = this.buildTradePairKey(input.dropperUserId, input.pickerUserId, input.itemId);
-    const record = this.tradesByPair.get(pairKey) ?? { entries: [] };
-    record.entries.push({ at: now, amount: input.amount });
-
-    const cutoff = now - this.config.tradeWindowMs;
-    record.entries = record.entries.filter((entry) => entry.at >= cutoff);
-
-    const tradeMax = this.getOverride("ANTI_CHEAT_TRADE_MAX", this.config.tradeMax);
-    if (record.entries.length >= tradeMax) {
-      void this.createAlert({
-        userId: input.pickerUserId,
-        severity: "MEDIUM",
-        category: "MULING_DETECTED",
-        description: `Frequent item transfers between users ${input.dropperUserId} and ${input.pickerUserId}`,
-        evidence: {
-          dropperUserId: input.dropperUserId,
-          pickerUserId: input.pickerUserId,
-          itemId: input.itemId,
-          windowMs: this.config.tradeWindowMs,
-          count: record.entries.length,
-          threshold: tradeMax,
-          possibleReasons: [
-            "Transferring wealth to alt account",
-            "Real-world trading (RWT)",
-            "Helping friend move items",
-            "Legitimate trading"
-          ]
-        },
-        serverId: this.serverId
-      });
-    }
-
-    const totalAmount = record.entries.reduce((sum, entry) => sum + entry.amount, 0);
-    const mulingThreshold = this.getOverride(
-      "ANTI_CHEAT_MULING_AMOUNT_THRESHOLD",
-      this.config.mulingAmountThreshold
-    );
-    if (totalAmount >= mulingThreshold) {
-      void this.createAlert({
-        userId: input.pickerUserId,
-        severity: "HIGH",
-        category: "MULING_LARGE_TRANSFER",
-        description: `Large item transfer (${totalAmount}) between users ${input.dropperUserId} and ${input.pickerUserId}`,
-        evidence: {
-          dropperUserId: input.dropperUserId,
-          pickerUserId: input.pickerUserId,
-          itemId: input.itemId,
-          windowMs: this.config.tradeWindowMs,
-          totalAmount,
-          threshold: mulingThreshold
-        },
-        serverId: this.serverId
-      });
-    }
-
-    this.tradesByPair.set(pairKey, record);
-
-    this.recordWealthTransfer({
+    this.recordInterPlayerItemTransfer({
       fromUserId: input.dropperUserId,
       toUserId: input.pickerUserId,
       itemId: input.itemId,
       amount: input.amount,
-      unitValue,
-      value: transferValue,
       source: "GROUND_ITEM_PICKUP"
+    });
+  }
+
+  recordTradeTransfer(input: { fromUserId: number; toUserId: number; itemId: number; amount: number }): void {
+    if (!this.shouldRun()) return;
+    if (input.fromUserId === input.toUserId) return;
+    this.recordInterPlayerItemTransfer({
+      fromUserId: input.fromUserId,
+      toUserId: input.toUserId,
+      itemId: input.itemId,
+      amount: input.amount,
+      source: "TRADE"
     });
   }
 
@@ -312,6 +261,86 @@ export class AntiCheatRealtimeService {
 
   private shouldRun(): boolean {
     return this.config.enabled && this.dbEnabled;
+  }
+
+  private recordInterPlayerItemTransfer(input: {
+    fromUserId: number;
+    toUserId: number;
+    itemId: number;
+    amount: number;
+    source: string;
+  }): void {
+    const now = Date.now();
+    const unitValue = this.getItemUnitValue(input.itemId);
+    const transferValue = unitValue * input.amount;
+    const pairKey = this.buildTradePairKey(input.fromUserId, input.toUserId, input.itemId);
+    const record = this.tradesByPair.get(pairKey) ?? { entries: [] };
+    record.entries.push({ at: now, amount: input.amount });
+
+    const cutoff = now - this.config.tradeWindowMs;
+    record.entries = record.entries.filter((entry) => entry.at >= cutoff);
+
+    const tradeMax = this.getOverride("ANTI_CHEAT_TRADE_MAX", this.config.tradeMax);
+    if (record.entries.length >= tradeMax) {
+      void this.createAlert({
+        userId: input.toUserId,
+        severity: "MEDIUM",
+        category: "MULING_DETECTED",
+        description: `Frequent item transfers between users ${input.fromUserId} and ${input.toUserId}`,
+        evidence: {
+          fromUserId: input.fromUserId,
+          toUserId: input.toUserId,
+          itemId: input.itemId,
+          source: input.source,
+          windowMs: this.config.tradeWindowMs,
+          count: record.entries.length,
+          threshold: tradeMax,
+          possibleReasons: [
+            "Transferring wealth to alt account",
+            "Real-world trading (RWT)",
+            "Helping friend move items",
+            "Legitimate trading"
+          ]
+        },
+        serverId: this.serverId
+      });
+    }
+
+    const totalAmount = record.entries.reduce((sum, entry) => sum + entry.amount, 0);
+    const mulingThreshold = this.getOverride(
+      "ANTI_CHEAT_MULING_AMOUNT_THRESHOLD",
+      this.config.mulingAmountThreshold
+    );
+    if (totalAmount >= mulingThreshold) {
+      void this.createAlert({
+        userId: input.toUserId,
+        severity: "HIGH",
+        category: "MULING_LARGE_TRANSFER",
+        description: `Large item transfer (${totalAmount}) between users ${input.fromUserId} and ${input.toUserId}`,
+        evidence: {
+          fromUserId: input.fromUserId,
+          toUserId: input.toUserId,
+          itemId: input.itemId,
+          source: input.source,
+          windowMs: this.config.tradeWindowMs,
+          totalAmount,
+          threshold: mulingThreshold
+        },
+        serverId: this.serverId
+      });
+    }
+
+    this.tradesByPair.set(pairKey, record);
+
+    this.recordWealthTransfer({
+      fromUserId: input.fromUserId,
+      toUserId: input.toUserId,
+      itemId: input.itemId,
+      amount: input.amount,
+      unitValue,
+      value: transferValue,
+      source: input.source
+    });
   }
 
   private getOverride(key: string, fallback: number): number {

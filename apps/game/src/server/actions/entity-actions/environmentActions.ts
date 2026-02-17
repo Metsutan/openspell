@@ -26,7 +26,6 @@ import { buildMovementPathAdjacent } from "../utils/pathfinding";
 import { checkAdjacentToEnvironment, checkAdjacentToDirectionalBlockingEntity } from "./shared";
 import type { WorldEntityActionLocation } from "../../services/WorldEntityActionService";
 import type { MapLevel } from "../../../world/Location";
-import { TargetingService } from "../../services/TargetingService";
 import type { RequirementCheckContext } from "../../services/RequirementsChecker";
 import { SKILLS, isSkillSlug } from "../../../world/PlayerState";
 import { DelayType } from "../../systems/DelaySystem";
@@ -734,7 +733,16 @@ function executeDefaultAction(
       executeUnlockAction(ctx, playerState, entityState);
       break;
     case Action.SleepIn:
-    case Action.Shake:
+      ctx.messageService.sendServerInfo(playerState.userId, "You don't feel tired.");
+      break;
+    case Action.Shake: {
+      if (ctx.shakingService) {
+        ctx.shakingService.initiateShake(playerState, entityState);
+      } else {
+        ctx.messageService.sendServerInfo(playerState.userId, "Shaking is not available.");
+      }
+      break;
+    }
     case Action.Comb:
       ctx.messageService.sendServerInfo(playerState.userId, `${actionName} not yet implemented`);
       break;

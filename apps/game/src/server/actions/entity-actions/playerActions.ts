@@ -344,8 +344,17 @@ function executeFollowPlayer(
 ): void {
   console.log(`[executeFollowPlayer] Player ${playerState.userId} following Player ${targetPlayer.userId}`);
 
-  // TODO: Implement follow logic
-  playerState.pendingAction = null;
+  // Keep follow intent active; FollowSystem executes movement in the same tick
+  // after normal player movement has finished.
+  ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Player, id: targetPlayer.userId });
+  playerState.pendingAction = {
+    action: Action.Follow,
+    entityType: EntityType.Player,
+    entityId: targetPlayer.userId,
+    retryCount: 0,
+    lastKnownX: targetPlayer.x,
+    lastKnownY: targetPlayer.y
+  };
 }
 
 function executeTradeWithPlayer(
@@ -355,7 +364,7 @@ function executeTradeWithPlayer(
 ): void {
   console.log(`[executeTradeWithPlayer] Player ${playerState.userId} trading with Player ${targetPlayer.userId}`);
 
-  // TODO: Implement trade logic
+  ctx.tradingService.requestTrade(playerState.userId, targetPlayer.userId);
   playerState.pendingAction = null;
 }
 
@@ -395,19 +404,53 @@ export function handlePlayerMovementComplete(
     return;
   }
 
-  const combatMode = getPlayerCombatMode(playerState);
-  const attackRange = getPlayerAttackRange(playerState, ctx.spellCatalog);
-  const hasLOS = ctx.losSystem
-    ? ctx.losSystem.checkLOS(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, playerState.mapLevel).hasLOS
-    : true;
-  const inRange = combatMode === "melee"
-    ? checkAdjacentToPlayer(ctx, playerState, targetPlayer)
-    : isWithinRange(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, attackRange) && hasLOS;
+  const attackInRange = (() => {
+    const combatMode = getPlayerCombatMode(playerState);
+    const attackRange = getPlayerAttackRange(playerState, ctx.spellCatalog);
+    const hasLOS = ctx.losSystem
+      ? ctx.losSystem.checkLOS(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, playerState.mapLevel).hasLOS
+      : true;
+    return combatMode === "melee"
+      ? checkAdjacentToPlayer(ctx, playerState, targetPlayer)
+      : isWithinRange(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, attackRange) && hasLOS;
+  })();
+  const isAdjacentForInteraction = checkAdjacentToPlayer(ctx, playerState, targetPlayer);
+  const requiresRange = action !== Action.Follow && action !== Action.TradeWith && action !== Action.Attack;
 
-  if (!inRange) {
+  if (requiresRange && !attackInRange) {
     console.warn(`[handlePlayerMovementComplete] Player not in range of target ${targetUserId}`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
+    return;
+  }
+
+  if (action === Action.TradeWith && !isAdjacentForInteraction) {
+    // Target moved while we were pathing to their old location.
+    // Keep trade intent active so FollowSystem can switch to cheap greedy pursuit.
+    ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Player, id: targetPlayer.userId });
+    playerState.pendingAction = {
+      action: Action.TradeWith,
+      entityType: EntityType.Player,
+      entityId: targetPlayer.userId,
+      retryCount: 0,
+      lastKnownX: targetPlayer.x,
+      lastKnownY: targetPlayer.y
+    };
+    return;
+  }
+
+  if (action === Action.Attack && !attackInRange) {
+    // Target moved while we were pathing to their old location.
+    // Keep attack intent active so FollowSystem can continue hybrid pursuit.
+    ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Player, id: targetPlayer.userId });
+    playerState.pendingAction = {
+      action: Action.Attack,
+      entityType: EntityType.Player,
+      entityId: targetPlayer.userId,
+      retryCount: 0,
+      lastKnownX: targetPlayer.x,
+      lastKnownY: targetPlayer.y
+    };
     return;
   }
 

@@ -121,6 +121,7 @@ The script:
 | `ITEM_EVENT_FLUSH_MS` | `2000` | Flush interval for item event batches (ms) |
 | `ITEM_EVENT_RETENTION_DAYS` | `90` | Retention period for item logs (days) |
 | `SHOP_SALE_LOG_ENABLED` | `true` | Track player-sold shop items and buyers |
+| `TRADE_EVENT_LOG_ENABLED` | `true` | Track completed trade item transfers (from/to/item/amount) |
 
 #### Anti-Cheat (Game Server)
 | Variable | Default | Description |

@@ -35,9 +35,9 @@ Please always remember to take backups, download, and keep a hold of anything pr
 | `Picklock` | ✅ Tentatively implemented |
 | `Unlock` | ✅ Tentatively implemented |
 | `Search` | ✅ Tentatively implemented |
-| `SleepIn` | Shows "not yet implemented" message |
-| `Follow` | Pathfinding works, execute is empty TODO |
-| `TradeWith` | Pathfinding works, execute is empty TODO |
+| `SleepIn` | 🚫 Ignoring as it's non-functional |
+| `Follow` | ✅ Tentatively implemented |
+| `TradeWith` | ✅ Tentatively implemented |
 | `Moderate` | Pathfinding works, execute is empty TODO |
 | `AddEntity` | Admin tool - not implemented |
 | `EditEntity` | Admin tool - not implemented |
@@ -51,8 +51,8 @@ Please always remember to take backups, download, and keep a hold of anything pr
 | ClientActionType | Notes |
 |------------------|-------|
 | `CaptchaAction` | Protocol exists, no server handler |
-| `ChangeAppearance` | Protocol exists, no server handler |
-| `UpdateTradeStatus` | Protocol exists, no server handler |
+| `ChangeAppearance` | ✅ Tentatively implemented |
+| `UpdateTradeStatus` | ✅ Tentatively implemented |
 
 ### Inventory Item Actions
 
@@ -61,10 +61,9 @@ Please always remember to take backups, download, and keep a hold of anything pr
 | `eat` | ✅ Tentatively implemented |
 | `drink` | ✅ Tentatively implemented |
 | `open` (item) | TODO - opening containers |
-| `offer` | TODO - Trading |
-| `revoke` | TODO - Trading |
-| `create` | TODO |
-| `rub` | TODO |
+| `offer` | ✅ Tentatively implemented |
+| `revoke` | ✅ Tentatively implemented |
+| `rub` | ✅ Tentatively implemented |
 | `dropx` | TODO - drop specific quantity |
 | `look_at` | TODO - clue scrolls |
 | `dig` | TODO - clue scrolls |

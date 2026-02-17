@@ -108,6 +108,15 @@ export class PathfindingSystem {
       const entityRef: EntityRef = { type: EntityType.Player, id: player.userId };
       const entityKey = this.config.makeEntityKey(entityRef);
 
+      // PvP combat chase is resolved in the post-player-movement pursuit pass
+      // (FollowSystem.update) so attackers can react after runners move this tick.
+      if (isInCombatState && targetPlayer) {
+        if (this.config.movementPlans.has(entityKey)) {
+          this.deleteMovementPlan(entityRef);
+        }
+        continue;
+      }
+
       const attackRange = getPlayerAttackRange(player, this.config.spellCatalog);
       const withinRange = isWithinRange(player.x, player.y, targetEntity.x, targetEntity.y, attackRange);
 

@@ -1028,10 +1028,26 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.offer:
-      handleNotImplementedAction("offer");
+      if (!ctx.tradingService.offerTradeItem(ctx.userId, payload)) {
+        logInvalid("offer_failed", {
+          menuType: payload.MenuType,
+          slot: payload.Slot,
+          itemId: payload.ItemID,
+          amount: payload.Amount,
+          isIOU: payload.IsIOU
+        });
+      }
       break;
     case ItemAction.revoke:
-      handleNotImplementedAction("revoke");
+      if (!ctx.tradingService.revokeTradeItem(ctx.userId, payload)) {
+        logInvalid("revoke_failed", {
+          menuType: payload.MenuType,
+          slot: payload.Slot,
+          itemId: payload.ItemID,
+          amount: payload.Amount,
+          isIOU: payload.IsIOU
+        });
+      }
       break;
 
     case ItemAction.create:

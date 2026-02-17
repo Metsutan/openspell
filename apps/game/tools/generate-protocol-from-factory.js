@@ -19,6 +19,42 @@ const OUT_FIELDS_DIR = path.join(REPO_ROOT, "apps", "game", "src", "protocol", "
 const OUT_PACKETS_DIR = path.join(REPO_ROOT, "apps", "game", "src", "protocol", "packets", "actions");
 const OVERWRITE = process.argv.includes("--overwrite");
 
+/**
+ * Some actions have known wire-order mismatches in the decompiled factory method body.
+ * We pin them here so generated field enums match the real packet index order.
+ */
+const FIELD_ORDER_OVERRIDES = {
+  PlayerEnteredChunk: [
+    "EntityID",
+    "EntityTypeID",
+    "PlayerType",
+    "Username",
+    "MapLevel",
+    "X",
+    "Y",
+    "HairStyleID",
+    "BeardStyleID",
+    "ShirtID",
+    "BodyTypeID",
+    "LegsID",
+    "EquipmentHeadID",
+    "EquipmentBodyID",
+    "EquipmentLegsID",
+    "EquipmentBootsID",
+    "EquipmentNecklaceID",
+    "EquipmentWeaponID",
+    "EquipmentShieldID",
+    "EquipmentBackPackID",
+    "EquipmentGlovesID",
+    "EquipmentProjectileID",
+    "CombatLevel",
+    "HitpointsLevel",
+    "CurrentHitpointsLevel",
+    "CurrentState",
+    "MentalClarity",
+  ],
+};
+
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
@@ -94,6 +130,28 @@ function guessFieldType(body, enumSym, fieldName) {
   return "unknown";
 }
 
+function applyFieldOrderOverride(actionConst, uniqueFieldRefs) {
+  const orderedFields = FIELD_ORDER_OVERRIDES[actionConst];
+  if (!orderedFields) return uniqueFieldRefs;
+
+  const byField = new Map(uniqueFieldRefs.map((r) => [r.field, r]));
+  const overridden = [];
+  const used = new Set();
+
+  for (const field of orderedFields) {
+    const ref = byField.get(field);
+    if (!ref) continue;
+    overridden.push(ref);
+    used.add(field);
+  }
+
+  for (const ref of uniqueFieldRefs) {
+    if (!used.has(ref.field)) overridden.push(ref);
+  }
+
+  return overridden;
+}
+
 function emitFieldsEnum(actionConst, fieldRefs) {
   const enumName = `${toSafeTsIdent(actionConst)}Fields`;
   const unique = [];
@@ -103,20 +161,21 @@ function emitFieldsEnum(actionConst, fieldRefs) {
     seen.add(r.field);
     unique.push(r);
   }
+  const ordered = applyFieldOrderOverride(actionConst, unique);
 
   const lines = [];
   lines.push(`/**`);
   lines.push(` * Auto-generated from \`apps/game/gameActionFactory.js\``);
   lines.push(` * Action: \`${actionConst}\``);
-  if (unique.length > 0) lines.push(` * Source field enum: \`${unique[0].enumSym}\``);
+  if (ordered.length > 0) lines.push(` * Source field enum: \`${ordered[0].enumSym}\``);
   lines.push(` */`);
   lines.push(`export enum ${enumName} {`);
-  unique.forEach((r, idx) => {
+  ordered.forEach((r, idx) => {
     lines.push(`  ${r.field} = ${idx},`);
   });
   lines.push(`}`);
   lines.push(``);
-  return { enumName, content: lines.join("\n"), unique };
+  return { enumName, content: lines.join("\n"), unique: ordered };
 }
 
 function emitPacketCodec(actionConst, enumName, uniqueFieldRefs, body) {

@@ -80,6 +80,12 @@ export interface StateMachineContext {
     sendServerInfo(userId: number, message: string): void;
 
     /**
+     * Handles cleanup when a player exits TradingState.
+     * @param userId - The player leaving trading state
+     */
+    onPlayerExitedTradingState(userId: number): void;
+
+    /**
      * Gets the woodcutting service (may be null if not loaded).
      */
     getWoodcuttingService(): WoodcuttingService | null;
@@ -214,8 +220,9 @@ export class StateMachine {
                 break;
 
             case States.TradingState:
-                // Close trade interface (placeholder for future implementation)
-                // closeTrade(entityRef);
+                if (entityRef.type === EntityType.Player) {
+                    this.context.onPlayerExitedTradingState(entityRef.id);
+                }
                 break;
 
             case States.ShoppingState:

@@ -12,6 +12,15 @@ const { sanitizeString, isValidEmail } = require('../services/validation');
 const { makeApiRequest, extractApiErrorMessage } = require('../services/api');
 const { escapeHtml } = require('../utils/helpers');
 
+function formatTotalPlayTime(totalMs) {
+    const safeMs = Number.isFinite(Number(totalMs)) ? Math.max(0, Number(totalMs)) : 0;
+    const totalMinutes = Math.floor(safeMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+    return `${days} days ${hours} hours ${minutes} minutes`;
+}
+
 // Apply authentication middleware to all account routes
 router.use(requireAuth);
 
@@ -78,6 +87,7 @@ router.get('/', async (req, res) => {
             day: 'numeric' 
         });
     }
+    const totalPlayTimeStr = formatTotalPlayTime(user.timePlayed);
     
     // Get success/error messages
     const successMessage = req.query.success ? escapeHtml(req.query.success) : '';
@@ -161,7 +171,7 @@ router.get('/', async (req, res) => {
                 ` : ''}
                 ` : ''}
                 <li>Player since <span class="fw-bold">${createdDateStr}</span></li>
-                <li>Total play time: <span class="fw-bold">0 days 0 hours 0 minutes</span></li>
+                <li>Total play time: <span class="fw-bold">${totalPlayTimeStr}</span></li>
                 <li></li>
                 <li><h3>Account Management</h3></li>
                 ${passwordCooldownInfo}

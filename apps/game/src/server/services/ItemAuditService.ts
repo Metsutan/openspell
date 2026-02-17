@@ -35,12 +35,23 @@ type ShopSaleInput = {
   serverId?: number | null;
 };
 
+type TradeItemTransferInput = {
+  tradeSessionId: string;
+  fromUserId: number;
+  toUserId: number;
+  itemId: number;
+  amount: number;
+  isIOU: number;
+  serverId?: number | null;
+};
+
 type ItemAuditConfig = {
   enabled: boolean;
   batchSize: number;
   flushMs: number;
   retentionDays: number;
   shopSaleEnabled: boolean;
+  tradeEventEnabled: boolean;
 };
 
 type ItemAuditHooks = {
@@ -49,6 +60,7 @@ type ItemAuditHooks = {
     input: ItemPickupInput & { dropperUserId?: number | null; serverId?: number | null }
   ) => void;
   onShopSale?: (input: ShopSaleInput & { serverId?: number | null }) => void;
+  onTradeItemTransfer?: (input: TradeItemTransferInput & { serverId?: number | null }) => void;
 };
 
 function parseNumber(value: string | undefined, fallback: number): number {
@@ -68,6 +80,7 @@ export class ItemAuditService {
   private readonly dropQueue: ItemDropInput[] = [];
   private readonly pickupQueue: Array<ItemPickupInput & { dropperUserId?: number | null }> = [];
   private readonly shopSaleQueue: ShopSaleInput[] = [];
+  private readonly tradeTransferQueue: TradeItemTransferInput[] = [];
   private flushTimer: NodeJS.Timeout | null = null;
   private cleanupTimer: NodeJS.Timeout | null = null;
   private readonly dropperByGroundItemId = new Map<number, number>();
@@ -83,10 +96,11 @@ export class ItemAuditService {
       flushMs: parseNumber(process.env.ITEM_EVENT_FLUSH_MS, 2000),
       retentionDays: parseNumber(process.env.ITEM_EVENT_RETENTION_DAYS, 90),
       shopSaleEnabled: parseBoolean(process.env.SHOP_SALE_LOG_ENABLED, true),
+      tradeEventEnabled: parseBoolean(process.env.TRADE_EVENT_LOG_ENABLED, true)
     };
     this.hooks = hooks;
 
-    if (this.dbEnabled && (this.config.enabled || this.config.shopSaleEnabled)) {
+    if (this.dbEnabled && (this.config.enabled || this.config.shopSaleEnabled || this.config.tradeEventEnabled)) {
       this.flushTimer = setInterval(() => void this.flush(), this.config.flushMs);
       this.cleanupTimer = setInterval(() => void this.cleanup(), 12 * 60 * 60 * 1000);
     }
@@ -140,6 +154,17 @@ export class ItemAuditService {
     this.flushIfNeeded();
   }
 
+  logTradeItemTransfer(input: TradeItemTransferInput): void {
+    const entry = {
+      ...input,
+      serverId: input.serverId ?? this.serverId
+    };
+    this.hooks?.onTradeItemTransfer?.(entry);
+    if (!this.config.tradeEventEnabled || !this.dbEnabled) return;
+    this.tradeTransferQueue.push(entry);
+    this.flushIfNeeded();
+  }
+
   async shutdown(): Promise<void> {
     if (this.flushTimer) clearInterval(this.flushTimer);
     if (this.cleanupTimer) clearInterval(this.cleanupTimer);
@@ -154,7 +179,8 @@ export class ItemAuditService {
     if (
       this.dropQueue.length +
         this.pickupQueue.length +
-        this.shopSaleQueue.length >=
+        this.shopSaleQueue.length +
+        this.tradeTransferQueue.length >=
       this.config.batchSize
     ) {
       void this.flush();
@@ -162,11 +188,12 @@ export class ItemAuditService {
   }
 
   private async flush(): Promise<void> {
-    if (!this.dbEnabled || (!this.config.enabled && !this.config.shopSaleEnabled)) return;
+    if (!this.dbEnabled || (!this.config.enabled && !this.config.shopSaleEnabled && !this.config.tradeEventEnabled)) return;
     if (
       this.dropQueue.length === 0 &&
       this.pickupQueue.length === 0 &&
-      this.shopSaleQueue.length === 0
+      this.shopSaleQueue.length === 0 &&
+      this.tradeTransferQueue.length === 0
     ) {
       return;
     }
@@ -175,6 +202,7 @@ export class ItemAuditService {
     const dropBatch = this.dropQueue.splice(0, this.dropQueue.length);
     const pickupBatch = this.pickupQueue.splice(0, this.pickupQueue.length);
     const saleBatch = this.shopSaleQueue.splice(0, this.shopSaleQueue.length);
+    const tradeTransferBatch = this.tradeTransferQueue.splice(0, this.tradeTransferQueue.length);
 
     const ops = [];
 
@@ -232,13 +260,30 @@ export class ItemAuditService {
       );
     }
 
+    if (tradeTransferBatch.length > 0 && this.config.tradeEventEnabled) {
+      const prismaAny = prisma as any;
+      ops.push(
+        prismaAny.tradeItemTransferEvent.createMany({
+          data: tradeTransferBatch.map((entry) => ({
+            tradeSessionId: entry.tradeSessionId,
+            fromUserId: entry.fromUserId,
+            toUserId: entry.toUserId,
+            itemId: entry.itemId,
+            amount: BigInt(entry.amount),
+            isIOU: entry.isIOU,
+            serverId: entry.serverId ?? null
+          }))
+        })
+      );
+    }
+
     if (ops.length > 0) {
       await prisma.$transaction(ops);
     }
   }
 
   private async cleanup(): Promise<void> {
-    if (!this.dbEnabled || (!this.config.enabled && !this.config.shopSaleEnabled)) return;
+    if (!this.dbEnabled || (!this.config.enabled && !this.config.shopSaleEnabled && !this.config.tradeEventEnabled)) return;
     if (this.config.retentionDays <= 0) return;
 
     const cutoff = new Date(Date.now() - this.config.retentionDays * 24 * 60 * 60 * 1000);
@@ -248,6 +293,7 @@ export class ItemAuditService {
       prisma.itemDropEvent.deleteMany({ where: { droppedAt: { lt: cutoff } } }),
       prisma.itemPickupEvent.deleteMany({ where: { pickedUpAt: { lt: cutoff } } }),
       prisma.shopItemSaleEvent.deleteMany({ where: { soldAt: { lt: cutoff } } }),
+      prisma.tradeItemTransferEvent.deleteMany({ where: { tradedAt: { lt: cutoff } } })
     ]);
   }
 }

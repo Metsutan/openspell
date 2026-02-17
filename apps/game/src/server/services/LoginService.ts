@@ -19,6 +19,7 @@ export interface LoginResult {
   userId: number;
   username: string;
   emailVerified: boolean;
+  isFirstGameLogin: boolean;
   serverId: number;
   persistenceId: number;
   lastLogin: {
@@ -77,6 +78,7 @@ export class LoginService {
     
     // Get the user's previous login time (before we update it)
     const previousLoginTimeMs = row.user.lastLoginAt ? row.user.lastLoginAt.getTime() : null;
+    const isFirstGameLogin = previousLoginTimeMs === null;
     
     // Calculate time offset: milliseconds since last login
     // If this is first login (null), send 0 as offset
@@ -97,6 +99,7 @@ export class LoginService {
       userId: row.userId,
       username: row.user.username.toLowerCase(),
       emailVerified: !!row.user.emailVerified,
+      isFirstGameLogin,
       serverId: row.serverId,
       persistenceId,
       lastLogin: {

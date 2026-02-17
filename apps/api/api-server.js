@@ -742,6 +742,7 @@ async function ensureInitialPlayerSkillsForUser(db, userId, persistenceId) {
 
   // Create non-overall rows if missing, but do not overwrite if already present.
   for (const skill of nonOverall) {
+    const isHitpoints = skill.slug === 'hitpoints';
     await db.playerSkill.upsert({
       where: { userId_persistenceId_skillId: { userId, persistenceId, skillId: skill.id } },
       update: {},
@@ -749,8 +750,9 @@ async function ensureInitialPlayerSkillsForUser(db, userId, persistenceId) {
         userId,
         persistenceId,
         skillId: skill.id,
-        level: skill.id === 2 ? 10 : 1,
-        experience: skill.id === 2 ? BigInt(1414) : BigInt(0)
+        level: isHitpoints ? 10 : 1,
+        boostedLevel: isHitpoints ? 10 : 1,
+        experience: isHitpoints ? BigInt(1414) : BigInt(0)
       }
     });
   }
@@ -1254,6 +1256,7 @@ app.get('/api/auth/me', requireWebServerSecret, verifyToken, async (req, res) =>
         emailVerified: true,
         lastPasswordChange: true,
         lastEmailChange: true,
+        timePlayed: true,
         createdAt: true
       }
     });

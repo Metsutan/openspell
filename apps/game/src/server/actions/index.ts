@@ -17,6 +17,8 @@ import { handleCreateItem } from "./handleCreateItem";
 import { handleToggleAutoCast } from "./handleToggleAutoCast";
 import { handleCastSingleCombatOrStatusSpell } from "./handleCastSingleCombatOrStatusSpell";
 import { handleCastInventorySpell } from "./handleCastInventorySpell";
+import { handleUpdateTradeStatus } from "./handleUpdateTradeStatus";
+import { handleChangeAppearance } from "./handleChangeAppearance";
 
 // Re-export types for convenience
 export type { ActionContext, ActionDefinition, ActionHandler } from "./types";
@@ -123,6 +125,16 @@ const ACTIONS: Partial<Record<ClientActionType, ActionDefinition>> = {
     handler: handleCreateItem,
     requiresAuth: true,
     description: "Create an item from a skilling menu"
+  },
+  [ClientActionTypes.UpdateTradeStatus]: {
+    handler: handleUpdateTradeStatus,
+    requiresAuth: true,
+    description: "Update current trade status (decline/accept)"
+  },
+  [ClientActionTypes.ChangeAppearance]: {
+    handler: handleChangeAppearance,
+    requiresAuth: true,
+    description: "Submit requested character appearance"
   }
 
   // Add more handlers here as they're implemented...

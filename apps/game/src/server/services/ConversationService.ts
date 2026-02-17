@@ -26,6 +26,7 @@ import type { MapLevel } from "../../world/Location";
 import { QuestProgressService } from "./QuestProgressService";
 import type { InstancedNpcService } from "./InstancedNpcService";
 import type { ItemCatalog } from "../../world/items/ItemCatalog";
+import type { ChangeAppearanceService } from "./ChangeAppearanceService";
 
 type EnqueueUserMessageCallback = (userId: number, action: GameAction, payload: unknown[]) => void;
 type EnqueueBroadcastCallback = (action: GameAction, payload: unknown[]) => void;
@@ -45,6 +46,7 @@ export interface ConversationServiceDependencies {
   deleteMovementPlan: DeleteMovementPlanCallback;
   targetingService: TargetingService;
   stateMachine: StateMachine;
+  changeAppearanceService: ChangeAppearanceService;
   getInstancedNpcService?: () => InstancedNpcService | null;
   teleportService: {
     changeMapLevel: (userId: number, x: number, y: number, mapLevel: MapLevel) => { success: boolean };
@@ -378,6 +380,9 @@ export class ConversationService {
         case "ForceChangeAppearance":
           this.handleForceChangeAppearance(userId, action);
           break;
+        case "ChangeAppearance":
+          this.handleChangeAppearanceAction(userId);
+          break;
         default:
           console.warn(`[ConversationService] Unknown action type: ${action.type}`);
       }
@@ -694,6 +699,15 @@ export class ConversationService {
     // Update local player immediately and broadcast for nearby observers.
     this.deps.enqueueUserMessage(userId, GameAction.ChangedAppearance, payload);
     this.deps.enqueueBroadcast(GameAction.ChangedAppearance, payload);
+  }
+
+  private handleChangeAppearanceAction(userId: number): void {
+    const result = this.deps.changeAppearanceService.startFromConversation(userId);
+    if (!result.ok) {
+      console.warn(
+        `[ConversationService] Failed to start ChangeAppearance for player ${userId}: ${result.reason ?? "unknown"}`
+      );
+    }
   }
 
   /**
