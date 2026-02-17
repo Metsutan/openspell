@@ -1,4 +1,3 @@
-import { PlayerType } from "../../protocol/enums/PlayerType";
 import { MessageStyle } from "../../protocol/enums/MessageStyle";
 import type { CommandContext, CommandHandler } from "./types";
 
@@ -56,27 +55,7 @@ const TELEPORT_LOCATIONS: Record<string, TeleportLocation> = {
     mapLevel: 1,
     description: "Icitrine city"
   }
-  // -------------------------------------------------------------------------
-  // Add more locations below following this pattern:
-  // -------------------------------------------------------------------------
-  // lumbridge: {
-  //   x: 100,
-  //   y: 200,
-  //   mapLevel: 1,
-  //   description: "Lumbridge town center"
-  // },
-  // varrock: {
-  //   x: 300,
-  //   y: 400,
-  //   mapLevel: 1,
-  //   description: "Varrock square"
-  // },
-  // dungeon1: {
-  //   x: 50,
-  //   y: 50,
-  //   mapLevel: 2,
-  //   description: "First dungeon entrance"
-  // },
+
 };
 
 // ============================================================================
@@ -89,6 +68,12 @@ type TeleportSubcommandHandler = (
   args: string[] // args after the subcommand
 ) => void;
 
+function resolveOnlinePlayerId(ctx: CommandContext, usernameArg: string | undefined): number | null {
+  const username = usernameArg?.trim();
+  if (!username) return null;
+  return ctx.getPlayerIdByUsername(username);
+}
+
 /**
  * Registry of special teleport subcommands with custom logic.
  * These take precedence over location lookups.
@@ -97,39 +82,53 @@ type TeleportSubcommandHandler = (
  * such as "to" (teleport to another player's position).
  */
 const TELEPORT_SUBCOMMANDS: Record<string, TeleportSubcommandHandler> = {
-  // Example: /teleport to <username> - teleport self to another player's location
-  // to: (ctx, args) => {
-  //   const targetName = args[0];
-  //   if (!targetName) {
-  //     ctx.reply("Usage: /teleport to <username>", MessageStyle.Warning);
-  //     return;
-  //   }
-  //   const targetId = ctx.getPlayerIdByUsername(targetName);
-  //   if (!targetId) {
-  //     ctx.reply(`Player "${targetName}" not found`, MessageStyle.Warning);
-  //     return;
-  //   }
-  //   // Would need to get target's position and teleport to it
-  //   // ctx.teleportToPlayer(ctx.userId, targetId);
-  //   ctx.reply(`Teleported to ${targetName}`, MessageStyle.Green);
-  // },
+  to: (ctx, args) => {
+    const targetName = args.join(" ").trim();
+    if (!targetName) {
+      ctx.reply("Usage: /teleport to <username>", MessageStyle.Warning);
+      return;
+    }
 
-  // Example: /teleport bring <username> - bring another player to your location
-  // bring: (ctx, args) => {
-  //   const targetName = args[0];
-  //   if (!targetName) {
-  //     ctx.reply("Usage: /teleport bring <username>", MessageStyle.Warning);
-  //     return;
-  //   }
-  //   const targetId = ctx.getPlayerIdByUsername(targetName);
-  //   if (!targetId) {
-  //     ctx.reply(`Player "${targetName}" not found`, MessageStyle.Warning);
-  //     return;
-  //   }
-  //   // Would teleport target to caller's position
-  //   // ctx.teleportToPlayer(targetId, ctx.userId);
-  //   ctx.reply(`Brought ${targetName} to your location`, MessageStyle.Green);
-  // },
+    const targetId = resolveOnlinePlayerId(ctx, targetName);
+    if (targetId === null) {
+      ctx.reply(`Player "${targetName}" not found`, MessageStyle.Warning);
+      return;
+    }
+
+    const targetState = ctx.getPlayerState(targetId);
+    if (!targetState) {
+      ctx.reply(`Player "${targetName}" is not online`, MessageStyle.Warning);
+      return;
+    }
+
+    ctx.stopPlayerMovement(ctx.userId);
+    ctx.teleportPlayer(ctx.userId, targetState.x, targetState.y, targetState.mapLevel);
+    ctx.reply(`Teleported to ${targetName}`, MessageStyle.Green);
+  },
+
+  bring: (ctx, args) => {
+    const targetName = args.join(" ").trim();
+    if (!targetName) {
+      ctx.reply("Usage: /teleport bring <username>", MessageStyle.Warning);
+      return;
+    }
+
+    const targetId = resolveOnlinePlayerId(ctx, targetName);
+    if (targetId === null) {
+      ctx.reply(`Player "${targetName}" not found`, MessageStyle.Warning);
+      return;
+    }
+
+    const sourceState = ctx.getPlayerState(ctx.userId);
+    if (!sourceState) {
+      ctx.reply("Could not resolve your current location", MessageStyle.Warning);
+      return;
+    }
+
+    ctx.stopPlayerMovement(targetId);
+    ctx.teleportPlayer(targetId, sourceState.x, sourceState.y, sourceState.mapLevel);
+    ctx.reply(`Brought ${targetName} to your location`, MessageStyle.Green);
+  },
 };
 
 // ============================================================================
@@ -152,10 +151,12 @@ function handleLocationTeleport(
       ctx.reply(`Player "${targetUsername}" not found`, MessageStyle.Warning);
       return;
     }
+    ctx.stopPlayerMovement(targetId);
     ctx.teleportPlayer(targetId, location.x, location.y, location.mapLevel);
     ctx.reply(`Teleported ${targetUsername} to ${locationName}`, MessageStyle.Green);
   } else {
     // Teleport self to the location
+    ctx.stopPlayerMovement(ctx.userId);
     ctx.teleportPlayer(ctx.userId, location.x, location.y, location.mapLevel);
     ctx.reply(`Teleported to ${locationName}`, MessageStyle.Green);
   }
@@ -167,6 +168,8 @@ function handleLocationTeleport(
  * Usage:
  *   /teleport <location>           - Teleport self to location
  *   /teleport <location> <user>    - Teleport user to location
+ *   /teleport to <username>        - Teleport yourself to another player
+ *   /teleport bring <username>     - Bring another player to your location
  *   /teleport help                 - Show available locations
  */
 export const teleportCommand: CommandHandler = (ctx, args) => {
@@ -177,6 +180,7 @@ export const teleportCommand: CommandHandler = (ctx, args) => {
     const locations = Object.keys(TELEPORT_LOCATIONS).join(", ");
     ctx.reply(`Available locations: ${locations}`, MessageStyle.Green);
     ctx.reply("Usage: /teleport <location> [username]", MessageStyle.Green);
+    ctx.reply("Also: /teleport to <username>, /teleport bring <username>", MessageStyle.Green);
     return;
   }
 

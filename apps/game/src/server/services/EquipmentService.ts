@@ -236,7 +236,6 @@ export class EquipmentService {
             // Queue for return to inventory
             itemsToReturnToInventory.push({ itemId: unequippedItemId, amount: unequippedAmount });
             
-            console.log(`[EquipmentService] User ${userId} unequipped ${unequippedItemId} x${unequippedAmount} from ${slotToRemove} (removeEquipmentOnEquip)`);
           }
         }
       }
@@ -281,7 +280,6 @@ export class EquipmentService {
       // Queue for return to inventory
       itemsToReturnToInventory.push({ itemId: unequippedItemId, amount: unequippedAmount });
       
-      console.log(`[EquipmentService] User ${userId} unequipped ${unequippedItemId} x${unequippedAmount} from ${equipmentSlot}`);
     }
 
     // Equip the new item
@@ -329,7 +327,6 @@ export class EquipmentService {
       
       // Handle overflow (drop on ground)
       if (addResult.overflow > 0) {
-        console.log(`[EquipmentService] Inventory full, overflow ${addResult.overflow}x ${returnItemId} for user ${userId}`);
         // Note: Item dropping would be handled by the caller or ItemManager
       }
     }
@@ -349,7 +346,6 @@ export class EquipmentService {
       timestamp: Date.now()
     });
     
-    console.log(`[EquipmentService] User ${userId} equipped item ${itemId} x${removeResult.removed} in slot ${equipmentSlot}`);
 
     this.setPlayerToIdle(userId);
     
@@ -471,7 +467,6 @@ export class EquipmentService {
       timestamp: Date.now()
     });
     
-    console.log(`[EquipmentService] User ${userId} unequipped item ${itemId} x${amount} from slot ${slot}`);
 
     this.setPlayerToIdle(userId);
     
@@ -601,15 +596,6 @@ export class EquipmentService {
     // Recalculate all equipment bonuses and update player state
     const bonuses = this.calculateEquipmentBonuses(playerState);
     playerState.setEquipmentBonuses(bonuses);
-
-    console.log(
-      `[EquipmentService] Equipment bonuses updated: ` +
-      `Accuracy=${bonuses.accuracyBonus}, Strength=${bonuses.strengthBonus}, ` +
-      `Defense=${bonuses.defenseBonus}, Magic=${bonuses.magicBonus}, Range=${bonuses.rangeBonus}` +
-      (Object.keys(bonuses.skillBonuses).length > 0 
-        ? `, Skills=${JSON.stringify(bonuses.skillBonuses)}` 
-        : '')
-    );
   }
 
   /**
@@ -628,15 +614,6 @@ export class EquipmentService {
     // Recalculate all equipment bonuses and update player state
     const bonuses = this.calculateEquipmentBonuses(playerState);
     playerState.setEquipmentBonuses(bonuses);
-
-    console.log(
-      `[EquipmentService] Equipment bonuses updated: ` +
-      `Accuracy=${bonuses.accuracyBonus}, Strength=${bonuses.strengthBonus}, ` +
-      `Defense=${bonuses.defenseBonus}, Magic=${bonuses.magicBonus}, Range=${bonuses.rangeBonus}` +
-      (Object.keys(bonuses.skillBonuses).length > 0 
-        ? `, Skills=${JSON.stringify(bonuses.skillBonuses)}` 
-        : '')
-    );
   }
 
   /**

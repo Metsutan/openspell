@@ -8,7 +8,9 @@ import { buildRemovedItemFromInventoryAtSlotPayload } from "../../protocol/packe
 import { buildAddedItemAtInventorySlotPayload } from "../../protocol/packets/actions/AddedItemAtInventorySlot";
 import { buildSkillCurrentLevelChangedPayload } from "../../protocol/packets/actions/SkillCurrentLevelChanged";
 import { buildShowSkillCurrentLevelIncreasedOrDecreasedMessagePayload } from "../../protocol/packets/actions/ShowSkillCurrentLevelIncreasedOrDecreasedMessage";
+import { buildShowLootMenuPayload } from "../../protocol/packets/actions/ShowLootMenu";
 import { GameAction } from "../../protocol/enums/GameAction";
+import { MessageStyle } from "../../protocol/enums/MessageStyle";
 import type { ActionContext, ActionHandler } from "./types";
 import type { ItemOnItemAction, ItemOnItemActionItem } from "../../world/items/ItemCatalog";
 import { buildPlayerWeightChangedPayload } from "../../protocol/packets/actions/PlayerWeightChanged";
@@ -18,6 +20,8 @@ import { applyWeightChange } from "../../world/systems/WeightCalculator";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { createEntityHitpointsChangedEvent } from "../events/GameEvents";
 import { DelayType } from "../systems/DelaySystem";
+
+const DEFAULT_DIG_DELAY_TICKS = 4;
 
 /**
  * Handles inventory item action invocations (e.g., eat food, equip weapon, drop, etc.)
@@ -39,35 +43,30 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
 
   // Validate user is authenticated
   if (!ctx.userId) {
-    console.warn("[handleInvokeInventoryItemAction] No userId - action ignored");
     return;
   }
 
   // Get player state
   const playerState = ctx.playerStatesByUserId.get(ctx.userId);
   if (!playerState) {
-    console.warn(`[handleInvokeInventoryItemAction] No player state for user ${ctx.userId}`);
     return;
   }
 
   const handleEdibleAction = (actionLabel: "eat" | "drink") => {
     if (payload.MenuType !== MenuType.Inventory) {
       logInvalid(`${actionLabel}_invalid_menu`, { menuType: payload.MenuType });
-      console.warn(`[handleInvokeInventoryItemAction] ${actionLabel} called on non-inventory menu: ${payload.MenuType}`);
       return;
     }
 
     const slot = Number(payload.Slot);
     if (!Number.isInteger(slot) || slot < 0 || slot >= 28) {
       logInvalid(`${actionLabel}_invalid_slot`, { slot });
-      console.warn(`[handleInvokeInventoryItemAction] Invalid ${actionLabel} slot index: ${slot}`);
       return;
     }
 
     const inventoryItem = playerState.inventory[slot];
     if (!inventoryItem) {
       logInvalid(`${actionLabel}_empty_slot`, { slot });
-      console.warn(`[handleInvokeInventoryItemAction] No item at slot ${slot} for ${actionLabel}`);
       return;
     }
 
@@ -75,13 +74,11 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     const expectedItemId = Number(payload.ItemID);
     if (itemId !== expectedItemId) {
       logInvalid(`${actionLabel}_item_mismatch`, { slot, expectedItemId, itemId });
-      console.warn(`[handleInvokeInventoryItemAction] ItemID mismatch at slot ${slot}. Expected ${itemId}, got ${expectedItemId}`);
       return;
     }
 
     if (playerState.lastEdibleActionTick === ctx.currentTick) {
       logInvalid(`${actionLabel}_rate_limited`, { slot, itemId, tick: ctx.currentTick });
-      console.warn(`[handleInvokeInventoryItemAction] ${actionLabel} rate limited for user ${ctx.userId} on tick ${ctx.currentTick}`);
       const failurePayload = buildInvokedInventoryItemActionPayload({
         Action: payload.Action,
         MenuType: payload.MenuType,
@@ -98,7 +95,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
 
     if (isIOU === 1) {
       logInvalid(`${actionLabel}_iou`, { slot, itemId });
-      console.warn(`[handleInvokeInventoryItemAction] Cannot ${actionLabel} IOU item ${itemId} at slot ${slot}`);
       const failurePayload = buildInvokedInventoryItemActionPayload({
         Action: payload.Action,
         MenuType: payload.MenuType,
@@ -117,21 +113,18 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
 
     const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
     if (!itemDef) {
-      console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${itemId}`);
       return;
     }
 
     const edibleEffects = itemDef.edibleEffects ?? null;
     if (!edibleEffects || edibleEffects.length === 0) {
       logInvalid(`${actionLabel}_no_effects`, { itemId });
-      console.warn(`[handleInvokeInventoryItemAction] Item ${itemId} has no edible effects for ${actionLabel}`);
       return;
     }
 
     const decrementResult = ctx.inventoryService.decrementItemAtSlot(ctx.userId!, slot, itemId, 1, isIOU);
     if (!decrementResult || decrementResult.removed <= 0) {
       logInvalid(`${actionLabel}_remove_failed`, { slot, itemId });
-      console.warn(`[handleInvokeInventoryItemAction] Failed to remove item ${itemId} from slot ${slot} for ${actionLabel}`);
       return;
     }
 
@@ -141,7 +134,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         continue;
       }
       if (!isSkillSlug(effect.skill)) {
-        console.warn(`[handleInvokeInventoryItemAction] Invalid edible effect skill "${effect.skill}" on item ${itemId}`);
         continue;
       }
 
@@ -227,8 +219,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       Data: null
     });
     ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, successPayload);
-
-    console.log(`[handleInvokeInventoryItemAction] User ${ctx.userId} ${actionLabel} item ${itemId} (slot ${slot})`);
   };
 
   const handleNotImplementedAction = (actionLabel: string) => {
@@ -246,8 +236,178 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       Data: null
     });
     ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, failurePayload);
+  };
 
-    console.warn(`[handleInvokeInventoryItemAction] ${actionLabel} action not implemented`);
+  const sendActionResponse = (success: boolean, data: unknown = null) => {
+    const responsePayload = buildInvokedInventoryItemActionPayload({
+      Action: payload.Action,
+      MenuType: payload.MenuType,
+      Slot: payload.Slot,
+      ItemID: payload.ItemID,
+      Amount: payload.Amount,
+      IsIOU: payload.IsIOU,
+      Success: success,
+      Data: data
+    });
+    ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, responsePayload);
+  };
+
+  const readValidatedInventoryItemAtPayloadSlot = (): { slot: number; itemId: number; amount: number; isIOU: number } | null => {
+    if (payload.MenuType !== MenuType.Inventory) {
+      logInvalid("read_validated_inventory_item_at_payload_slot_invalid_menu", { payload });
+      return null;
+    }
+
+    const slot = Number(payload.Slot);
+    if (!Number.isInteger(slot) || slot < 0 || slot >= 28) {
+      logInvalid("read_validated_inventory_item_at_payload_slot_invalid_slot", { payload });
+      return null;
+    }
+
+    const inventoryItem = playerState.inventory[slot];
+    if (!inventoryItem) {
+      logInvalid("read_validated_inventory_item_at_payload_slot_empty_slot", { payload });
+      return null;
+    }
+
+    const [itemId, amount, isIOU] = inventoryItem;
+    if (itemId !== Number(payload.ItemID)) {
+      logInvalid("read_validated_inventory_item_at_payload_slot_item_mismatch", { payload });
+      return null;
+    }
+    if ((payload.IsIOU ? 1 : 0) !== isIOU) {
+      logInvalid("read_validated_inventory_item_at_payload_slot_is_iou_mismatch", { payload });
+      return null;
+    }
+
+    return { slot, itemId, amount, isIOU };
+  };
+
+  const capitalizeFirstLetter = (value: string): string => {
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const formatNumberWithCommas = (value: number): string => {
+    return value.toLocaleString("en-US");
+  };
+
+  const handleShovelDigAction = () => {
+    const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
+    if (!inventoryPayloadItem) {
+      sendActionResponse(false);
+      return;
+    }
+
+    const SHOVEL_ITEM_ID = 444;
+    if (inventoryPayloadItem.itemId !== SHOVEL_ITEM_ID) {
+      logInvalid("shovel_dig_invalid_item", { payload });
+      sendActionResponse(false);
+      return;
+    }
+
+    // Restart this windup if the user re-clicks dig.
+    ctx.delaySystem.interruptDelay(ctx.userId!, false);
+
+    const delayStarted = ctx.delaySystem.startDelay({
+      userId: ctx.userId!,
+      type: DelayType.NonBlocking,
+      ticks: DEFAULT_DIG_DELAY_TICKS,
+      state: States.DiggingState,
+      restoreState: States.IdleState,
+      startMessage: "You begin digging with your shovel...",
+      onComplete: (resolvedUserId) => {
+        const delayedPlayerState = ctx.playerStatesByUserId.get(resolvedUserId);
+        if (!delayedPlayerState) {
+          return;
+        }
+        let foundSomethingValuable = false;
+
+        const digTarget = ctx.treasureMapService?.resolveTreasureMapDigLocation(
+          resolvedUserId,
+          delayedPlayerState.mapLevel,
+          delayedPlayerState.x,
+          delayedPlayerState.y
+        ) ?? null;
+
+        if (digTarget && ctx.worldEntityLootService) {
+          const lootResult = ctx.worldEntityLootService.attemptLoot(
+            delayedPlayerState,
+            digTarget.lootTableId,
+            SKILLS.crime,
+            ctx.itemCatalog
+          );
+
+          if (lootResult.passedRequirements && lootResult.succeeded) {
+            const removedMap = ctx.inventoryService.removeItem(
+              resolvedUserId,
+              digTarget.itemId,
+              1,
+              0
+            );
+
+            if (removedMap.removed > 0) {
+              ctx.treasureMapService?.onTreasureMapDiscarded(resolvedUserId, digTarget.itemId);
+
+              let hadOverflow = false;
+              const lootMenuItems: Array<[number, number, number]> = [];
+              for (const drop of lootResult.drops) {
+                const itemGrantResult = ctx.inventoryService.giveItem(
+                  resolvedUserId,
+                  drop.itemId,
+                  drop.amount,
+                  drop.isIOU ? 1 : 0
+                );
+                if (itemGrantResult.added > 0) {
+                  lootMenuItems.push([drop.itemId, itemGrantResult.added, drop.isIOU ? 1 : 0]);
+                  const itemName = capitalizeFirstLetter(itemGrantResult.itemName);
+                  const message = itemGrantResult.added > 1
+                    ? `You received ${formatNumberWithCommas(itemGrantResult.added)} ${itemName}`
+                    : `You received some ${itemName}`;
+                  ctx.messageService.sendServerInfo(resolvedUserId, message, MessageStyle.Magenta);
+                }
+                if (itemGrantResult.overflow > 0) {
+                  hadOverflow = true;
+                }
+              }
+
+              if (hadOverflow) {
+                ctx.messageService.sendServerInfo(resolvedUserId, "Some items were placed on the ground.");
+              }
+
+              if (lootMenuItems.length > 0) {
+                const showLootPayload = buildShowLootMenuPayload({
+                  Items: lootMenuItems,
+                  Type: 1
+                });
+                ctx.enqueueUserMessage(resolvedUserId, GameAction.ShowLootMenu, showLootPayload);
+                foundSomethingValuable = true;
+              }
+            }
+          }
+        }
+
+        if (!foundSomethingValuable) {
+          ctx.messageService.sendServerInfo(resolvedUserId, "...but you only find dirt and rocks");
+        }
+
+        const responsePayload = buildInvokedInventoryItemActionPayload({
+          Action: payload.Action,
+          MenuType: payload.MenuType,
+          Slot: payload.Slot,
+          ItemID: payload.ItemID,
+          Amount: payload.Amount,
+          IsIOU: payload.IsIOU,
+          Success: true,
+          Data: 0
+        });
+        ctx.enqueueUserMessage(resolvedUserId, GameAction.InvokedInventoryItemAction, responsePayload);
+      }
+    });
+
+    if (!delayStarted) {
+      sendActionResponse(false);
+    }
   };
 
   const handleRubAction = () => {
@@ -387,7 +547,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
             }
 
             sendRubResponse(true);
-            console.log(`[handleInvokeInventoryItemAction] User ${resolvedUserId} rubbed orb ${delayedItemId} -> ${nextOrbId} and gained defense boost`);
           }
         });
 
@@ -407,6 +566,19 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
   // Switch on the item action type
   switch (payload.Action) {
     case ItemAction.drop: {
+      const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
+      if (!inventoryPayloadItem) {
+        sendActionResponse(false);
+        return;
+      }
+
+      const dropItemDef = ctx.itemCatalog?.getDefinitionById(inventoryPayloadItem.itemId);
+      if (dropItemDef?.isOnlyDiscardable) {
+        logInvalid("drop_only_discardable", { itemId: inventoryPayloadItem.itemId });
+        sendActionResponse(false);
+        return;
+      }
+
       // Step 1: Remove item from inventory
       const removedItem = ctx.world.inventorySystem.removeItemFromInventoryAtSlot(
         { enqueueUserMessage: ctx.enqueueUserMessage, itemCatalog: ctx.itemCatalog! },
@@ -415,8 +587,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       );
 
       if (!removedItem) {
-        console.warn(`[handleInvokeInventoryItemAction] Failed to remove item from inventory`);
-        // TODO Implement logging - Specifically inside of removeItemFromInventoryAtslot for better specifics.
         return;
       }
 
@@ -463,7 +633,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       ctx.enqueueUserMessage(ctx.userId, GameAction.InvokedInventoryItemAction, successPayload);
       ctx.inventoryService.sendWeightUpdate(ctx.userId, playerState);
       
-      console.log(`[handleInvokeInventoryItemAction] User ${ctx.userId} dropped item ${removedItem[0]} x${removedItem[1]}`);
       
       // TODO: implement PlayerWeightChanged
       break;
@@ -476,21 +645,18 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     case ItemAction.equip: {
       // Validate MenuType is Inventory (equipping FROM inventory)
       if (payload.MenuType !== MenuType.Inventory) {
-        console.warn(`[handleInvokeInventoryItemAction] equip called on non-inventory menu: ${payload.MenuType}`);
         return;
       }
 
       // Validate slot index
       const slot = Number(payload.Slot);
       if (!Number.isInteger(slot) || slot < 0 || slot >= 28) {
-        console.warn(`[handleInvokeInventoryItemAction] Invalid slot index: ${slot}`);
         return;
       }
 
       // Get item from inventory slot
       const inventoryItem = playerState.inventory[slot];
       if (!inventoryItem) {
-        console.warn(`[handleInvokeInventoryItemAction] No item at slot ${slot}`);
         return;
       }
 
@@ -499,28 +665,24 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Validate packet data matches inventory
       const expectedItemId = Number(payload.ItemID);
       if (itemId !== expectedItemId) {
-        console.warn(`[handleInvokeInventoryItemAction] ItemID mismatch at slot ${slot}. Expected ${itemId}, got ${expectedItemId}`);
         return;
       }
 
       // Cannot equip IOUs
       if (isIOU === 1) {
         logInvalid("equip_iou", { itemId });
-        console.warn(`[handleInvokeInventoryItemAction] Cannot equip IOU item ${itemId}`);
         return;
       }
 
       // Get item definition
       const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
       if (!itemDef) {
-        console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${itemId}`);
         return;
       }
 
       // Check if item is equippable
       if (!itemDef.equipmentType) {
         logInvalid("equip_not_equippable", { itemId });
-        console.warn(`[handleInvokeInventoryItemAction] Item ${itemId} is not equippable`);
         return;
       }
 
@@ -531,7 +693,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const equipResult = ctx.equipmentService.equipItem(ctx.userId, itemId, amountToEquip, slot);
 
       if (!equipResult.success) {
-        console.warn(`[handleInvokeInventoryItemAction] Failed to equip item ${itemId}: ${equipResult.error}`);
         ctx.messageService.sendServerInfo(ctx.userId, equipResult.error ?? "Failed to equip item");
         // Send success response
         const failurePayload = buildInvokedInventoryItemActionPayload({
@@ -564,7 +725,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Send weight update
       ctx.inventoryService.sendWeightUpdate(ctx.userId, playerState);
 
-      console.log(`[handleInvokeInventoryItemAction] User ${ctx.userId} equipped item ${itemId} x${amountToEquip}`);
       break;
     }
 
@@ -572,7 +732,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Validate MenuType is Loadout (unequipping FROM equipment)
       if (payload.MenuType !== MenuType.Loadout) {
         logInvalid("unequip_invalid_menu", { menuType: payload.MenuType });
-        console.warn(`[handleInvokeInventoryItemAction] unequip called on non-loadout menu: ${payload.MenuType}`);
         return;
       }
 
@@ -580,7 +739,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const slotIndex = Number(payload.Slot);
       if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > 9) {
         logInvalid("unequip_invalid_slot", { slotIndex });
-        console.warn(`[handleInvokeInventoryItemAction] Invalid equipment slot index: ${slotIndex}`);
         return;
       }
 
@@ -601,7 +759,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const equipmentSlot = SLOT_INDEX_TO_NAME[slotIndex];
       if (!equipmentSlot) {
         logInvalid("unequip_unknown_slot", { slotIndex });
-        console.warn(`[handleInvokeInventoryItemAction] Unknown equipment slot index: ${slotIndex}`);
         return;
       }
 
@@ -609,7 +766,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const equippedItem = playerState.equipment[equipmentSlot];
       if (!equippedItem) {
         logInvalid("unequip_empty_slot", { equipmentSlot });
-        console.warn(`[handleInvokeInventoryItemAction] No item equipped at slot ${equipmentSlot}`);
         return;
       }
 
@@ -619,14 +775,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const expectedItemId = Number(payload.ItemID);
       if (itemId !== expectedItemId) {
         logInvalid("unequip_item_mismatch", { equipmentSlot, expectedItemId, itemId });
-        console.warn(`[handleInvokeInventoryItemAction] ItemID mismatch at equipment slot ${equipmentSlot}. Expected ${itemId}, got ${expectedItemId}`);
         return;
       }
 
       // Get item definition
       const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
       if (!itemDef) {
-        console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${itemId}`);
         return;
       }
 
@@ -634,7 +788,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const unequipResult = ctx.equipmentService.unequipItem(ctx.userId, equipmentSlot);
 
       if (!unequipResult.success) {
-        console.warn(`[handleInvokeInventoryItemAction] Failed to unequip item ${itemId}: ${unequipResult.error}`);
         return;
       }
 
@@ -654,7 +807,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Send weight update
       ctx.inventoryService.sendWeightUpdate(ctx.userId, playerState);
 
-      console.log(`[handleInvokeInventoryItemAction] User ${ctx.userId} unequipped item ${itemId} x${itemAmount} from ${equipmentSlot}`);
       break;
     }
 
@@ -675,7 +827,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const currentShopId = playerState.currentShopId;
       if (currentShopId === null) {
         logInvalid("check_price_not_in_shop");
-        console.warn(`[handleInvokeInventoryItemAction] check_price called but player not in shop`);
         return;
       }
 
@@ -683,7 +834,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const shopState = ctx.shopSystem.getShopState(currentShopId);
       if (!shopState) {
         logInvalid("check_price_shop_missing", { shopId: currentShopId });
-        console.warn(`[handleInvokeInventoryItemAction] Shop ${currentShopId} not found`);
         return;
       }
 
@@ -691,7 +841,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const slotIndex = payload.Slot as number;
       if (slotIndex < 0 || slotIndex >= 50) {
         logInvalid("check_price_invalid_slot", { slotIndex });
-        console.warn(`[handleInvokeInventoryItemAction] Invalid slot index: ${slotIndex}`);
         return;
       }
 
@@ -704,14 +853,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const slot = shopState.slots[slotIndex];
         if (!slot) {
           logInvalid("check_price_empty_slot", { slotIndex });
-          console.warn(`[handleInvokeInventoryItemAction] Slot ${slotIndex} is empty in shop ${currentShopId}`);
           return;
         }
 
         // Get item definition
         const itemDef = ctx.itemCatalog?.getDefinitionById(slot.itemId);
         if (!itemDef) {
-          console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${slot.itemId}`);
           return;
         }
 
@@ -752,7 +899,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         // Get item definition
         const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
         if (!itemDef) {
-          console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${itemId}`);
           return;
         }
 
@@ -783,7 +929,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         
       } else {
         logInvalid("check_price_invalid_menu", { menuType: payload.MenuType });
-        console.warn(`[handleInvokeInventoryItemAction] check_price called on invalid menu: ${payload.MenuType}`);
         return;
       }
 
@@ -804,7 +949,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Send server info message with price
       ctx.messageService.sendServerInfo(ctx.userId, message);
 
-      console.log(`[handleInvokeInventoryItemAction] Player ${ctx.userId} checked price of ${itemName} in shop ${currentShopId}: ${price} coins (MenuType: ${payload.MenuType})`);
       break;
     }
 
@@ -812,7 +956,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Validate MenuType is Shop
       if (payload.MenuType !== MenuType.Shop) {
         logInvalid("buy_invalid_menu", { menuType: payload.MenuType });
-        console.warn(`[handleInvokeInventoryItemAction] buy called on non-shop menu: ${payload.MenuType}`);
         return;
       }
 
@@ -820,7 +963,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const currentShopId = playerState.currentShopId;
       if (currentShopId === null) {
         logInvalid("buy_not_in_shop");
-        console.warn(`[handleInvokeInventoryItemAction] buy called but player not in shop`);
         return;
       }
 
@@ -828,7 +970,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const shopState = ctx.shopSystem.getShopState(currentShopId);
       if (!shopState) {
         logInvalid("buy_shop_missing", { shopId: currentShopId });
-        console.warn(`[handleInvokeInventoryItemAction] Shop ${currentShopId} not found`);
         return;
       }
 
@@ -836,7 +977,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const slotIndex = payload.Slot as number;
       if (slotIndex < 0 || slotIndex >= 50) {
         logInvalid("buy_invalid_slot", { slotIndex });
-        console.warn(`[handleInvokeInventoryItemAction] Invalid slot index: ${slotIndex}`);
         return;
       }
 
@@ -844,7 +984,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const slot = shopState.slots[slotIndex];
       if (!slot) {
         logInvalid("buy_empty_slot", { slotIndex });
-        console.warn(`[handleInvokeInventoryItemAction] Slot ${slotIndex} is empty in shop ${currentShopId}`);
         return;
       }
 
@@ -852,7 +991,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const COIN_ITEM_ID = 6;
       const buyItemDef = ctx.itemCatalog?.getDefinitionById(slot.itemId);
       if (!buyItemDef) {
-        console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${slot.itemId}`);
         return;
       }
       if (slot.itemId === COIN_ITEM_ID || !buyItemDef.isTradeable) {
@@ -864,7 +1002,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const expectedItemId = payload.ItemID as number;
       if (slot.itemId !== expectedItemId) {
         logInvalid("buy_item_mismatch", { slotIndex, expectedItemId, itemId: slot.itemId });
-        console.warn(`[handleInvokeInventoryItemAction] ItemID mismatch at slot ${slotIndex}. Expected ${slot.itemId}, got ${expectedItemId}`);
         return;
       }
 
@@ -872,7 +1009,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const requestedAmount = payload.Amount as number;
       if (typeof requestedAmount !== 'number' || !Number.isInteger(requestedAmount) || requestedAmount <= 0) {
         logInvalid("buy_invalid_amount", { requestedAmount });
-        console.warn(`[handleInvokeInventoryItemAction] Invalid amount: ${requestedAmount}`);
         return;
       }
 
@@ -880,7 +1016,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const expectedIsIOU = payload.IsIOU ? 1 : 0;
       if (expectedIsIOU !== 0) {
         logInvalid("buy_iou_not_allowed");
-        console.warn(`[handleInvokeInventoryItemAction] IsIOU mismatch. Shop items cannot be IOUs.`);
         return;
       }
 
@@ -907,7 +1042,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       // Validate MenuType is Inventory (selling FROM inventory TO shop)
       if (payload.MenuType !== MenuType.Inventory) {
         logInvalid("sell_invalid_menu", { menuType: payload.MenuType });
-        console.warn(`[handleInvokeInventoryItemAction] sell called on non-inventory menu: ${payload.MenuType}`);
         return;
       }
 
@@ -915,7 +1049,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const currentShopId = playerState.currentShopId;
       if (currentShopId === null) {
         logInvalid("sell_not_in_shop");
-        console.warn(`[handleInvokeInventoryItemAction] sell called but player not in shop`);
         return;
       }
 
@@ -923,7 +1056,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const shopState = ctx.shopSystem.getShopState(currentShopId);
       if (!shopState) {
         logInvalid("sell_shop_missing", { shopId: currentShopId });
-        console.warn(`[handleInvokeInventoryItemAction] Shop ${currentShopId} not found`);
         return;
       }
 
@@ -931,7 +1063,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const itemId = payload.ItemID as number;
       if (!itemId || itemId <= 0) {
         logInvalid("sell_invalid_item", { itemId });
-        console.warn(`[handleInvokeInventoryItemAction] Invalid itemId: ${itemId}`);
         return;
       }
 
@@ -939,7 +1070,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       const COIN_ITEM_ID = 6;
       const sellItemDef = ctx.itemCatalog?.getDefinitionById(itemId);
       if (!sellItemDef) {
-        console.warn(`[handleInvokeInventoryItemAction] Item definition not found for item ${itemId}`);
         return;
       }
       if (itemId === COIN_ITEM_ID || !sellItemDef.isTradeable) {
@@ -963,7 +1093,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       let amount = payload.Amount as number;
       if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
         logInvalid("sell_invalid_amount", { amount });
-        console.warn(`[handleInvokeInventoryItemAction] Invalid amount: ${amount}`);
         return;
       }
 
@@ -1063,15 +1192,64 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.look_at:
-      handleNotImplementedAction("look at");
+      {
+        const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
+        if (!inventoryPayloadItem) {
+          sendActionResponse(false);
+          return;
+        }
+
+        if (!ctx.treasureMapService?.isTreasureMapItemId(inventoryPayloadItem.itemId)) {
+          logInvalid("look_at_invalid_item", { itemId: inventoryPayloadItem.itemId });
+          sendActionResponse(false);
+          return;
+        }
+
+        const mapData = ctx.treasureMapService.getLookAtData(ctx.userId, inventoryPayloadItem.itemId);
+        if (!mapData) {
+          logInvalid("look_at_no_map_data", { itemId: inventoryPayloadItem.itemId });
+          sendActionResponse(false);
+          return;
+        }
+
+        ctx.messageService.sendServerInfo(ctx.userId, "You look at your Treasure Map...");
+        sendActionResponse(true, mapData);
+      }
       break;
 
     case ItemAction.dig:
-      handleNotImplementedAction("dig");
+      handleShovelDigAction();
       break;
 
     case ItemAction.discard:
-      handleNotImplementedAction("discard");
+      {
+        const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
+        if (!inventoryPayloadItem) {
+          sendActionResponse(false);
+          return;
+        }
+
+        if (!ctx.treasureMapService?.isTreasureMapItemId(inventoryPayloadItem.itemId)) {
+          logInvalid("discard_invalid_item", { itemId: inventoryPayloadItem.itemId });
+          sendActionResponse(false);
+          return;
+        }
+
+        const decrementResult = ctx.inventoryService.decrementItemAtSlot(
+          ctx.userId,
+          inventoryPayloadItem.slot,
+          inventoryPayloadItem.itemId,
+          1,
+          inventoryPayloadItem.isIOU
+        );
+        if (!decrementResult || decrementResult.removed <= 0) {
+          sendActionResponse(false);
+          return;
+        }
+
+        ctx.treasureMapService.onTreasureMapDiscarded(ctx.userId, inventoryPayloadItem.itemId);
+        sendActionResponse(true);
+      }
       break;
 
     case ItemAction.blow:
@@ -1083,7 +1261,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         // Validate MenuType is Inventory (disassembling FROM inventory)
         if (payload.MenuType !== MenuType.Inventory) {
           logInvalid("disassemble_invalid_menu", { menuType: payload.MenuType });
-          console.warn(`[handleInvokeInventoryItemAction] disassemble called on non-inventory menu: ${payload.MenuType}`);
           return;
         }
 
@@ -1091,7 +1268,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const slot = Number(payload.Slot);
         if (!Number.isInteger(slot) || slot < 0 || slot >= 28) {
           logInvalid("disassemble_invalid_slot", { slot });
-          console.warn(`[handleInvokeInventoryItemAction] Invalid slot index: ${slot}`);
           return;
         }
 
@@ -1099,7 +1275,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const inventoryItem = playerState.inventory[slot];
         if (!inventoryItem) {
           logInvalid("disassemble_empty_slot", { slot });
-          console.warn(`[handleInvokeInventoryItemAction] No item at slot ${slot}`);
           return;
         }
 
@@ -1109,14 +1284,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const expectedItemId = Number(payload.ItemID);
         if (itemId !== expectedItemId) {
           logInvalid("disassemble_item_mismatch", { slot, expectedItemId, itemId });
-          console.warn(`[handleInvokeInventoryItemAction] ItemID mismatch at slot ${slot}. Expected ${itemId}, got ${expectedItemId}`);
           return;
         }
 
         const payloadIsIOU = payload.IsIOU ? 1 : 0;
         if (isIOU !== payloadIsIOU) {
           logInvalid("disassemble_iou_mismatch", { slot, isIOU, payloadIsIOU });
-          console.warn(`[handleInvokeInventoryItemAction] IsIOU mismatch at slot ${slot}. Expected ${isIOU}, got ${payloadIsIOU}`);
           return;
         }
 
@@ -1277,7 +1450,6 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
             result.isIOU ? 1 : 0
           );
           if (removeResult.removed < removeAmount) {
-            console.warn(`[handleInvokeInventoryItemAction] Failed to remove result item ${result.id} for disassemble`);
             const failurePayload = buildInvokedInventoryItemActionPayload({
               Action: payload.Action,
               MenuType: payload.MenuType,
@@ -1387,7 +1559,6 @@ function handleBankWithdraw(
     // No inventory space - return item to bank
     ctx.bankingService.depositItem(userId, result.itemId, result.amountWithdrawn);
     ctx.messageService.sendServerInfo(userId, "Your inventory is full.");
-    console.warn(`[banking] Inventory full for user ${userId}, returned ${result.amountWithdrawn}x ${result.itemId} to bank`);
     return;
   }
   
@@ -1395,7 +1566,6 @@ function handleBankWithdraw(
   if (amountToWithdraw < result.amountWithdrawn) {
     const excess = result.amountWithdrawn - amountToWithdraw;
     ctx.bankingService.depositItem(userId, result.itemId, excess);
-    console.log(`[banking] User ${userId} inventory partially full, returned ${excess}x ${result.itemId} to bank`);
   }
   
   // Create inventory manager and add items
@@ -1461,7 +1631,6 @@ function handleBankWithdraw(
   // Send weight update if item has weight
   ctx.inventoryService.sendWeightUpdate(userId, playerState);
   
-  console.log(`[banking] User ${userId} withdrew ${amountToWithdraw}x ${result.itemId} ${asIOU ? '(IOU)' : ''} from slot ${slot}`);
 }
 
 /**
@@ -1605,7 +1774,6 @@ function handleBankDeposit(
   // Send weight update if item has weight
   ctx.inventoryService.sendWeightUpdate(userId, playerState);
   
-  console.log(`[banking] User ${userId} deposited ${removeResult.removed}x ${itemId} ${isIOU ? '(IOU)' : ''} to bank slot ${depositResult.slot}`);
 }
 
 /**

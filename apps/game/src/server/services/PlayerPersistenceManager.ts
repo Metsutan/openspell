@@ -26,6 +26,7 @@ import { BankingService } from "./BankingService";
 import { DefaultPacketBuilder } from "../systems/PacketBuilder";
 import { SKILL_SLUGS, type SkillSlug } from "../../world/PlayerState";
 import { QuestProgressService, type QuestProgress } from "./QuestProgressService";
+import type { PersistedTreasureMapOwnership, TreasureMapService } from "./TreasureMapService";
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 const SAVE_DEBOUNCE_MS = 3_000;
@@ -38,6 +39,7 @@ export class PlayerPersistenceManager {
   private bankingService?: BankingService; // BankingService reference for bank saves
   private skillIdCache: Map<string, number> | null = null; // Cache for skill slug -> ID mapping
   private questProgressService: QuestProgressService; // Quest progress service
+  private treasureMapService?: TreasureMapService;
 
   constructor(
     private readonly dbEnabled: boolean,
@@ -61,6 +63,13 @@ export class PlayerPersistenceManager {
    */
   setBankingService(bankingService: BankingService) {
     this.bankingService = bankingService;
+  }
+
+  /**
+   * Sets treasure map service for persistence of map ownership data.
+   */
+  setTreasureMapService(treasureMapService: TreasureMapService) {
+    this.treasureMapService = treasureMapService;
   }
 
   startAutosaveLoop() {
@@ -159,8 +168,6 @@ export class PlayerPersistenceManager {
     
     if (changedUserIds.length === 0) return;
     
-    console.log(`[hiscores] Recomputing overall and ranks for ${changedUserIds.length} player(s)...`);
-    
     try {
       // One API call to recompute "overall" and recalculate ranks
       await recomputeHiscores(changedUserIds, this.serverId);
@@ -179,22 +186,16 @@ export class PlayerPersistenceManager {
   }
 
   async trySavePlayerState(userId: number, options?: { force?: boolean; nowMs?: number }) {
-    console.log(`[db] trySavePlayerState called for user ${userId}, force: ${options?.force}, dbEnabled: ${this.dbEnabled}`);
-    
     if (!this.dbEnabled) {
-      console.log(`[db] Skipping save for user ${userId} - database disabled`);
       return;
     }
     const playerState = this.playerStates.get(userId);
     if (!playerState) {
-      console.log(`[db] Skipping save for user ${userId} - player state not found`);
       return;
     }
 
     const nowMs = options?.nowMs ?? Date.now();
     const forceSave = Boolean(options?.force);
-    
-    console.log(`[db] User ${userId} - dirty: ${playerState.dirty}, forceSave: ${forceSave}`);
 
     if (!forceSave && !playerState.dirty) {
       return;
@@ -230,9 +231,7 @@ export class PlayerPersistenceManager {
     
     this.playerSaveInFlight.add(userId);
     try {
-      console.log(`[db] Calling persistPlayerState for user ${userId}...`);
       await this.persistPlayerState(playerState, nowMs);
-      console.log(`[db] persistPlayerState returned successfully for user ${userId}`);
     } catch (error) {
       console.error(`[db] ✗✗✗ FATAL: persistPlayerState failed for user ${userId}:`, error);
       console.error(`[db] Error message:`, (error as Error)?.message);
@@ -244,14 +243,11 @@ export class PlayerPersistenceManager {
   }
 
   private async persistPlayerState(playerState: PlayerState, nowMs: number) {
-    console.log(`[db] persistPlayerState starting for user ${playerState.userId}`);
     const persistenceId = this.requirePersistenceId(playerState.persistenceId, "persistPlayerState");
     const prisma = getPrisma();  
     const nextVersion = playerState.saveVersion + 1;
     const snapshot = this.buildPlayerSnapshot(playerState, nowMs, nextVersion);
     const { location, equipment, inventory } = this.buildNormalizedWrites(playerState);
-
-    console.log(`[db] Built normalized writes for user ${playerState.userId}`);
 
     // Calculate session time since last save or connection
     const sessionTimeMs = nowMs - playerState.connectedAt;
@@ -259,30 +255,23 @@ export class PlayerPersistenceManager {
 
     // Load skill ID mappings if not cached
     if (!this.skillIdCache) {
-      console.log(`[db] Loading skill ID cache...`);
       await this.loadSkillIdCache();
     }
 
-    console.log(`[db] Starting Prisma transaction for user ${playerState.userId}...`);
     try {
       await prisma.$transaction(async (tx) => {
-        console.log(`[db] >> Inside transaction for user ${playerState.userId}`);
-        
         try {
           // Update user's total time played
-          console.log(`[db] >> Updating user timePlayed...`);
           await tx.user.update({
             where: { id: playerState.userId },
             data: { timePlayed: newTimePlayed }
           });
-          console.log(`[db] >> User timePlayed updated`);
         } catch (err) {
           console.error(`[db] ERROR updating user timePlayed:`, err);
           throw err;
         }
 
         try {
-          console.log(`[db] >> Upserting player location...`);
           await tx.playerLocation.upsert({
             where: {
               userId_persistenceId: {
@@ -293,7 +282,6 @@ export class PlayerPersistenceManager {
             create: { userId: playerState.userId, persistenceId, ...location },
             update: location
           });
-          console.log(`[db] >> Player location upserted: x=${location.x}, y=${location.y}, mapLevel=${location.mapLevel}`);
         } catch (err) {
           console.error(`[db] ERROR upserting player location:`, err);
           throw err;
@@ -441,8 +429,6 @@ export class PlayerPersistenceManager {
 
       // Save quest progress if dirty
       if (playerState.questProgressDirty) {
-        console.log(`[db] >> Saving quest progress for user ${playerState.userId}...`);
-        
         // Get all quest progress entries
         const questProgressArray = this.questProgressService.serializeQuestProgress(playerState.questProgress);
         
@@ -463,17 +449,14 @@ export class PlayerPersistenceManager {
             }))
           });
         }
-        
-        console.log(`[db] >> Quest progress saved: ${questProgressArray.length} quests`);
       }
+
+      // Save treasure map ownership/coordinates for this player.
+      await this.persistTreasureMapsForPlayer(tx as any, playerState, persistenceId);
 
       // Save bank if it's loaded in memory (outside transaction for safety)
       // Bank is saved separately since it's a large JSONB blob
-      
-      console.log(`[db] >> Transaction operations complete, committing...`);
     });
-    
-    console.log(`[db] ✓ Transaction completed for user ${playerState.userId}`);
     
     } catch (transactionError) {
       console.error(`[db] ✗✗✗ CRITICAL: Transaction failed for user ${playerState.userId}:`, transactionError);
@@ -483,10 +466,8 @@ export class PlayerPersistenceManager {
     
     // Save bank after main transaction (if loaded and banking service available)
     if (playerState.bank && this.bankingService) {
-      console.log(`[db] Saving bank for user ${playerState.userId}...`);
       try {
         await this.bankingService.saveBankToDatabase(playerState);
-        console.log(`[db] ✓ Bank saved for user ${playerState.userId}`);
       } catch (error) {
         console.error(`[db] Failed to save bank for user ${playerState.userId}:`, (error as Error)?.message ?? error);
         // Non-fatal: player state was saved, bank can be retried
@@ -502,8 +483,42 @@ export class PlayerPersistenceManager {
     if (playerState.questProgressDirty) {
       playerState.markQuestProgressClean();
     }
-    
-    console.log(`[db] ✓✓ persistPlayerState fully complete for user ${playerState.userId}`);
+  }
+
+  private async persistTreasureMapsForPlayer(
+    tx: any,
+    playerState: PlayerState,
+    persistenceId: number
+  ): Promise<void> {
+    if (!this.treasureMapService) {
+      return;
+    }
+    if (!tx?.playerTreasureMap) {
+      return;
+    }
+
+    const rows = this.treasureMapService.getPersistedTreasureMapsForPlayer(playerState.userId, persistenceId);
+
+    await tx.playerTreasureMap.deleteMany({
+      where: {
+        userId: playerState.userId,
+        persistenceId
+      }
+    });
+
+    if (rows.length > 0) {
+      await tx.playerTreasureMap.createMany({
+        data: rows.map((row) => ({
+          userId: row.userId,
+          persistenceId: row.persistenceId,
+          tier: row.tier,
+          itemId: row.itemId,
+          x: row.x,
+          y: row.y,
+          mapLevel: row.mapLevel
+        }))
+      });
+    }
   }
 
   /**
@@ -533,8 +548,6 @@ export class PlayerPersistenceManager {
     for (const skill of skills) {
       this.skillIdCache.set(skill.slug, skill.id);
     }
-
-    console.log(`[db] Loaded ${this.skillIdCache.size} skill ID mappings`);
   }
 
   private buildPlayerSnapshot(playerState: PlayerState, savedAt: number, version: number): PlayerStateSnapshotDTO {
@@ -737,6 +750,32 @@ export class PlayerPersistenceManager {
     playerState.markClean();
 
     return playerState;
+  }
+
+  async loadPlayerTreasureMaps(userId: number, persistenceId: number): Promise<PersistedTreasureMapOwnership[]> {
+    if (!this.dbEnabled) {
+      return [];
+    }
+
+    const prisma = getPrisma() as any;
+    if (!prisma?.playerTreasureMap) {
+      return [];
+    }
+
+    const rows = await prisma.playerTreasureMap.findMany({
+      where: { userId, persistenceId },
+      orderBy: { tier: "asc" }
+    });
+
+    return rows.map((row: any) => ({
+      userId: row.userId,
+      persistenceId: row.persistenceId,
+      tier: row.tier,
+      itemId: row.itemId,
+      x: row.x,
+      y: row.y,
+      mapLevel: row.mapLevel
+    })) as PersistedTreasureMapOwnership[];
   }
 
   private async loadPlayerInventory(userId: number, persistenceId: number): Promise<FullInventory> {

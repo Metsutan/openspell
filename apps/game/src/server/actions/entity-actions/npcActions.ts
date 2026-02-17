@@ -63,13 +63,11 @@ function handleNPCInteraction(
   // Get the NPC state
   const npcState = ctx.npcStates.get(npcId);
   if (!npcState) {
-    console.warn(`[${actionName}] NPC ${npcId} not found`);
     return;
   }
 
   // Check if NPC is on the same map level
   if (npcState.mapLevel !== playerState.mapLevel) {
-    console.warn(`[${actionName}] NPC on different map level`);
     return;
   }
 
@@ -107,7 +105,6 @@ function handleNPCInteraction(
     );
 
     if (!path || path.length <= 1) {
-      console.warn(`[${actionName}] Failed to find path to NPC`);
       ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
       playerState.pendingAction = null;
       ctx.targetingService.clearPlayerTarget(playerState.userId);
@@ -126,8 +123,6 @@ function handleNPCInteraction(
       speed,
       () => onMovementComplete(ctx, playerState)
     );
-
-    console.log(`[${actionName}] Player ${playerState.userId} pathfinding to NPC ${npcId} at (${npcState.x}, ${npcState.y})`);
   }
 }
 
@@ -143,12 +138,10 @@ function handleAttackNPC(
 ): void {
   const npcState = ctx.npcStates.get(npcId);
   if (!npcState) {
-    console.warn(`[handleAttackNPC] NPC ${npcId} not found`);
     return;
   }
 
   if (npcState.mapLevel !== playerState.mapLevel) {
-    console.warn(`[handleAttackNPC] NPC on different map level`);
     return;
   }
 
@@ -221,7 +214,6 @@ function handleAttackNPC(
       );
 
   if (!path || path.length <= 1) {
-    console.warn(`[handleAttackNPC] Failed to find path to NPC`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     ctx.targetingService.clearPlayerTarget(playerState.userId);
@@ -238,7 +230,6 @@ function handleAttackNPC(
     () => onMovementComplete(ctx, playerState)
   );
 
-  console.log(`[handleAttackNPC] Player ${playerState.userId} pathfinding to NPC ${npcId} at (${npcState.x}, ${npcState.y})`);
 }
 
 function handleTalkToNPC(
@@ -297,7 +288,6 @@ function handlePickpocketNPC(
 // =============================================================================
 
 function executeAttackNPC(ctx: ActionContext, playerState: PlayerState, npcState: NPCState): void {
-  console.log(`[executeAttackNPC] Player ${playerState.userId} attacking NPC ${npcState.id}`);
 
   if (!canPlayerInteractWithNpc(playerState.userId, npcState)) {
     ctx.messageService.sendServerInfo(playerState.userId, "You cannot attack that.");
@@ -328,11 +318,9 @@ function executeAttackNPC(ctx: ActionContext, playerState: PlayerState, npcState
  * @param npcState - The NPC being talked to
  */
 export function executeTalkToNPC(ctx: ActionContext, playerState: PlayerState, npcState: NPCState): void {
-  console.log(`[executeTalkToNPC] Player ${playerState.userId} talking to NPC ${npcState.id}`);
   
   // Final safety check: Verify adjacency and LOS
   if (!checkAdjacentToNPC(ctx, playerState, npcState)) {
-    console.warn(`[executeTalkToNPC] Player ${playerState.userId} not adjacent or no LOS to NPC ${npcState.id}`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     return;
@@ -368,11 +356,9 @@ export function executeTalkToNPC(ctx: ActionContext, playerState: PlayerState, n
  * @param npcState - The NPC shopkeeper
  */
 export function executeShopNPC(ctx: ActionContext, playerState: PlayerState, npcState: NPCState): void {
-  console.log(`[executeShopNPC] Player ${playerState.userId} shopping with NPC ${npcState.id}`);
   
   // Final safety check: Verify adjacency and LOS
   if (!checkAdjacentToNPC(ctx, playerState, npcState)) {
-    console.warn(`[executeShopNPC] Player ${playerState.userId} not adjacent or no LOS to NPC ${npcState.id}`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     return;
@@ -404,15 +390,12 @@ export function executeShopNPC(ctx: ActionContext, playerState: PlayerState, npc
   // Clear pending action
   playerState.pendingAction = null;
   
-  console.log(`[executeShopNPC] Player ${playerState.userId} opened shop ${npcState.shopId} from NPC ${npcState.id}`);
 }
 
 function executePickpocketNPC(ctx: ActionContext, playerState: PlayerState, npcState: NPCState): void {
-  console.log(`[executePickpocketNPC] Player ${playerState.userId} pickpocketing NPC ${npcState.id}`);
   
   // Final safety check: Verify adjacency and LOS
   if (!checkAdjacentToNPC(ctx, playerState, npcState)) {
-    console.warn(`[executePickpocketNPC] Player ${playerState.userId} not adjacent or no LOS to NPC ${npcState.id}`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     return;
@@ -464,7 +447,6 @@ export function handleNPCMovementComplete(
 ): void {
   const npcState = ctx.npcStates.get(npcId);
   if (!npcState) {
-    console.warn(`[handleNPCMovementComplete] NPC ${npcId} no longer exists`);
     ctx.messageService.sendServerInfo(playerState.userId, "They're no longer there");
     playerState.pendingAction = null;
     return;
@@ -472,7 +454,6 @@ export function handleNPCMovementComplete(
 
   // Check if NPC is on different map level
   if (npcState.mapLevel !== playerState.mapLevel) {
-    console.warn(`[handleNPCMovementComplete] NPC ${npcId} is on different map level`);
     ctx.messageService.sendServerInfo(playerState.userId, "They're no longer there");
     playerState.pendingAction = null;
     return;
@@ -488,7 +469,6 @@ export function handleNPCMovementComplete(
     : isWithinRange(playerState.x, playerState.y, npcState.x, npcState.y, attackRange) && hasLOS;
 
   if (!inRange) {
-    console.warn(`[handleNPCMovementComplete] Player not in range of NPC ${npcId}`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     return;

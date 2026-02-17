@@ -35,7 +35,7 @@ let transporter = null;
  */
 function initializeTransporter() {
   if (!EMAIL_ENABLED) {
-    console.log('[Email] Email service is disabled (EMAIL_ENABLED=false)');
+    if (process.env.NODE_ENV !== 'production') console.log('[Email] Email service is disabled (EMAIL_ENABLED=false)');
     return null;
   }
 
@@ -49,7 +49,7 @@ function initializeTransporter() {
           secure: false,
           auth: null
         });
-        console.log(`[Email] Initialized Mailhog transporter (${SMTP_HOST || 'localhost'}:${SMTP_PORT || 1025})`);
+        if (process.env.NODE_ENV !== 'production') console.log(`[Email] Initialized Mailhog transporter (${SMTP_HOST || 'localhost'}:${SMTP_PORT || 1025})`);
         break;
 
       case 'maildev':
@@ -60,7 +60,7 @@ function initializeTransporter() {
           secure: false,
           auth: null
         });
-        console.log(`[Email] Initialized Maildev transporter (${SMTP_HOST || 'localhost'}:${SMTP_PORT || 1025})`);
+        if (process.env.NODE_ENV !== 'production') console.log(`[Email] Initialized Maildev transporter (${SMTP_HOST || 'localhost'}:${SMTP_PORT || 1025})`);
         break;
 
       case 'smtp':
@@ -74,7 +74,7 @@ function initializeTransporter() {
             pass: SMTP_PASS
           } : undefined
         });
-        console.log(`[Email] Initialized SMTP transporter (${SMTP_HOST}:${SMTP_PORT})`);
+        if (process.env.NODE_ENV !== 'production') console.log(`[Email] Initialized SMTP transporter (${SMTP_HOST}:${SMTP_PORT})`);
         break;
 
       case 'ses':
@@ -92,7 +92,7 @@ function initializeTransporter() {
             pass: AWS_SECRET_ACCESS_KEY
           }
         });
-        console.log(`[Email] Initialized AWS SES transporter via SMTP (${sesHost}:${sesPort})`);
+        if (process.env.NODE_ENV !== 'production') console.log(`[Email] Initialized AWS SES transporter via SMTP (${sesHost}:${sesPort})`);
         break;
 
       default:
@@ -117,7 +117,7 @@ function initializeTransporter() {
  */
 async function sendEmail(to, subject, html, text = null) {
   if (!EMAIL_ENABLED) {
-    console.log(`[Email] Email disabled - would send to ${to}: ${subject}`);
+    if (process.env.NODE_ENV !== 'production') console.log(`[Email] Email disabled - would send to ${to}: ${subject}`);
     return { success: false, error: 'Email service is disabled' };
   }
 
@@ -138,7 +138,7 @@ async function sendEmail(to, subject, html, text = null) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[Email] Email sent successfully to ${to}: ${info.messageId}`);
+    if (process.env.NODE_ENV !== 'production') console.log(`[Email] Email sent successfully to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error(`[Email] Failed to send email to ${to}:`, error);

@@ -34,6 +34,10 @@ export interface CommandContext {
   /** Send a server info message to the executing player */
   reply: (message: string, style?: MessageStyle) => void;
 
+  // --- Server Control ---
+  /** Schedule a graceful server shutdown countdown */
+  scheduleServerShutdown: (minutes: number) => { scheduled: boolean; reason?: string };
+
   // --- Player Lookups ---
   /** Get a player's user ID by their username (online players only) */
   getPlayerIdByUsername: (username: string) => number | null;
@@ -41,6 +45,9 @@ export interface CommandContext {
   // --- Teleportation ---
   /** Teleport a player to a specific location */
   teleportPlayer: (targetUserId: number, x: number, y: number, mapLevel: number) => void;
+
+  /** Force-stop a player's movement intent and active movement plan */
+  stopPlayerMovement: (targetUserId: number) => void;
 
   // --- Inventory Operations ---
   /** 
@@ -57,6 +64,9 @@ export interface CommandContext {
   // --- Item Lookups ---
   /** Get an item definition by ID */
   getItemDefinition: (itemId: number) => ItemDefinition | undefined;
+
+  /** Returns true when giveitem can safely grant this treasure map item */
+  canReceiveTreasureMapItem: (targetUserId: number, itemId: number) => boolean;
 
   // --- Player State Access ---
   /** Get a player's state by their user ID */

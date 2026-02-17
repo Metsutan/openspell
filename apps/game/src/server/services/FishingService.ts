@@ -329,10 +329,6 @@ export class FishingService {
       return false;
     }
 
-    console.log(
-      `[FishingService] Player ${playerState.userId} initiated fish on spot ${entityState.id} ` +
-      `(${rodConfig.tier} rod, ${rodConfig.castDelay} tick delay)`
-    );
     return true;
   }
 
@@ -383,7 +379,6 @@ export class FishingService {
     const session = this.activeSessions.get(userId);
 
     if (!player || !session) {
-      console.warn(`[FishingService] No active session for player ${userId}`);
       return;
     }
 
@@ -436,8 +431,6 @@ export class FishingService {
     fish: FishConfig,
     currentTick: number
   ): void {
-    console.log(`[FishingService] Player ${player.userId} caught ${fish.name} at spot ${spot.id}`);
-
     // Deplete spot resource
     const remaining = this.spotResources.get(spot.id) ?? 0;
     this.spotResources.set(spot.id, remaining - 1);
@@ -515,8 +508,6 @@ export class FishingService {
   private scheduleSpotRespawn(spot: WorldEntityState): void {
     const respawnTicks = spot.definition.respawnTicks ?? 60;
 
-    console.log(`[FishingService] Spot ${spot.id} depleted, respawning in ${respawnTicks} ticks`);
-
     const nearbyPlayers = this.config.visibilitySystem.getPlayersNearEntity(spot);
     const exhaustionTracker = this.config.visibilitySystem.getResourceExhaustionTracker();
     exhaustionTracker.markExhausted(spot.id, nearbyPlayers);
@@ -529,8 +520,6 @@ export class FishingService {
       this.spotResources.set(spot.id, resources);
 
       exhaustionTracker.markReplenished(spot.id);
-
-      console.log(`[FishingService] Spot ${spot.id} respawned with ${resources} resources`);
     }, respawnTicks * 600);
   }
 
@@ -646,7 +635,5 @@ export class FishingService {
     }
 
     this.config.delaySystem.clearDelay(userId);
-
-    console.log(`[FishingService] Cancelled session for player ${userId} (packets: ${sendPackets})`);
   }
 }

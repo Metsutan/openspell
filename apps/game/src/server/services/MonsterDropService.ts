@@ -25,6 +25,7 @@ import path from "path";
 import { ItemManager } from "../../world/systems/ItemManager";
 import type { MapLevel } from "../../world/Location";
 import type { EntityCatalog } from "../../world/entities/EntityCatalog";
+import type { TreasureMapService } from "./TreasureMapService";
 
 // Static assets path
 const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
@@ -160,11 +161,14 @@ export interface LootDrop {
   itemId: number;
   amount: number;
   isIOU: boolean;
+  treasureMapTier?: number;
+  treasureMapOwnerUserId?: number;
 }
 
 export interface MonsterDropServiceConfig {
   itemManager: ItemManager;
   entityCatalog: EntityCatalog;
+  treasureMapService: TreasureMapService;
 }
 
 /**
@@ -354,16 +358,23 @@ export class MonsterDropService {
       }
     }
 
-    // 3. Roll for treasure map
-    if (lootTable.treasureMap && Math.random() < lootTable.treasureMap.odds) {
-      // Treasure map item ID would need to be defined - using placeholder
-      // TODO: Get actual treasure map item ID from game data
-      const treasureMapItemId = 1000 + lootTable.treasureMap.level; // Placeholder
-      drops.push({
-        itemId: treasureMapItemId,
-        amount: 1,
-        isIOU: false
-      });
+    // 3. Roll for treasure map (only if killer doesn't already own same tier)
+    if (lootTable.treasureMap && killerUserId !== null) {
+      const mapTier = lootTable.treasureMap.level;
+      if (this.config.treasureMapService.canRollTreasureMapDrop(killerUserId, mapTier)) {
+        if (Math.random() < lootTable.treasureMap.odds) {
+          const preparedDrop = this.config.treasureMapService.prepareTreasureMapDrop(killerUserId, mapTier);
+          if (preparedDrop) {
+            drops.push({
+              itemId: preparedDrop.itemId,
+              amount: 1,
+              isIOU: false,
+              treasureMapTier: preparedDrop.tier,
+              treasureMapOwnerUserId: killerUserId
+            });
+          }
+        }
+      }
     }
 
     // 4. Add base loot (guaranteed drops)
@@ -406,17 +417,29 @@ export class MonsterDropService {
     killerUserId: number | null
   ): void {
     for (const drop of drops) {
-      // Spawn the item with 5 minute despawn timer, visible initially only to killer
-      this.config.itemManager.spawnGroundItem(
+      const spawned = this.config.itemManager.spawnGroundItem(
         drop.itemId,
         drop.amount,
         drop.isIOU,
         mapLevel,
         x,
         y,
-        ItemManager.MONSTER_DROP_DESPAWN_TICKS, // 5 minutes
-        killerUserId // Initial visibility to killer, becomes visible to all after 3 minutes
+        ItemManager.MONSTER_DROP_DESPAWN_TICKS,
+        killerUserId
       );
+      if (
+        spawned &&
+        drop.treasureMapTier &&
+        typeof drop.treasureMapOwnerUserId === "number"
+      ) {
+        // Treasure maps are owner-bound and should never become visible to other players.
+        spawned.visibleToAllAtTick = null;
+        this.config.treasureMapService.registerSpawnedTreasureMapGroundItem(
+          spawned.id,
+          drop.treasureMapOwnerUserId,
+          drop.treasureMapTier
+        );
+      }
     }
   }
 

@@ -16,6 +16,7 @@ import type { BankingService } from "./BankingService";
 import type { DelaySystem } from "../systems/DelaySystem";
 import type { SkillingMenuService } from "./SkillingMenuService";
 import type { ChangeAppearanceService } from "./ChangeAppearanceService";
+import type { TreasureMapService } from "./TreasureMapService";
 
 export interface ConnectionServiceDependencies {
   dbEnabled: boolean;
@@ -30,6 +31,7 @@ export interface ConnectionServiceDependencies {
   bankingService: BankingService;
   skillingMenuService: SkillingMenuService;
   changeAppearanceService: ChangeAppearanceService;
+  treasureMapService: TreasureMapService | null;
   delaySystem: DelaySystem;
   equipmentService: any; // Using 'any' to avoid circular dependency with EquipmentService
   enqueueUserMessage: (userId: number, action: GameAction, payload: unknown[]) => void;
@@ -102,18 +104,20 @@ export class ConnectionService {
         const bankData = await this.deps.bankingService.loadBankForPlayer(userId, persistenceId);
         if (bankData) {
           playerState.bank = bankData;
-          console.log(`[Connection] Pre-loaded bank for user ${userId}`);
         } else {
           console.warn(`[Connection] Failed to pre-load bank for user ${userId} (will retry on demand)`);
         }
+      }
+
+      if (this.deps.dbEnabled && this.deps.treasureMapService) {
+        const mapRows = await this.deps.playerPersistence.loadPlayerTreasureMaps(userId, persistenceId);
+        this.deps.treasureMapService.hydratePlayerTreasureMaps(userId, mapRows);
       }
 
       // Calculate and cache equipment bonuses from equipped items
       // This ensures combat formulas can use cached bonuses instead of recalculating every attack
       const equipmentBonuses = this.deps.equipmentService.calculateEquipmentBonuses(playerState);
       playerState.setEquipmentBonuses(equipmentBonuses);
-      console.log(`[Connection] Initialized equipment bonuses for user ${userId}`);
-
 
       // Emit PlayerAdded event (VisibilitySystem will handle packets)
       this.deps.eventBus.emit(createPlayerAddedEvent(

@@ -103,7 +103,7 @@ class RedisRateLimiter {
     });
     
     this.redis.on('ready', () => {
-      console.log('[rate-limiter] Redis connected');
+      if (process.env.NODE_ENV !== 'production') console.log('[rate-limiter] Redis connected');
       this.isHealthy = true;
     });
   }
@@ -198,7 +198,7 @@ class RateLimiter {
         });
 
         this.redisLimiter = new RedisRateLimiter(redis);
-        console.log('[rate-limiter] Initialized with Redis backend');
+        if (process.env.NODE_ENV !== 'production') console.log('[rate-limiter] Initialized with Redis backend');
       } catch (error) {
         console.error('[rate-limiter] Failed to initialize Redis:', error.message);
         console.warn('[rate-limiter] Falling back to in-memory rate limiting');

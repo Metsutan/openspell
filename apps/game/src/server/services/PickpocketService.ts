@@ -260,7 +260,6 @@ export class PickpocketService {
       return false;
     }
 
-    console.log(`[PickpocketService] Player ${playerState.userId} initiated pickpocket on NPC ${npcState.id}`);
     return true;
   }
 
@@ -371,7 +370,6 @@ export class PickpocketService {
     npc: NPCState,
     pickpocketDef: PickpocketDefinition
   ): void {
-    console.log(`[PickpocketService] Player ${player.userId} successfully pickpocketed NPC ${npc.id}`);
 
     // Award base loot (guaranteed)
     let hadOverflow = false;
@@ -457,7 +455,6 @@ export class PickpocketService {
     const currentHp = player.getSkillBoostedLevel(SKILLS.hitpoints);
     if (currentHp <= 0) {
       // Player died from pickpocket stun damage - mark as dying
-      console.log(`[PickpocketService] Player ${player.userId} died from pickpocket stun damage`);
       this.config.combatSystem.markPlayerDying(player.userId, npcRef);
       // Skip stun mechanics - player is dead
       return;

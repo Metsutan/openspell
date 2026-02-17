@@ -4,6 +4,7 @@ import type { CommandContext, CommandDefinition, CommandHandler } from "./types"
 import { teleportCommand } from "./teleport";
 import { giveitemCommand } from "./giveitem";
 import { setskillCommand } from "./setskill";
+import { shutdownCommand } from "./shutdown";
 
 // Re-export types for convenience
 export type { CommandContext, CommandDefinition, CommandHandler } from "./types";
@@ -50,6 +51,13 @@ const COMMANDS: Record<string, CommandDefinition> = {
     requiredPrivilege: [PlayerType.Admin],
     usage: "/setskill <skill> <level> [username]",
     description: "Set a skill to a specific level"
+  },
+
+  shutdown: {
+    handler: shutdownCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/shutdown [minutes]",
+    description: "Schedule a graceful server shutdown countdown"
   },
 
   // ---------------------------------------------------------------------------

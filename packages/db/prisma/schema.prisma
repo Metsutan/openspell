@@ -48,6 +48,7 @@ model User {
   playerBank        PlayerBank[]
   userIPs           UserIP[]
   playerQuests      PlayerQuest[]
+  playerTreasureMaps PlayerTreasureMap[]
   invalidPacketEvents InvalidPacketEvent[]
   invalidPacketEventRollups InvalidPacketEventRollup[]
   packetTraceFiles  PacketTraceFile[]
@@ -446,6 +447,27 @@ model PlayerQuest {
   @@index([persistenceId])
   @@index([questId]) // Fast lookup of all players on a specific quest
   @@index([userId, persistenceId, questId]) // Composite index for specific quest lookup
+}
+
+// Tracks per-tier treasure map ownership and assigned clue location.
+// One row per user+persistence+tier when a player currently owns that tier.
+model PlayerTreasureMap {
+  userId        Int
+  persistenceId Int
+  tier          Int
+  itemId        Int
+  x             Int
+  y             Int
+  mapLevel      Int
+  updatedAt     DateTime @updatedAt
+
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("player_treasure_maps")
+  @@id([userId, persistenceId, tier])
+  @@index([userId, persistenceId])
+  @@index([persistenceId])
+  @@index([tier])
 }
 
 // Logs invalid/malformed client packets with dedupe support.

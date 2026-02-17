@@ -49,7 +49,7 @@ async function loadNews() {
         }));
         newsCache = apiNews;
         newsCacheTime = Date.now();
-        console.log(`News loaded from API at ${new Date().toISOString()}`);
+        if (process.env.NODE_ENV !== 'production') console.log(`News loaded from API at ${new Date().toISOString()}`);
         return newsCache;
     }
     

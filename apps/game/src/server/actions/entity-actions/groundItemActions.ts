@@ -26,25 +26,21 @@ export function handleGroundItemAction(
 ): void {
   // Only valid action for ground items is Grab (pickup)
   if (action !== Action.Grab) {
-    console.warn(`[handleGroundItemAction] Invalid action ${action} for ground item`);
     return;
   }
 
   // Get the ground item
   if (!ctx.itemManager) {
-    console.warn("[handleGroundItemAction] ItemManager not available");
     return;
   }
 
   const groundItem = ctx.itemManager.getGroundItem(itemId);
   if (!groundItem) {
-    console.warn(`[handleGroundItemAction] Ground item ${itemId} not found`);
     return;
   }
 
   // Check if item is on the same map level
   if (groundItem.mapLevel !== playerState.mapLevel) {
-    console.warn("[handleGroundItemAction] Ground item on different map level");
     return;
   }
 
@@ -73,7 +69,6 @@ export function handleGroundItemAction(
     );
 
     if (!path || path.length <= 1) {
-      console.warn("[handleGroundItemAction] Failed to find path to or near ground item");
       ctx.messageService.sendServerInfo(playerState.userId, "Can't reach that item");
       playerState.pendingAction = null;
       return;
@@ -92,7 +87,6 @@ export function handleGroundItemAction(
       () => onMovementComplete(ctx, playerState)
     );
 
-    console.log(`[handleGroundItemAction] Player ${playerState.userId} pathfinding to ground item ${itemId}`);
   }
 }
 
@@ -104,9 +98,16 @@ export function executePickupGroundItem(
   playerState: PlayerState,
   groundItem: ItemSpatialEntry
 ): void {
+  if (ctx.treasureMapService?.isTreasureMapItemId(groundItem.itemId)) {
+    const ownerUserId = ctx.treasureMapService.getOwnerForGroundTreasureMap(groundItem.id);
+    if (ownerUserId !== null && ownerUserId !== playerState.userId) {
+      ctx.messageService.sendServerInfo(playerState.userId, "This treasure map does not belong to you.");
+      return;
+    }
+  }
+
   // Check if player has inventory space
   if (!playerState.hasInventorySpace()) {
-    console.warn(`[executePickupGroundItem] Player ${playerState.userId} inventory full`);
     ctx.messageService.sendServerInfo(playerState.userId, "Your inventory is full.");
     return;
   }
@@ -121,7 +122,6 @@ export function executePickupGroundItem(
 
   // Check if any items were actually added
   if (result.added === 0) {
-    console.warn(`[executePickupGroundItem] Failed to add item to inventory (full or error)`);
     ctx.messageService.sendServerInfo(playerState.userId, "Could not pick up item");
     return;
   }
@@ -140,12 +140,6 @@ export function executePickupGroundItem(
     groundItemId: groundItem.id
   });
 
-  // Log success
-  console.log(
-    `[executePickupGroundItem] Player ${playerState.userId} picked up ${result.itemName} x${result.added}${
-      result.overflow > 0 ? ` (${result.overflow} left on ground)` : ""
-    }`
-  );
 }
 
 /**
@@ -161,7 +155,6 @@ export function handleGroundItemMovementComplete(
 
   const groundItem = ctx.itemManager.getGroundItem(itemId);
   if (!groundItem) {
-    console.warn(`[handleGroundItemMovementComplete] Ground item ${itemId} no longer exists`);
     return;
   }
 
@@ -169,7 +162,6 @@ export function handleGroundItemMovementComplete(
   if (checkGroundItemRange(ctx, playerState, groundItem)) {
     executePickupGroundItem(ctx, playerState, groundItem);
   } else {
-    console.warn("[handleGroundItemMovementComplete] Still not in range after movement");
     ctx.messageService.sendServerInfo(playerState.userId, "Unable to reach that item");
   }
 }

@@ -356,10 +356,6 @@ export class HarvestingService {
       return false;
     }
 
-    console.log(
-      `[HarvestingService] Player ${playerState.userId} initiated harvest on plant ${entityState.id} ` +
-        `(${gloveConfig.tier} gloves, ${(successProbability * 100).toFixed(2)}% success)`
-    );
     return true;
   }
 
@@ -399,7 +395,6 @@ export class HarvestingService {
     const session = this.activeSessions.get(userId);
 
     if (!player || !session) {
-      console.warn(`[HarvestingService] No active session for player ${userId}`);
       return;
     }
 
@@ -434,7 +429,6 @@ export class HarvestingService {
       return;
     }
 
-    console.log(`[HarvestingService] Player ${player.userId} harvested ${harvestableConfig.itemName} at ${plant.id}`);
 
     const remaining = this.plantResources.get(plant.id) ?? 0;
     this.plantResources.set(plant.id, remaining - 1);
@@ -492,7 +486,6 @@ export class HarvestingService {
   private schedulePlantRespawn(plant: WorldEntityState): void {
     const respawnTicks = plant.definition.respawnTicks ?? 100;
 
-    console.log(`[HarvestingService] Plant ${plant.id} depleted, respawning in ${respawnTicks} ticks`);
 
     const nearbyPlayers = this.config.visibilitySystem.getPlayersNearEntity(plant);
     const exhaustionTracker = this.config.visibilitySystem.getResourceExhaustionTracker();
@@ -507,7 +500,6 @@ export class HarvestingService {
 
       exhaustionTracker.markReplenished(plant.id);
 
-      console.log(`[HarvestingService] Plant ${plant.id} respawned with ${resources} resources`);
     }, respawnTicks * 600);
   }
 
@@ -537,7 +529,6 @@ export class HarvestingService {
 
     this.config.delaySystem.clearDelay(userId);
 
-    console.log(`[HarvestingService] Cancelled session for player ${userId} (packets: ${sendPackets})`);
   }
 
   private buildItemIdIndex(itemCatalog: ItemCatalog): Map<string, number> {

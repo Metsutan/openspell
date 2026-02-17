@@ -292,10 +292,6 @@ export class MiningService {
       return false;
     }
 
-    console.log(
-      `[MiningService] Player ${playerState.userId} initiated mine on rock ${entityState.id} ` +
-        `(${pickaxeConfig.tier} pickaxe, ${(successProbability * 100).toFixed(2)}% success)`
-    );
     return true;
   }
 
@@ -335,7 +331,6 @@ export class MiningService {
     const session = this.activeSessions.get(userId);
 
     if (!player || !session) {
-      console.warn(`[MiningService] No active session for player ${userId}`);
       return;
     }
 
@@ -364,7 +359,6 @@ export class MiningService {
     session: MiningSession,
     currentTick: number
   ): void {
-    console.log(`[MiningService] Player ${player.userId} mined rock ${rock.id}`);
 
     const remaining = this.rockResources.get(rock.id) ?? 0;
     this.rockResources.set(rock.id, remaining - 1);
@@ -423,8 +417,6 @@ export class MiningService {
   private scheduleRockRespawn(rock: WorldEntityState): void {
     const respawnTicks = rock.definition.respawnTicks ?? 10;
 
-    console.log(`[MiningService] Rock ${rock.id} depleted, respawning in ${respawnTicks} ticks`);
-
     const nearbyPlayers = this.config.visibilitySystem.getPlayersNearEntity(rock);
     const exhaustionTracker = this.config.visibilitySystem.getResourceExhaustionTracker();
     exhaustionTracker.markExhausted(rock.id, nearbyPlayers);
@@ -433,7 +425,6 @@ export class MiningService {
       this.rockResources.set(rock.id, SINGLE_RESOURCE_PER_ROCK);
 
       exhaustionTracker.markReplenished(rock.id);
-      console.log(`[MiningService] Rock ${rock.id} respawned`);
     }, respawnTicks * 600);
   }
 
@@ -463,7 +454,6 @@ export class MiningService {
 
     this.config.delaySystem.clearDelay(userId);
 
-    console.log(`[MiningService] Cancelled session for player ${userId} (packets: ${sendPackets})`);
   }
 
   private buildItemIdIndex(itemCatalog: ItemCatalog): Map<string, number> {

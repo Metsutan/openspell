@@ -105,8 +105,6 @@ export class TargetingService {
       y: playerState.y
     };
     this.deps.eventBus.emit(createPlayerStartedTargetingEvent(userId, target, position));
-    
-    console.log(`[TargetingService] Player ${userId} now targeting ${target.type}:${target.id}`);
     return true;
   }
 
@@ -153,8 +151,6 @@ export class TargetingService {
     
     this.playerTargets.delete(userId);
     this.deps.eventBus.emit(createPlayerStoppedTargetingEvent(userId));
-    
-    console.log(`[TargetingService] Cleared target for player ${userId}`);
     return true;
   }
 
@@ -201,7 +197,6 @@ export class TargetingService {
       // Target no longer exists - clear it
       this.playerTargets.delete(userId);
       this.deps.eventBus.emit(createPlayerStoppedTargetingEvent(userId));
-      console.log(`[TargetingService] Player ${userId} target became invalid - cleared`);
       return false;
     }
     
@@ -224,7 +219,6 @@ export class TargetingService {
     const target = this.playerTargets.get(userId);
     if (target) {
       this.playerTargets.delete(userId);
-      console.log(`[TargetingService] Cleared target for disconnected player ${userId}`);
     }
     
     // Also clear any other players/NPCs that were targeting this player
@@ -263,7 +257,6 @@ export class TargetingService {
   setNpcTarget(npcId: number, target: Target, clearDroppedMemory: boolean = true): boolean {
     const npcState = this.deps.npcStates.get(npcId);
     if (!npcState) {
-      console.warn(`[TargetingService] Cannot set NPC target - NPC ${npcId} not found`);
       return false;
     }
 
@@ -284,8 +277,6 @@ export class TargetingService {
       y: npcState.y
     };
     this.deps.eventBus.emit(createNPCStartedAggroEvent(npcId, target, position));
-
-    console.log(`[TargetingService] NPC ${npcId} now targeting ${target.type}:${target.id}`);
     return true;
   }
 
@@ -343,8 +334,6 @@ export class TargetingService {
     
     npcState.aggroTarget = null;
     this.deps.eventBus.emit(createNPCStoppedAggroEvent(npcId));
-
-    console.log(`[TargetingService] Cleared target for NPC ${npcId}`);
     return true;
   }
 
@@ -460,9 +449,6 @@ export class TargetingService {
       }
     }
 
-    if (clearedCount > 0) {
-      console.log(`[TargetingService] Cleared ${clearedCount} targets on ${target.type}:${target.id}`);
-    }
   }
 
   /**

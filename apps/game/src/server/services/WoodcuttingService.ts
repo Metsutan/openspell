@@ -315,10 +315,6 @@ export class WoodcuttingService {
             return false;
         }
 
-        console.log(
-            `[WoodcuttingService] Player ${playerState.userId} initiated chop on tree ${entityState.id} ` +
-            `(${axeConfig.tier} axe, ${axeConfig.initialDelay} tick delay, ${(successProbability * 100).toFixed(2)}% success)`
-        );
         return true;
     }
 
@@ -380,7 +376,6 @@ export class WoodcuttingService {
         const session = this.activeSessions.get(userId);
 
         if (!player || !session) {
-            console.warn(`[WoodcuttingService] No active session for player ${userId}`);
             return;
         }
 
@@ -419,8 +414,6 @@ export class WoodcuttingService {
             this.endSession(player.userId, "Invalid tree type.", false);
             return;
         }
-
-        console.log(`[WoodcuttingService] Player ${player.userId} successfully chopped tree ${tree.id}`);
 
         // Deplete tree resource
         const remaining = this.treeResources.get(tree.id) ?? 0;
@@ -506,8 +499,6 @@ export class WoodcuttingService {
     private scheduleTreeRespawn(tree: WorldEntityState): void {
         const respawnTicks = tree.definition.respawnTicks ?? 30;
 
-        console.log(`[WoodcuttingService] Tree ${tree.id} depleted, respawning in ${respawnTicks} ticks`);
-
         // Get nearby players who can see the tree (position-based query for static entities)
         const nearbyPlayers = this.config.visibilitySystem.getPlayersNearEntity(tree);
 
@@ -527,8 +518,6 @@ export class WoodcuttingService {
             // Mark tree as replenished and notify all witnesses
             exhaustionTracker.markReplenished(tree.id);
             this.config.shakingService?.onTreeReplenished(tree.id);
-
-            console.log(`[WoodcuttingService] Tree ${tree.id} respawned with ${resources} resources`);
         }, respawnTicks * 600); // 600ms per tick
     }
 
@@ -609,6 +598,5 @@ export class WoodcuttingService {
         // Cancel any active delay for this player
         this.config.delaySystem.clearDelay(userId);
 
-        console.log(`[WoodcuttingService] Cancelled session for player ${userId} (packets: ${sendPackets})`);
     }
 }

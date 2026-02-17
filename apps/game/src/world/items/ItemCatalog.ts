@@ -114,6 +114,8 @@ export interface ItemDefinition {
   useItemOnItemActions: ItemOnItemAction[] | null;
   metalType: string | null;
   weight: number;
+  isOnlyDiscardable?: boolean;
+  hasUniqueData?: boolean;
 }
 
 /**
@@ -204,7 +206,9 @@ export class ItemCatalog {
         recipe: raw.recipe ?? null,
         useItemOnItemActions: raw.useItemOnItemActions ?? null,
         metalType: raw.metalType ?? null,
-        weight: raw.weight ?? 0
+        weight: raw.weight ?? 0,
+        isOnlyDiscardable: raw.isOnlyDiscardable ?? false,
+        hasUniqueData: raw.hasUniqueData ?? false
       };
       definitionsById.set(definition.id, definition);
     }
@@ -316,6 +320,8 @@ interface RawItemDefinition {
   useItemOnItemActions?: ItemOnItemAction[] | null;
   metalType?: string | null;
   weight?: number;
+  isOnlyDiscardable?: boolean;
+  hasUniqueData?: boolean;
 }
 
 /**

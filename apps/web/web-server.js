@@ -131,8 +131,8 @@ const assetsDir = process.env.ASSETS_ROOT
 const distDir = path.join(rootDir, 'dist'); // Local dist directory (served files)
 const referencePublicDir = path.join(__dirname, '..', '..', 'public'); // Reference only - source of truth
 
-// Log assets directory for debugging
-console.log(`Assets directory: ${assetsDir}`);
+// Log assets directory for debugging (dev only)
+if (process.env.NODE_ENV !== 'production') console.log(`Assets directory: ${assetsDir}`);
 
 /**
  * Copy file from reference directory to dist directory (one-time copy)
@@ -145,7 +145,7 @@ function copyFileFromReference(sourcePath, destPath) {
         }
         if (!fs.existsSync(destPath)) {
             fs.copyFileSync(sourcePath, destPath);
-            console.log(`Copied ${path.relative(rootDir, destPath)} from reference`);
+            if (process.env.NODE_ENV !== 'production') console.log(`Copied ${path.relative(rootDir, destPath)} from reference`);
         }
     }
 }
@@ -182,10 +182,12 @@ const jsPath = path.join(assetsDir, 'js');
 const imagesPath = path.join(assetsDir, 'images');
 const staticPath = path.join(assetsDir, 'static');
 
-console.log(`Serving CSS from: ${cssPath}`);
-console.log(`Serving JS from: ${jsPath}`);
-console.log(`Serving images from: ${imagesPath}`);
-console.log(`Serving static from: ${staticPath}`);
+if (process.env.NODE_ENV !== 'production') {
+  console.log(`Serving CSS from: ${cssPath}`);
+  console.log(`Serving JS from: ${jsPath}`);
+  console.log(`Serving images from: ${imagesPath}`);
+  console.log(`Serving static from: ${staticPath}`);
+}
 
 app.use('/css', express.static(cssPath));
 app.use('/js', express.static(jsPath));

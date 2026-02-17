@@ -51,24 +51,15 @@ export class DamageService {
     const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
-      console.log(
-        `[DamageService] ranged atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=false damage=0`
-      );
       return 0;
     }
 
     const maxHit = this.calculateRangedMaxHit(attacker);
     if (maxHit <= 0) {
-      console.log(
-        `[DamageService] ranged atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=0`
-      );
       return 0;
     }
 
     const damage = Math.floor(Math.random() * maxHit) + 1;
-    console.log(
-      `[DamageService] ranged atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=${damage}`
-    );
     return damage;
   }
 
@@ -105,16 +96,10 @@ export class DamageService {
     const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
-      console.log(
-        `[DamageService] magic atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=false damage=0`
-      );
       return 0;
     }
 
     const damage = Math.floor(Math.random() * maxDamage) + 1;
-    console.log(
-      `[DamageService] magic atkRoll=${attackRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxDamage} damage=${damage}`
-    );
     return damage;
   }
 
@@ -156,26 +141,17 @@ export class DamageService {
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
       // Miss! Early exit saves maxHit calculation
-      console.log(
-        `[DamageService] melee atkRoll=${accuracyRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=false damage=0`
-      );
       return 0;
     }
 
     // Calculate maximum possible hit (only if attack lands)
     const maxHit = this.getMaximumHit(attacker);
     if (maxHit <= 0) {
-      console.log(
-        `[DamageService] melee atkRoll=${accuracyRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=0`
-      );
       return 0;
     }
     
     // Hit! Roll damage between 0 and maxHit (inclusive), OSRS-style
     const damage = Math.floor(Math.random() * (maxHit + 1));
-    console.log(
-      `[DamageService] melee atkRoll=${accuracyRoll} defRoll=${defenseRoll} hitChance=${hitChance.toFixed(4)} hit=true maxHit=${maxHit} damage=${damage}`
-    );
     return damage;
   }
 

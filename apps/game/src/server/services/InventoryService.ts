@@ -72,7 +72,6 @@ export class InventoryService {
     }
 
     if (!definition) {
-      console.warn(`[InventoryService] giveItem: Invalid item ID ${itemId}`);
       return { added: 0, overflow: amount, itemName };
     }
 
@@ -217,7 +216,6 @@ export class InventoryService {
    */
   private sendInventorySlotUpdates(userId: number, slotsModified: InventorySlotChange[]) {
     if (slotsModified.length === 0) {
-      console.warn(`[InventoryService] sendInventorySlotUpdates called with no slot changes for user ${userId}`);
       return;
     }
 
@@ -236,7 +234,6 @@ export class InventoryService {
           PreviousAmountAtSlot: previousAmount
         });
         this.deps.enqueueUserMessage(userId, GameAction.AddedItemAtInventorySlot, payload);
-        console.log(`[InventoryService] Queued AddedItemAtInventorySlot for user ${userId}, slot ${change.slot}, item ${newItem[0]}, amount ${change.amountChanged}`);
       } else if (change.amountChanged < 0) {
         // Item removed
         const previousItem = change.previousItem!;
@@ -285,10 +282,6 @@ export class InventoryService {
     
     // If item is stackable OR it's an IOU, spawn once with full amount
     if (itemDef?.isStackable || isItemIOU) {
-      console.log(
-        `[InventoryService] Player ${userId} inventory overflow: ${amount}x ${itemName} - spawning as stack`
-      );
-      
       const spawned = this.deps.itemManager.spawnGroundItem(
         itemId,
         amount,
@@ -313,10 +306,6 @@ export class InventoryService {
       }
     } else {
       // Non-stackable items spawn individually
-      console.log(
-        `[InventoryService] Player ${userId} inventory overflow: ${amount}x ${itemName} - spawning ${amount} individual items`
-      );
-      
       for (let i = 0; i < amount; i++) {
         const spawned = this.deps.itemManager.spawnGroundItem(
           itemId,

@@ -149,7 +149,6 @@ export class DelaySystem {
       originalState
     });
 
-    console.log(`[DelaySystem] Started ${config.type} delay for player ${config.userId}: ${config.ticks} ticks`);
     return true;
   }
 
@@ -193,7 +192,6 @@ export class DelaySystem {
     // Remove delay
     this.activeDelays.delete(userId);
 
-    console.log(`[DelaySystem] Interrupted non-blocking delay for player ${userId}`);
     return true;
   }
 
@@ -204,7 +202,6 @@ export class DelaySystem {
     const delay = this.activeDelays.get(userId);
     if (!delay) return;
 
-    console.log(`[DelaySystem] Delay completed for player ${userId}`);
 
     // Remove delay BEFORE calling callback
     // This allows the callback to start new delays (e.g., pickpocket fail → stun delay)
@@ -217,7 +214,6 @@ export class DelaySystem {
 
     // Skip state restoration if configured (useful for continuous activities like woodcutting)
     if (delay.config.skipStateRestore) {
-      console.log(`[DelaySystem] Skipping state restore for player ${userId} (staying in current state)`);
       return;
     }
 

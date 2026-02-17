@@ -17,6 +17,7 @@ import { ClientActionTypes, isClientActionType, type ClientActionType } from "..
 import { EntityType } from "../protocol/enums/EntityType";
 import { ClientActionPayload, decodeClientActionPayload } from "../protocol/packets/actions/ClientAction";
 import { buildLoggedOutPayload } from "../protocol/packets/actions/LoggedOut";
+import { buildServerShutdownCountdownPayload } from "../protocol/packets/actions/ServerShutdownCountdown";
 import { World } from "../world/World";
 import { MAP_LEVELS, type MapLevel } from "../world/Location";
 import { PlayerState } from "../world/PlayerState";
@@ -67,6 +68,7 @@ import { BankingService } from "./services/BankingService";
 import { DamageService } from "./services/DamageService";
 import { ExperienceService } from "./services/ExperienceService";
 import { MonsterDropService } from "./services/MonsterDropService";
+import { TreasureMapService } from "./services/TreasureMapService";
 import { PlayerDeathDropService } from "./services/PlayerDeathDropService";
 import { PickpocketService } from "./services/PickpocketService";
 import { WoodcuttingService } from "./services/WoodcuttingService";
@@ -154,6 +156,11 @@ export class GameServer {
   private static readonly IDLE_WARNING_TICKS = 1400; // 14 minutes
   private static readonly IDLE_DISCONNECT_TICKS = 1500; // 15 minutes
 
+  // Throttle repeated protocol action failures to avoid log spam
+  private protocolErrorThrottleLastMs = 0;
+  private protocolErrorThrottleCount = 0;
+  private static readonly PROTOCOL_ERROR_THROTTLE_MS = 10_000;
+
   // Event-driven systems
   private readonly eventBus: EventBus;
   private readonly spatialIndex: SpatialIndexManager;
@@ -180,6 +187,7 @@ export class GameServer {
   private harvestingSystem!: HarvestingSystem;
   private miningSystem!: MiningSystem;
   private monsterDropService!: MonsterDropService;
+  private treasureMapService!: TreasureMapService;
   private playerDeathDropService!: PlayerDeathDropService;
   private pickpocketService!: PickpocketService | null;
   private woodcuttingService!: WoodcuttingService | null;
@@ -198,6 +206,7 @@ export class GameServer {
 
   // Graceful shutdown
   private shutdownInProgress = false;
+  private shutdownTimer: NodeJS.Timeout | null = null;
   private readonly shutdownHandlers: Array<() => void> = [];
 
   // Service layer
@@ -564,6 +573,12 @@ export class GameServer {
       packetAudit: this.packetAudit
     });
 
+    this.treasureMapService = await TreasureMapService.load({
+      playerStatesByUserId: this.playerStatesByUserId,
+      eventBus: this.eventBus
+    });
+    this.playerPersistence.setTreasureMapService(this.treasureMapService);
+
     this.connectionService = new ConnectionService({
       dbEnabled: this.dbEnabled,
       world: this.world,
@@ -577,6 +592,7 @@ export class GameServer {
       bankingService: this.bankingService,
       skillingMenuService: this.skillingMenuService,
       changeAppearanceService: this.changeAppearanceService,
+      treasureMapService: this.treasureMapService,
       equipmentService: this.equipmentService,
       delaySystem: this.delaySystem,
       enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
@@ -683,7 +699,8 @@ export class GameServer {
     // Initialize monster drop service for NPC loot
     this.monsterDropService = await MonsterDropService.load({
       itemManager: this.itemManager,
-      entityCatalog: this.entityCatalog
+      entityCatalog: this.entityCatalog,
+      treasureMapService: this.treasureMapService
     });
 
     // Initialize pickpocket service for pickpocketing NPCs
@@ -1196,8 +1213,20 @@ export class GameServer {
         const ctx = this.buildActionContext(socket, connectedUserId);
         await dispatchClientAction(clientAction.ActionType as number, ctx, clientAction.ActionData as unknown);
       } catch (err) {
-        // keep server alive; protocol decoding will evolve over time
-        console.warn("[protocol] failed to handle client action:", (err as Error)?.message ?? err);
+        // keep server alive; protocol decoding will evolve over time; throttle repeated failures
+        const now = Date.now();
+        const msg = String((err as Error)?.message ?? err);
+        if (now - this.protocolErrorThrottleLastMs > GameServer.PROTOCOL_ERROR_THROTTLE_MS) {
+          if (this.protocolErrorThrottleCount > 1) {
+            console.warn(`[protocol] failed to handle client action (${this.protocolErrorThrottleCount} similar in last 10s):`, msg);
+          } else {
+            console.warn("[protocol] failed to handle client action:", msg);
+          }
+          this.protocolErrorThrottleLastMs = now;
+          this.protocolErrorThrottleCount = 1;
+        } else {
+          this.protocolErrorThrottleCount++;
+        }
       }
     });
 
@@ -1233,6 +1262,7 @@ export class GameServer {
       targetingService: this.targetingService,
       tradingService: this.tradingService,
       changeAppearanceService: this.changeAppearanceService,
+      treasureMapService: this.treasureMapService,
       teleportService: this.teleportService,
       conversationService: this.conversationService,
       shopSystem: this.shopSystem,
@@ -1264,8 +1294,62 @@ export class GameServer {
       },
       enqueueBroadcast: (action: number, payload: unknown[]) => {
         this.enqueueBroadcast(action, payload);
+      },
+      scheduleServerShutdown: (minutes: number, requestedByUserId?: number) => {
+        return this.scheduleServerShutdown(minutes, requestedByUserId);
       }
     };
+  }
+
+  private scheduleServerShutdown(
+    minutesUntilShutdown: number,
+    requestedByUserId?: number
+  ): { scheduled: boolean; reason?: string } {
+    if (this.shutdownInProgress) {
+      return { scheduled: false, reason: "Shutdown is already in progress." };
+    }
+    if (this.shutdownTimer !== null) {
+      return { scheduled: false, reason: "A shutdown countdown is already active." };
+    }
+    if (!Number.isFinite(minutesUntilShutdown) || minutesUntilShutdown < 0) {
+      return { scheduled: false, reason: "Minutes must be a non-negative integer." };
+    }
+
+    const minutes = Math.floor(minutesUntilShutdown);
+    const requesterLabel = requestedByUserId !== undefined
+      ? `user ${requestedByUserId}`
+      : "system";
+
+    const countdownPayload = buildServerShutdownCountdownPayload({
+      MinutesUntilShutdown: minutes
+    });
+    this.enqueueBroadcast(GameAction.ServerShutdownCountdown, countdownPayload);
+
+    const infoMessage =
+      minutes === 0
+        ? "Server shutdown has been initiated."
+        : `Server shutdown in ${minutes} minute(s).`;
+    for (const userId of this.playerStatesByUserId.keys()) {
+      this.messageService.sendServerInfo(userId, infoMessage);
+    }
+
+    console.log(`[shutdown] Scheduled by ${requesterLabel}: ${minutes} minute(s)`);
+
+    this.shutdownTimer = setTimeout(async () => {
+      this.shutdownTimer = null;
+      try {
+        await this.gracefulShutdown(
+          `Chat command shutdown by ${requesterLabel}${minutes > 0 ? ` (${minutes}m countdown)` : ""}`,
+          0
+        );
+        process.exit(0);
+      } catch (err) {
+        console.error("[shutdown] Scheduled shutdown failed:", err);
+        process.exit(1);
+      }
+    }, minutes * 60 * 1000);
+
+    return { scheduled: true };
   }
 
   private createStateMachineContext(): StateMachineContext {
@@ -1651,6 +1735,7 @@ export class GameServer {
     bankingService: this.bankingService,
     worldEntityLootService: this.worldEntityLootService,
     inventoryService: this.inventoryService,
+      treasureMapService: this.treasureMapService,
     equipmentService: this.equipmentService,
     itemCatalog: this.itemCatalog,
     experienceService: this.experienceService,
@@ -1679,7 +1764,6 @@ export class GameServer {
   if (idleTicks >= GameServer.IDLE_DISCONNECT_TICKS) {
     const socket = this.socketsByUserId.get(userId);
     if (socket) {
-      console.log(`[idle] Disconnecting user ${userId} after ${idleTicks} ticks of inactivity`);
       //this.messageService.sendServerInfo(userId, "You have been logged out due to inactivity.");
       this.enqueueUserMessage(userId, GameAction.LoggedOut, [userId]);
       // Give them a moment to see the message, then disconnect
@@ -1694,7 +1778,6 @@ export class GameServer {
   if (idleTicks >= GameServer.IDLE_WARNING_TICKS && !this.idleWarningsSentToUserId.has(userId)) {
     this.messageService.sendServerInfo(userId, "WARNING - You will be logged out for inactivity in one minute.");
     this.idleWarningsSentToUserId.add(userId);
-    console.log(`[idle] Warned user ${userId} about inactivity (${idleTicks} ticks idle)`);
   }
 }
   }

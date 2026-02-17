@@ -101,6 +101,9 @@ function buildCommandContext(ctx: ActionContext, playerState: PlayerState): Comm
     reply: (message: string, style?: MessageStyle) => {
       ctx.messageService.sendServerInfo(ctx.userId!, message, style);
     },
+    scheduleServerShutdown: (minutes: number) => {
+      return ctx.scheduleServerShutdown(minutes, ctx.userId!);
+    },
     getPlayerIdByUsername: (username: string) => {
       // Search through all player states for matching username
       for (const state of ctx.playerStatesByUserId.values()) {
@@ -112,6 +115,15 @@ function buildCommandContext(ctx: ActionContext, playerState: PlayerState): Comm
     },
     teleportPlayer: (targetUserId: number, x: number, y: number, mapLevel: number) => {
       ctx.teleportService.teleportPlayer(targetUserId, x, y, mapLevel as MapLevel, { validate: false });
+    },
+    stopPlayerMovement: (targetUserId: number) => {
+      const targetState = ctx.playerStatesByUserId.get(targetUserId);
+      if (!targetState) return;
+
+      targetState.pendingAction = null;
+      ctx.targetingService.clearPlayerTarget(targetUserId);
+      ctx.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: targetUserId });
+      ctx.stateMachine.setState({ type: EntityType.Player, id: targetUserId }, States.IdleState);
     },
     giveItem: (targetUserId: number, itemId: number, amount: number, noted: boolean = false) => {
       const definition = ctx.itemCatalog?.getDefinitionById(itemId);
@@ -128,6 +140,13 @@ function buildCommandContext(ctx: ActionContext, playerState: PlayerState): Comm
     },
     getItemDefinition: (itemId: number) => {
       return ctx.itemCatalog?.getDefinitionById(itemId);
+    },
+    canReceiveTreasureMapItem: (targetUserId: number, itemId: number) => {
+      const tier = ctx.treasureMapService?.getTreasureMapTierByItemId(itemId);
+      if (!tier) {
+        return true;
+      }
+      return ctx.treasureMapService?.canRollTreasureMapDrop(targetUserId, tier) ?? true;
     },
     getPlayerState: (userId: number) => {
       return ctx.playerStatesByUserId.get(userId);
@@ -202,3 +221,5 @@ import type { PlayerState } from "../../world/PlayerState";
 import type { MapLevel } from "../../world/Location";
 import { MessageStyle } from "../../protocol/enums/MessageStyle";
 import type { ActionContext } from "./types";
+import { EntityType } from "../../protocol/enums/EntityType";
+import { States } from "../../protocol/enums/States";

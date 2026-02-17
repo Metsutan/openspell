@@ -162,13 +162,11 @@ export class ShakingService {
       return;
     }
 
-    if (this.shakenTrees.has(entityState.id)) {
-      this.sendShakeTreeResult(playerState.userId, 0, false);
-      return;
+    const shouldRollLoot = !this.shakenTrees.has(entityState.id);
+    if (shouldRollLoot) {
+      // One shake roll per tree per resource cycle, regardless of result.
+      this.shakenTrees.add(entityState.id);
     }
-
-    // One shake roll per tree per resource cycle, regardless of result.
-    this.shakenTrees.add(entityState.id);
 
     // Keep server-side target state clear for normal action flow.
     this.deps.targetingService.clearPlayerTarget(playerState.userId);
@@ -201,15 +199,15 @@ export class ShakingService {
       userId: playerState.userId,
       type: DelayType.NonBlocking,
       ticks: SHAKE_TREE_DELAY_TICKS,
-      onComplete: (nextUserId) => this.resolveShake(nextUserId, entityState.id)
+      onComplete: (nextUserId) => this.resolveShake(nextUserId, entityState.id, shouldRollLoot)
     });
 
     if (!delayStarted) {
-      this.resolveShake(playerState.userId, entityState.id);
+      this.resolveShake(playerState.userId, entityState.id, shouldRollLoot);
     }
   }
 
-  private resolveShake(userId: number, worldEntityId: number): void {
+  private resolveShake(userId: number, worldEntityId: number, shouldRollLoot: boolean): void {
     const playerState = this.deps.playerStatesByUserId.get(userId);
     if (!playerState) {
       return;
@@ -218,6 +216,13 @@ export class ShakingService {
     try {
       const entityState = this.deps.worldEntityStates.get(worldEntityId);
       if (!entityState || entityState.mapLevel !== playerState.mapLevel) {
+        return;
+      }
+
+      // Tree was already shaken during this resource cycle:
+      // still perform full animation+delay flow, but always return nothing.
+      if (!shouldRollLoot) {
+        this.sendShakeTreeResult(userId, 0, false);
         return;
       }
 

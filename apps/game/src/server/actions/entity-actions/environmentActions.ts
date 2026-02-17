@@ -439,7 +439,6 @@ function executeOverrideAction(
   entityState: WorldEntityState,
   actionName: string
 ): void {
-  console.log(`[executeOverrideAction] Player ${playerState.userId} "${actionName}" on ${entityState.type} (${entityState.id})`);
 
   const actionConfig = ctx.worldEntityActionService.getActionConfig(entityState.id, actionName);
   if (!actionConfig) {
@@ -516,9 +515,6 @@ function executeOverrideAction(
       
       ctx.messageService.sendServerInfo(playerState.userId, failureMessage);
       ctx.messageService.sendServerInfo(playerState.userId, detailedFailureMessage);
-      console.log(
-        `[executeOverrideAction] Player ${playerState.userId} failed requirements for ${actionName} on entity ${entityState.id}: ${failureMessage}`
-      );
       return;
     }
   }
@@ -652,7 +648,6 @@ function executeDefaultAction(
   action: Action,
   actionName: string
 ): void {
-  console.log(`[executeDefaultAction] Player ${playerState.userId} "${actionName}" on ${entityState.type} (${entityState.id})`);
 
   switch (action) {
     case Action.BankAt:
@@ -1313,11 +1308,9 @@ function executeClimbSameMapLevel(
   if (canReachSideOne && !canReachSideTwo) {
     // Player is near sideOne, teleport to sideTwo
     targetSide = sideTwo;
-    console.log(`[executeClimbSameMapLevel] Player ${playerState.userId} near sideOne, climbing to sideTwo`);
   } else if (canReachSideTwo && !canReachSideOne) {
     // Player is near sideTwo, teleport to sideOne
     targetSide = sideOne;
-    console.log(`[executeClimbSameMapLevel] Player ${playerState.userId} near sideTwo, climbing to sideOne`);
   } else if (canReachSideOne && canReachSideTwo) {
     // Player can reach both sides (unlikely but possible if very close)
     // Choose the closer one
@@ -1326,10 +1319,8 @@ function executeClimbSameMapLevel(
     
     if (distToSideOne <= distToSideTwo) {
       targetSide = sideTwo;
-      console.log(`[executeClimbSameMapLevel] Player ${playerState.userId} equidistant, climbing from sideOne to sideTwo`);
     } else {
       targetSide = sideOne;
-      console.log(`[executeClimbSameMapLevel] Player ${playerState.userId} equidistant, climbing from sideTwo to sideOne`);
     }
   } else {
     // Player cannot reach either side within 2 steps
@@ -1387,7 +1378,6 @@ function executeGoThroughDoor(
 
   const destination = isAtInside ? outsideLocation : insideLocation;
 
-  console.log(`[executeGoThroughDoor] Player ${playerState.userId} through door to (${destination.x}, ${destination.y})`);
 
   // Cross-level transitions must use TeleportService so the client receives map-level sync.
   if ((destination.lvl as MapLevel) !== pl) {
@@ -1525,7 +1515,6 @@ function executeMineThroughRocks(
 
   const destination = isAtSideOne ? sideTwo : sideOne;
 
-  console.log(`[executeMineThroughRocks] Player ${playerState.userId} mining through rocks to (${destination.x}, ${destination.y})`);
 
   // Send message
   ctx.messageService.sendServerInfo(playerState.userId, "You mine your way through the rocks");

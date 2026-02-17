@@ -33,7 +33,6 @@ export class ResourceExhaustionTracker {
    * @param nearbyPlayerIds - Player IDs who can currently see the entity
    */
   markExhausted(entityId: number, nearbyPlayerIds: Set<number>): void {
-    console.log(`[ResourceExhaustionTracker] Entity ${entityId} exhausted, witnesses: [${Array.from(nearbyPlayerIds).join(', ')}]`);
 
     // Initialize witness set if not exists
     if (!this.exhaustedEntities.has(entityId)) {
@@ -75,7 +74,6 @@ export class ResourceExhaustionTracker {
     // Add player as witness if not already
     if (!witnesses.has(userId)) {
       witnesses.add(userId);
-      console.log(`[ResourceExhaustionTracker] Player ${userId} entered view of exhausted entity ${entityId}, added as witness`);
     }
 
     // Send exhausted packet to the player
@@ -99,7 +97,6 @@ export class ResourceExhaustionTracker {
       return; // Entity was not exhausted
     }
 
-    console.log(`[ResourceExhaustionTracker] Entity ${entityId} replenished, notifying witnesses: [${Array.from(witnesses).join(', ')}]`);
 
     // Build replenished packet
     const replenishedPayload = buildEntityReplenishedResourcesPayload({

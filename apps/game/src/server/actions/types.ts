@@ -40,6 +40,7 @@ import type { InstancedNpcService } from "../services/InstancedNpcService";
 import type { TradingService } from "../services/TradingService";
 import type { ChangeAppearanceService } from "../services/ChangeAppearanceService";
 import type { ShakingService } from "../services/ShakingService";
+import type { TreasureMapService } from "../services/TreasureMapService";
 
 /**
  * Context passed to client action handlers, providing access to necessary systems
@@ -95,6 +96,7 @@ export interface ActionContext {
   experienceService: ExperienceService;
   tradingService: TradingService;
   changeAppearanceService: ChangeAppearanceService;
+  treasureMapService?: TreasureMapService | null;
   /** Line of sight system for checking projectile paths and visibility */
   losSystem: LineOfSightSystem | null;
   worldEntityCatalog: WorldEntityCatalog | null;
@@ -103,6 +105,9 @@ export interface ActionContext {
   
   /** Enqueue a broadcast message */
   enqueueBroadcast: (action: number, payload: unknown[]) => void;
+
+  /** Schedule a graceful server shutdown countdown */
+  scheduleServerShutdown: (minutes: number, requestedByUserId?: number) => { scheduled: boolean; reason?: string };
 }
 
 /**

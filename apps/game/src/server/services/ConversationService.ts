@@ -150,7 +150,6 @@ export class ConversationService {
     // so initial nodes can execute actions and continuances consistently.
     this.advanceToDialogue(userId, npcId, conversationId, initialDialogueId, true);
 
-    console.log(`[ConversationService] Started conversation ${conversationId} for player ${userId} with NPC ${npcId}`);
     return true;
   }
 
@@ -206,7 +205,6 @@ export class ConversationService {
       this.advanceToDialogue(userId, active.npcId, conversationId, selectedOption.nextDialogueId);
     } else {
       // Conversation ends
-      console.log(`[ConversationService] Ending conversation ${conversationId} for player ${userId}`);
       this.endConversation(userId);
     }
   }
@@ -408,7 +406,6 @@ export class ConversationService {
       return;
     }
 
-    console.log(`[ConversationService] Player ${userId} opening shop ${shopId} with NPC ${npcId}`);
     
     // Get current stock from ShopSystem (50-element array with nulls for empty slots)
     const currentStock = this.deps.shopSystem.getCurrentStock(shopId);
@@ -627,7 +624,6 @@ export class ConversationService {
       return;
     }
 
-    console.log(`[ConversationService] Teleporting player ${userId} to (${location.x}, ${location.y}, ${location.lvl})`);
     
     const result = this.deps.teleportService.changeMapLevel(
       userId,
@@ -756,7 +752,6 @@ export class ConversationService {
 
     // Clear conversation state
     this.activeConversations.delete(userId);
-    console.log(`[ConversationService] Ended conversation with NPC ${active.npcId} for player ${userId}`);
   }
 
   /**

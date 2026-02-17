@@ -480,7 +480,7 @@ async function cleanupExpiredSessions() {
         }
       }
     });
-    if (result.count > 0) {
+    if (result.count > 0 && process.env.NODE_ENV !== 'production') {
       console.log(`Cleaned up ${result.count} expired session(s)`);
     }
   } catch (error) {
@@ -589,8 +589,10 @@ async function syncNewsFromFileToDb() {
       await prisma.$transaction(upserts);
     }
 
-    const ms = Date.now() - startedAt;
-    console.log(`[news-sync] Synced ${upserts.length} item(s) from ${NEWS_FILE_SYNC_PATH}${skipped ? ` (skipped ${skipped})` : ''} in ${ms}ms`);
+    if (process.env.NODE_ENV !== 'production') {
+      const ms = Date.now() - startedAt;
+      console.log(`[news-sync] Synced ${upserts.length} item(s) from ${NEWS_FILE_SYNC_PATH}${skipped ? ` (skipped ${skipped})` : ''} in ${ms}ms`);
+    }
   } catch (error) {
     console.error('[news-sync] Failed to sync news from file:', error);
   } finally {
@@ -617,12 +619,12 @@ function setupNewsFileWatcher() {
 
   fs.watchFile(NEWS_FILE_SYNC_PATH, { interval: 1000 }, (curr, prev) => {
     if (curr.mtimeMs !== prev.mtimeMs) {
-      console.log('[news-sync] Detected change in news.json; scheduling DB sync...');
+      if (process.env.NODE_ENV !== 'production') console.log('[news-sync] Detected change in news.json; scheduling DB sync...');
       scheduleNewsFileSync();
     }
   });
 
-  console.log(`[news-sync] Watching for changes: ${NEWS_FILE_SYNC_PATH}`);
+  if (process.env.NODE_ENV !== 'production') console.log(`[news-sync] Watching for changes: ${NEWS_FILE_SYNC_PATH}`);
 }
 
 // Helper: Verify JWT token
@@ -3893,7 +3895,7 @@ async function startServer() {
 
     // Optional: keep DB news in sync with apps/web/news.json for local/dev convenience.
     if (NEWS_FILE_SYNC_ENABLED) {
-      console.log(`[news-sync] Enabled (debounce=${NEWS_FILE_SYNC_DEBOUNCE_MS}ms)`);
+      if (process.env.NODE_ENV !== 'production') console.log(`[news-sync] Enabled (debounce=${NEWS_FILE_SYNC_DEBOUNCE_MS}ms)`);
       await syncNewsFromFileToDb();
       setupNewsFileWatcher();
     }
@@ -3904,7 +3906,7 @@ async function startServer() {
     // Set up periodic cleanup of expired sessions (every hour)
     setInterval(async () => {
       await cleanupExpiredSessions();
-      console.log('Sessions cleaned up successfully');
+      if (process.env.NODE_ENV !== 'production') console.log('Sessions cleaned up successfully');
     }, 360 * 60 * 1000); // 6 hours
     
     const server = (() => {

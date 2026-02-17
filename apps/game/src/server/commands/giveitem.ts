@@ -77,7 +77,7 @@ export const giveitemCommand: CommandHandler = (ctx: CommandContext, args: strin
   }
 
   // Parse amount
-  const amount = parseAmount(args[1]);
+  let amount = parseAmount(args[1]);
 
   // Determine target player
   let targetUserId = ctx.userId;
@@ -97,6 +97,39 @@ export const giveitemCommand: CommandHandler = (ctx: CommandContext, args: strin
   }
 
   const noted = args.length >= 4 && args[3] === 'true' ? true : false;
+
+  const TIERED_TREASURE_MAP_IDS = new Set<number>([442, 443, 456]);
+  const isTreasureMap = TIERED_TREASURE_MAP_IDS.has(itemId);
+
+  if (isTreasureMap) {
+    if (!ctx.canReceiveTreasureMapItem(targetUserId, itemId)) {
+      if (targetUserId === ctx.userId) {
+        ctx.reply("You already have this tier of Treasure Map in your inventory, bank, or on the floor.", MessageStyle.Warning);
+      } else {
+        ctx.reply(`${targetUsername} already has this tier of Treasure Map in inventory, bank, or on the floor.`, MessageStyle.Warning);
+      }
+      return;
+    }
+
+    if (noted) {
+      ctx.reply("Treasure Maps cannot be given as noted items.", MessageStyle.Warning);
+      return;
+    }
+
+    if (amount > 1) {
+      amount = 1;
+    }
+
+    const targetState = ctx.getPlayerState(targetUserId);
+    if (!targetState || !targetState.hasInventorySpace()) {
+      if (targetUserId === ctx.userId) {
+        ctx.reply("You need at least 1 free inventory slot to receive a Treasure Map.", MessageStyle.Warning);
+      } else {
+        ctx.reply(`${targetUsername} needs at least 1 free inventory slot to receive a Treasure Map.`, MessageStyle.Warning);
+      }
+      return;
+    }
+  }
   let result: GiveItemResult;
   if(noted) {
     result = ctx.giveItem(targetUserId, itemId, amount, true);

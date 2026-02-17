@@ -161,7 +161,6 @@ export class ShopSystem {
               // No more stock, remove temporary slot
               shopState.slots[i] = null;
               this.temporaryLotsBySlot.delete(this.getLotKey(shopState.shopId, i));
-              console.log(`[ShopSystem] Temporary item ${slot.itemId} fully decayed from shop ${shopState.shopId}`);
             }
           }
         }
@@ -281,7 +280,6 @@ export class ShopSystem {
     });
     this.deps.enqueueUserMessage(userId, GameAction.UpdatedShopStock, updatePayload);
 
-    console.log(`[ShopSystem] Reduced stock for shop ${shopId} slot ${slotIndex}: ${slot.itemId} x${amount} (remaining: ${slot.currentAmount})`);
 
     return true;
   }
@@ -469,7 +467,6 @@ export class ShopSystem {
     // Reduce shop stock and send update to player
     this.reduceShopStock(userId, shopId, slotIndex, giveResult.added);
 
-    console.log(`[ShopSystem] Player ${userId} purchased ${giveResult.added}x ${itemDef.name ?? `Item ${slot.itemId}`} from shop ${shopId} for ${totalCost} coins`);
     
     return true;
   }
@@ -599,7 +596,6 @@ export class ShopSystem {
         amount: existingSlot.currentAmount
       }]);
 
-      console.log(`[ShopSystem] Player ${userId} sold ${removeResult.removed}x item ${itemId} to shop ${shopId} for ${totalSellPrice} coins`);
       
       return true;
     }
@@ -639,7 +635,6 @@ export class ShopSystem {
       amount: removeResult.removed
     }]);
 
-    console.log(`[ShopSystem] Player ${userId} sold ${removeResult.removed}x temporary item ${itemId} to shop ${shopId} at slot ${emptySlotIndex} for ${totalSellPrice} coins`);
 
     return true;
   }
@@ -677,9 +672,6 @@ export class ShopSystem {
       }
     }
 
-    console.log(
-      `[ShopSystem] Broadcasted ${changedSlots.length} stock update(s) for shop ${shopId} to ${shoppingPlayers.length} player(s)`
-    );
   }
 
   private getLotKey(shopId: number, slotIndex: number): string {

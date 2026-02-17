@@ -67,20 +67,17 @@ function handlePlayerInteraction(
 
   if (targetUserId === playerState.userId) {
     logInvalid("self_target", { action, targetUserId });
-    console.warn(`[${actionName}] Player ${playerState.userId} cannot target themselves`);
     return;
   }
 
   const targetPlayer = ctx.playerStatesByUserId.get(targetUserId);
   if (!targetPlayer) {
     logInvalid("target_missing", { action, targetUserId });
-    console.warn(`[${actionName}] Player ${targetUserId} not found`);
     return;
   }
 
   if (targetPlayer.mapLevel !== playerState.mapLevel) {
     logInvalid("target_wrong_map", { action, targetUserId, mapLevel: targetPlayer.mapLevel });
-    console.warn(`[${actionName}] Target player on different map level`);
     return;
   }
 
@@ -113,7 +110,6 @@ function handlePlayerInteraction(
     );
 
     if (!path || path.length <= 1) {
-      console.warn(`[${actionName}] Failed to find path to player`);
       ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
       playerState.pendingAction = null;
       ctx.targetingService.clearPlayerTarget(playerState.userId);
@@ -130,10 +126,6 @@ function handlePlayerInteraction(
       speed,
       () => onMovementComplete(ctx, playerState)
     );
-
-    console.log(
-      `[${actionName}] Player ${playerState.userId} pathfinding to Player ${targetUserId} at (${targetPlayer.x}, ${targetPlayer.y})`
-    );
   }
 }
 
@@ -149,12 +141,10 @@ function handleAttackPlayer(
 ): void {
   const targetPlayer = ctx.playerStatesByUserId.get(targetUserId);
   if (!targetPlayer) {
-    console.warn(`[handleAttackPlayer] Player ${targetUserId} not found`);
     return;
   }
 
   if (targetPlayer.mapLevel !== playerState.mapLevel) {
-    console.warn(`[handleAttackPlayer] Target player on different map level`);
     return;
   }
 
@@ -208,7 +198,6 @@ function handleAttackPlayer(
       );
 
   if (!path || path.length <= 1) {
-    console.warn(`[handleAttackPlayer] Failed to find path to player`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     ctx.targetingService.clearPlayerTarget(playerState.userId);
@@ -225,9 +214,6 @@ function handleAttackPlayer(
     () => onMovementComplete(ctx, playerState)
   );
 
-  console.log(
-    `[handleAttackPlayer] Player ${playerState.userId} pathfinding to Player ${targetUserId} at (${targetPlayer.x}, ${targetPlayer.y})`
-  );
 }
 
 function handleFollowPlayer(
@@ -290,7 +276,6 @@ function executeAttackPlayer(
   playerState: PlayerState,
   targetPlayer: PlayerState
 ): void {
-  console.log(`[executeAttackPlayer] Player ${playerState.userId} attacking Player ${targetPlayer.userId}`);
 
   const targetState = ctx.stateMachine.getCurrentState({ type: EntityType.Player, id: targetPlayer.userId });
   if (targetState === States.PlayerDeadState) {
@@ -342,7 +327,6 @@ function executeFollowPlayer(
   playerState: PlayerState,
   targetPlayer: PlayerState
 ): void {
-  console.log(`[executeFollowPlayer] Player ${playerState.userId} following Player ${targetPlayer.userId}`);
 
   // Keep follow intent active; FollowSystem executes movement in the same tick
   // after normal player movement has finished.
@@ -362,7 +346,6 @@ function executeTradeWithPlayer(
   playerState: PlayerState,
   targetPlayer: PlayerState
 ): void {
-  console.log(`[executeTradeWithPlayer] Player ${playerState.userId} trading with Player ${targetPlayer.userId}`);
 
   ctx.tradingService.requestTrade(playerState.userId, targetPlayer.userId);
   playerState.pendingAction = null;
@@ -373,7 +356,6 @@ function executeModeratePlayer(
   playerState: PlayerState,
   targetPlayer: PlayerState
 ): void {
-  console.log(`[executeModeratePlayer] Player ${playerState.userId} moderating Player ${targetPlayer.userId}`);
 
   // TODO: Implement moderate logic
   playerState.pendingAction = null;
@@ -391,14 +373,12 @@ export function handlePlayerMovementComplete(
 ): void {
   const targetPlayer = ctx.playerStatesByUserId.get(targetUserId);
   if (!targetPlayer) {
-    console.warn(`[handlePlayerMovementComplete] Player ${targetUserId} no longer exists`);
     ctx.messageService.sendServerInfo(playerState.userId, "They're no longer there");
     playerState.pendingAction = null;
     return;
   }
 
   if (targetPlayer.mapLevel !== playerState.mapLevel) {
-    console.warn(`[handlePlayerMovementComplete] Player ${targetUserId} is on different map level`);
     ctx.messageService.sendServerInfo(playerState.userId, "They're no longer there");
     playerState.pendingAction = null;
     return;
@@ -418,7 +398,6 @@ export function handlePlayerMovementComplete(
   const requiresRange = action !== Action.Follow && action !== Action.TradeWith && action !== Action.Attack;
 
   if (requiresRange && !attackInRange) {
-    console.warn(`[handlePlayerMovementComplete] Player not in range of target ${targetUserId}`);
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
     playerState.pendingAction = null;
     return;

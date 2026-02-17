@@ -360,7 +360,6 @@ export class MovementSystem {
     }
 
     // Success! Seamlessly replace the current path
-    console.log(`[MovementSystem] NPC ${npcState.id} moved to (${npcState.x}, ${npcState.y}) - seamlessly updating path (distance: ${distance}, new path length: ${newPath.length})`);
     
     // Replace the path in the existing plan
     plan.path = newPath;

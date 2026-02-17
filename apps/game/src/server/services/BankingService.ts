@@ -118,7 +118,6 @@ export class BankingService {
       // Mark that this user has received their bank items
       this.receivedBankItems.add(userId);
       
-      console.log(`[banking] Sent bank items to user ${userId} (${this.countNonEmptySlots(playerState.bank)} slots occupied)`);
     }
     
     // Always send StartedBanking packet (every time bank is opened)
@@ -132,9 +131,6 @@ export class BankingService {
     
     // Set player state to BankingState
     playerState.setState(States.BankingState);
-    
-    console.log(`[banking] User ${userId} started banking at world entity ${worldEntityId}`);
-    
     return true;
   }
   
@@ -168,13 +164,11 @@ export class BankingService {
       
       if (!record) {
         // Player has no bank record yet, create empty bank
-        console.log(`[banking] No bank record for user ${userId}, creating empty bank`);
         return this.createEmptyBank();
       }
       
       // Parse the JSON bank data
       const bankData = this.parseBankData(record.items);
-      console.log(`[banking] Loaded bank for user ${userId} from database (persistence ${persistenceId})`);
       return bankData;
       
     } catch (error) {
@@ -221,7 +215,6 @@ export class BankingService {
         }
       });
       
-      console.log(`[banking] Saved bank for user ${playerState.userId} to database (persistence ${playerState.persistenceId})`);
       return true;
       
     } catch (error) {
