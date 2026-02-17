@@ -52,6 +52,29 @@ export interface ConnectionInfo {
 export class ConnectionService {
   constructor(private readonly deps: ConnectionServiceDependencies) {}
 
+  private rejectLoginAndCloseSocket(socket: Socket, payload: unknown): null {
+    socket.emit(GameAction.LoginFailed.toString(), payload);
+
+    // Force-close both Socket.IO namespace + underlying Engine.IO transport.
+    // This avoids clients getting stuck on an upgraded websocket after rejection.
+    setTimeout(() => {
+      try {
+        if (socket.connected) {
+          socket.disconnect(true);
+        }
+      } catch {
+        // best effort
+      }
+      try {
+        socket.conn.close();
+      } catch {
+        // best effort
+      }
+    }, 25);
+
+    return null;
+  }
+
   /**
    * Handles the login flow for a player.
    * Validates credentials, sets up session state, and emits appropriate events.
@@ -70,8 +93,7 @@ export class ConnectionService {
         const ipBanResult = await checkIPBan(clientIP);
         if (ipBanResult) {
           const banMessage = formatBanMessage(ipBanResult);
-          socket.emit(GameAction.LoginFailed.toString(), [banMessage]);
-          return null;
+          return this.rejectLoginAndCloseSocket(socket, [banMessage]);
         }
       }
 
@@ -84,8 +106,7 @@ export class ConnectionService {
         const userBanResult = await checkUserBan(userId);
         if (userBanResult) {
           const banMessage = formatBanMessage(userBanResult, username);
-          socket.emit(GameAction.LoginFailed.toString(), [banMessage]);
-          return null;
+          return this.rejectLoginAndCloseSocket(socket, [banMessage]);
         }
       }
 
@@ -169,11 +190,9 @@ export class ConnectionService {
       return { userId, username, emailVerified, socket };
     } catch (err) {
       if (err instanceof LoginFailedError) {
-        socket.emit(GameAction.LoginFailed.toString(), [{ code: err.code, msg: err.msg }]);
-        return null;
+        return this.rejectLoginAndCloseSocket(socket, [{ code: err.code, msg: err.msg }]);
       }
-      socket.emit(GameAction.LoginFailed.toString(), [String((err as Error)?.message ?? err)]);
-      return null;
+      return this.rejectLoginAndCloseSocket(socket, [String((err as Error)?.message ?? err)]);
     }
   }
 

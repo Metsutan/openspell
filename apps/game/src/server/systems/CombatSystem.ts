@@ -628,6 +628,11 @@ export class CombatSystem {
     const currentHp = this.getCurrentHitpoints(target);
     const actualDamage = Math.min(rawDamage, currentHp);
 
+    // Track incoming combat damage on players (used by logout/disconnect restrictions).
+    if (actualDamage >= 0 && "userId" in target) {
+      target.noteIncomingCombatHit();
+    }
+
     // Get target position for broadcasting
     const targetPosition: Position = {
       mapLevel: 'mapLevel' in target ? target.mapLevel : (target as NPCState).mapLevel,

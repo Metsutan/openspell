@@ -156,7 +156,7 @@ const EXTRA_DROPS_BY_SPOT: Record<string, ExtraDropConfig[]> = {
   oceanfishingspot: [
     {
       itemId: 425,
-      chance: 2 / 256,
+      chance: 1 / 256,
       message: "You find a message in a bottle."
     }
   ],

@@ -17,7 +17,9 @@ export interface ExclusionZone extends Rectangle {
 
 export class WildernessService {
   private static readonly LEVEL_LENGTH = 8;
+  private static readonly MAX_TELEPORT_WILDERNESS_LEVEL = 20;
   private static readonly DEEP_WILDERNESS_LEVEL = 21;
+  public static readonly TELEPORT_BLOCK_MESSAGE = "A strange force is blocking your teleporation spell";
 
   private static readonly WILDERNESS_REGIONS: WildernessRegion[] = [
     { minX: 152, minY: -516, maxX: 516, maxY: -137, mapLevel: MAP_LEVELS.Overworld },
@@ -77,6 +79,10 @@ export class WildernessService {
 
   public static isInDeepWilderness(x: number, y: number, mapLevel: MapLevel): boolean {
     return this.getWildernessLevel(x, y, mapLevel) >= this.DEEP_WILDERNESS_LEVEL;
+  }
+
+  public static canTeleport(x: number, y: number, mapLevel: MapLevel): boolean {
+    return this.getWildernessLevel(x, y, mapLevel) <= this.MAX_TELEPORT_WILDERNESS_LEVEL;
   }
 
   public static getWildernessInfo(x: number, y: number, mapLevel: MapLevel) {

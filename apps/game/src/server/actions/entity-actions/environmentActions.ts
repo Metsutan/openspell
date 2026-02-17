@@ -14,6 +14,7 @@
 
 import { Action } from "../../../protocol/enums/Actions";
 import { EntityType } from "../../../protocol/enums/EntityType";
+import { GameAction } from "../../../protocol/enums/GameAction";
 import { PlayerSetting } from "../../../protocol/enums/PlayerSetting";
 import { MenuType } from "../../../protocol/enums/MenuType";
 import { MessageStyle } from "../../../protocol/enums/MessageStyle";
@@ -29,6 +30,7 @@ import type { MapLevel } from "../../../world/Location";
 import type { RequirementCheckContext } from "../../services/RequirementsChecker";
 import { SKILLS, isSkillSlug } from "../../../world/PlayerState";
 import { DelayType } from "../../systems/DelaySystem";
+import { buildPathfindingFailedPayload } from "../../../protocol/packets/actions/PathfindingFailed";
 import { buildShowLootMenuPayload } from "../../../protocol/packets/actions/ShowLootMenu";
 import type { WorldEntityAction } from "../../services/WorldEntityActionService";
 
@@ -167,7 +169,12 @@ export function handleEnvironmentAction(
   
   if (!supportedActions.includes(actionName) && !hasOverride) {
     ctx.messageService.sendServerInfo(playerState.userId, "Supported action but lacks override. Please contact an administrator.");
-      ctx.messageService.sendServerInfo(playerState.userId, "Environment ID: " + entityState.id + " Action: " + actionName);
+    ctx.messageService.sendServerInfo(playerState.userId, "Environment ID: " + entityState.id + " Action: " + actionName);
+    ctx.enqueueUserMessage(
+      playerState.userId,
+      GameAction.PathfindingFailed,
+      buildPathfindingFailedPayload({ EntityID: -1 })
+    );
     //console.warn(`[handleEnvironmentAction] Supported action but lacks override. Please contact an administrator. Environment ID: ${entityState.id}`);
     return;
   }

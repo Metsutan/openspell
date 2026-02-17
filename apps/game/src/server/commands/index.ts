@@ -5,6 +5,10 @@ import { teleportCommand } from "./teleport";
 import { giveitemCommand } from "./giveitem";
 import { setskillCommand } from "./setskill";
 import { shutdownCommand } from "./shutdown";
+import { muteCommand } from "./mute";
+import { unmuteCommand } from "./unmute";
+import { banCommand } from "./ban";
+import { unbanCommand } from "./unban";
 
 // Re-export types for convenience
 export type { CommandContext, CommandDefinition, CommandHandler } from "./types";
@@ -64,28 +68,38 @@ const COMMANDS: Record<string, CommandDefinition> = {
   // Moderator Commands
   // ---------------------------------------------------------------------------
   mute: {
-    handler: (ctx, args) => {
-      ctx.reply("Mute command not yet implemented", MessageStyle.Warning);
-    },
+    handler: muteCommand,
     requiredPrivilege: [PlayerType.Admin, PlayerType.Mod, PlayerType.PlayerMod],
     usage: "/mute <username> [duration]",
     description: "Mute a player"
   },
 
-  ban: {
-    handler: (ctx, args) => {
-      ctx.reply("Ban command not yet implemented", MessageStyle.Warning);
-    },
+  unmute: {
+    handler: unmuteCommand,
     requiredPrivilege: [PlayerType.Admin, PlayerType.Mod, PlayerType.PlayerMod],
-    usage: "/ban <username> [reason]",
-    description: "Ban a player"
+    usage: "/unmute <username>",
+    description: "Unmute a player"
+  },
+
+  ban: {
+    handler: banCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/ban <username> [duration]",
+    description: "Account-ban a player"
+  },
+
+  unban: {
+    handler: unbanCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/unban <username>",
+    description: "Remove an account ban from a player"
   },
 
   kick: {
     handler: (ctx, args) => {
       ctx.reply("Kick command not yet implemented", MessageStyle.Warning);
     },
-    requiredPrivilege: [PlayerType.Admin, PlayerType.Mod, PlayerType.PlayerMod],
+    requiredPrivilege: [PlayerType.Admin],
     usage: "/kick <username> [reason]",
     description: "Kick a player from the server"
   },

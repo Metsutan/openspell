@@ -302,6 +302,317 @@ export function formatBanMessage(banResult: BanCheckResult, username?: string): 
 }
 
 /**
+ * Applies an account ban to a user looked up by username (case-insensitive).
+ * This only updates user ban fields and does NOT affect IP bans.
+ *
+ * @param username - Target username
+ * @param durationMs - Ban duration in milliseconds, or null for permanent
+ * @param reason - Ban reason
+ * @returns Target user information or null if not found
+ */
+export async function banUserByUsername(
+  username: string,
+  durationMs: number | null,
+  reason: string
+): Promise<{ userId: number; username: string; bannedUntil: Date | null } | null> {
+  const prisma = getPrisma();
+  const normalizedUsername = username.trim();
+  if (!normalizedUsername) return null;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      username: {
+        equals: normalizedUsername,
+        mode: "insensitive"
+      }
+    },
+    select: {
+      id: true,
+      username: true
+    }
+  });
+
+  if (!user) return null;
+
+  const bannedUntil = durationMs === null ? null : new Date(Date.now() + durationMs);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      bannedUntil,
+      banReason: reason
+    }
+  });
+
+  return { userId: user.id, username: user.username, bannedUntil };
+}
+
+/**
+ * Removes account ban fields from a user looked up by username (case-insensitive).
+ * This only updates user ban fields and does NOT affect IP bans.
+ *
+ * @param username - Target username
+ * @returns Unbanned user info, or null if user not found
+ */
+export async function unbanUserByUsername(
+  username: string
+): Promise<{ userId: number; username: string; wasBanned: boolean } | null> {
+  const prisma = getPrisma();
+  const normalizedUsername = username.trim();
+  if (!normalizedUsername) return null;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      username: {
+        equals: normalizedUsername,
+        mode: "insensitive"
+      }
+    },
+    select: {
+      id: true,
+      username: true,
+      banReason: true
+    }
+  });
+
+  if (!user) return null;
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      bannedUntil: null,
+      banReason: null
+    }
+  });
+
+  return {
+    userId: user.id,
+    username: user.username,
+    wasBanned: user.banReason !== null
+  };
+}
+
+/**
+ * Returns connected user IDs that are currently account-banned.
+ * This intentionally ignores IP bans.
+ */
+export async function getActiveAccountBansForUserIds(userIds: number[]): Promise<Array<{
+  userId: number;
+  banReason: string | null;
+  bannedUntil: Date | null;
+}>> {
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const prisma = getPrisma();
+  const now = new Date();
+  const rows = await prisma.user.findMany({
+    where: {
+      id: { in: userIds },
+      banReason: { not: null },
+      OR: [
+        { bannedUntil: null },
+        { bannedUntil: { gt: now } }
+      ]
+    },
+    select: {
+      id: true,
+      banReason: true,
+      bannedUntil: true
+    }
+  });
+
+  return rows.map((row) => ({
+    userId: row.id,
+    banReason: row.banReason,
+    bannedUntil: row.bannedUntil
+  }));
+}
+
+/**
+ * Result of a mute check operation.
+ */
+export type MuteCheckResult = {
+  isMuted: boolean;
+  isPermanent: boolean;
+  muteReason: string | null;
+  mutedUntil: Date | null;
+  timeRemainingMs: number | null; // Milliseconds until unmute (null if permanent)
+};
+
+/**
+ * Format a remaining duration in a compact human-friendly form.
+ * Example: "2 days, 3 hours" or "45 minutes, 10 seconds".
+ */
+function formatRemainingDuration(timeRemainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(timeRemainingMs / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return `${days} day${days !== 1 ? "s" : ""}, ${hours} hour${hours !== 1 ? "s" : ""}`;
+  }
+  if (hours > 0) {
+    return `${hours} hour${hours !== 1 ? "s" : ""}, ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  }
+  if (minutes > 0) {
+    return `${minutes} minute${minutes !== 1 ? "s" : ""}, ${seconds} second${seconds !== 1 ? "s" : ""}`;
+  }
+  return `${seconds} second${seconds !== 1 ? "s" : ""}`;
+}
+
+/**
+ * Checks if a user is currently muted.
+ * Returns mute information if muted, null if not muted.
+ *
+ * @param userId - The user ID to check
+ * @returns Mute check result or null if not muted
+ */
+export async function checkUserMute(userId: number): Promise<MuteCheckResult | null> {
+  const prisma = getPrisma();
+  const rows = await prisma.$queryRaw<Array<{ mutedUntil: Date | null; muteReason: string | null }>>`
+    SELECT "mutedUntil", "muteReason"
+    FROM "users"
+    WHERE "id" = ${userId}
+    LIMIT 1
+  `;
+  const user = rows[0];
+
+  if (!user || user.muteReason === null) {
+    return null; // Not muted
+  }
+
+  const now = new Date();
+  const isPermanent = user.mutedUntil === null;
+
+  // If temporary mute, check if it has expired
+  if (!isPermanent && user.mutedUntil && user.mutedUntil <= now) {
+    // Mute has expired, clear it
+    await prisma.$executeRaw`
+      UPDATE "users"
+      SET "mutedUntil" = NULL, "muteReason" = NULL
+      WHERE "id" = ${userId}
+    `;
+    return null;
+  }
+
+  const timeRemainingMs = isPermanent
+    ? null
+    : user.mutedUntil
+      ? Math.max(0, user.mutedUntil.getTime() - now.getTime())
+      : null;
+
+  return {
+    isMuted: true,
+    isPermanent,
+    muteReason: user.muteReason,
+    mutedUntil: user.mutedUntil,
+    timeRemainingMs
+  };
+}
+
+/**
+ * Formats a mute message for display in chat.
+ */
+export function formatMuteMessage(muteResult: MuteCheckResult): string {
+  if (muteResult.isPermanent) {
+    return "You are permanently muted.";
+  }
+  if (muteResult.timeRemainingMs === null) {
+    return "You're muted.";
+  }
+  return `You're muted for ${formatRemainingDuration(muteResult.timeRemainingMs)}.`;
+}
+
+/**
+ * Applies a mute to a user looked up by username (case-insensitive).
+ *
+ * @param username - Target username
+ * @param durationMs - Mute duration in milliseconds, or null for permanent
+ * @param reason - Optional reason text
+ * @returns Target user information or null if not found
+ */
+export async function muteUserByUsername(
+  username: string,
+  durationMs: number | null,
+  reason: string
+): Promise<{ userId: number; username: string; mutedUntil: Date | null } | null> {
+  const prisma = getPrisma();
+  const normalizedUsername = username.trim();
+  if (!normalizedUsername) return null;
+
+  const users = await prisma.$queryRaw<Array<{ id: number; username: string }>>`
+    SELECT "id", "username"
+    FROM "users"
+    WHERE LOWER("username") = LOWER(${normalizedUsername})
+    LIMIT 1
+  `;
+  const user = users[0];
+
+  if (!user) return null;
+
+  const mutedUntil = durationMs === null ? null : new Date(Date.now() + durationMs);
+  await prisma.$executeRaw`
+    UPDATE "users"
+    SET "mutedUntil" = ${mutedUntil}, "muteReason" = ${reason}
+    WHERE "id" = ${user.id}
+  `;
+
+  return { userId: user.id, username: user.username, mutedUntil };
+}
+
+/**
+ * Removes mute fields from a user looked up by username (case-insensitive).
+ *
+ * @param username - Target username
+ * @returns Unmuted user info, or null if user not found
+ */
+export async function unmuteUserByUsername(
+  username: string
+): Promise<{ userId: number; username: string; wasMuted: boolean } | null> {
+  const prisma = getPrisma();
+  const normalizedUsername = username.trim();
+  if (!normalizedUsername) return null;
+
+  const users = await prisma.$queryRaw<Array<{ id: number; username: string; muteReason: string | null }>>`
+    SELECT "id", "username", "muteReason"
+    FROM "users"
+    WHERE LOWER("username") = LOWER(${normalizedUsername})
+    LIMIT 1
+  `;
+  const user = users[0];
+
+  if (!user) return null;
+
+  await prisma.$executeRaw`
+    UPDATE "users"
+    SET "mutedUntil" = NULL, "muteReason" = NULL
+    WHERE "id" = ${user.id}
+  `;
+
+  return {
+    userId: user.id,
+    username: user.username,
+    wasMuted: user.muteReason !== null
+  };
+}
+
+/**
+ * Clears account mute fields by user ID.
+ * Useful when an in-memory temporary mute expires and needs DB cleanup.
+ */
+export async function clearUserMuteByUserId(userId: number): Promise<void> {
+  const prisma = getPrisma();
+  await prisma.$executeRaw`
+    UPDATE "users"
+    SET "mutedUntil" = NULL, "muteReason" = NULL
+    WHERE "id" = ${userId}
+  `;
+}
+
+/**
  * Recomputes "overall" skill and recalculates ranks for players who changed skills.
  * The game server already saves skills directly to the database, so this only needs to:
  * 1. Recompute "overall" skill for specified users

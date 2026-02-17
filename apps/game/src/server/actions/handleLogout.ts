@@ -9,12 +9,27 @@ import type { ActionHandler } from "./types";
  */
 export const handleLogout: ActionHandler = async (ctx, actionData) => {
   if (ctx.userId === null) return;
-  
+
+  const playerState = ctx.playerStatesByUserId.get(ctx.userId);
+  if (!playerState) return;
+
+  if (playerState.wasHitWithin(10_000)) {
+    ctx.messageService.sendServerInfo(
+      ctx.userId,
+      "You cannot logout within 10 seconds of being in combat"
+    );
+    return;
+  }
+
+  // Mark this as an intentional/logout-request disconnect so GameServer can
+  // distinguish it from an unclean client disconnect.
+  (ctx.socket.data as { logoutRequested?: boolean }).logoutRequested = true;
+
   ctx.socket.emit(
     GameAction.LoggedOut.toString(),
     buildLoggedOutPayload({ EntityID: ctx.userId })
   );
-  
+
   // Socket disconnect will trigger cleanupConnectedUser in GameServer
   ctx.socket.disconnect(true);
 };

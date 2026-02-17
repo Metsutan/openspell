@@ -1179,6 +1179,15 @@ router.get('/admin', requireAdmin, async (req, res) => {
                     await loadUserAntiCheatLogs(this);
                 });
             });
+
+            // Handle Ban IP buttons in dynamic user details content.
+            document.querySelectorAll('.ban-ip-btn').forEach(button => {
+                if (button.dataset.handlerAttached) return;
+                button.dataset.handlerAttached = 'true';
+                button.addEventListener('click', async function() {
+                    await banIP(this.dataset.ip, this.dataset.csrf);
+                });
+            });
         }
 
         function attachAntiCheatHandlers() {
@@ -1273,6 +1282,10 @@ router.post('/admin/search-user', requireAdmin, csrfProtection, async (req, res)
                 const banStatusBadge = isBanned 
                     ? '<span style="color: var(--error-color); margin-left: 8px; font-weight: 600;">BANNED</span>' 
                     : '';
+                const isMuted = !!user.muteReason;
+                const muteStatusBadge = isMuted
+                    ? '<span style="color: var(--warning-color); margin-left: 8px; font-weight: 600;">MUTED</span>'
+                    : '';
                 const adminBadge = user.isAdmin 
                     ? '<span style="color: var(--warning-color); margin-left: 8px; font-weight: 600;">ADMIN</span>' 
                     : '';
@@ -1281,7 +1294,7 @@ router.post('/admin/search-user', requireAdmin, csrfProtection, async (req, res)
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                         <td style="padding: 8px;">${user.id}</td>
                         <td style="padding: 8px;">
-                            ${escapeHtml(user.username)}${adminBadge}${banStatusBadge}
+                            ${escapeHtml(user.username)}${adminBadge}${banStatusBadge}${muteStatusBadge}
                         </td>
                         <td style="padding: 8px;">${escapeHtml(user.displayName || user.username)}</td>
                         <td style="padding: 8px;">
@@ -1487,10 +1500,22 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
 
         // Get user ban status to check if user exists and get ban info
         let banStatus = null;
+        let muteStatus = null;
         let userIPs = null;
         
         try {
             banStatus = await makeApiRequest(`/api/admin/user-ban-status/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${req.session.token}`
+                }
+            });
+        } catch (error) {
+            // User might not exist or endpoint failed
+        }
+        
+        try {
+            muteStatus = await makeApiRequest(`/api/admin/user-mute-status/${userId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${req.session.token}`
@@ -1511,7 +1536,7 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
             // Failed to get IPs
         }
 
-        if (!banStatus && !userIPs) {
+        if (!banStatus && !muteStatus && !userIPs) {
             return res.send('<div id="user-details-content"><div class="notification error">User not found</div></div>');
         }
 
@@ -1519,6 +1544,10 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
         const isPermanent = banStatus?.isPermanent || false;
         const bannedUntil = banStatus?.bannedUntil || null;
         const banReason = banStatus?.banReason || null;
+        const isMuted = muteStatus?.isMuted || false;
+        const isMutePermanent = muteStatus?.isPermanent || false;
+        const mutedUntil = muteStatus?.mutedUntil || null;
+        const muteReason = muteStatus?.muteReason || null;
         const ips = userIPs?.ips || [];
 
         let banStatusHtml = '';
@@ -1534,6 +1563,20 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
         } else {
             banStatusHtml = '<div class="notification success" style="margin: 16px 0;">User is not banned</div>';
         }
+        
+        let muteStatusHtml = '';
+        if (isMuted) {
+            const muteUntilStr = mutedUntil ? new Date(mutedUntil).toLocaleString() : 'N/A';
+            muteStatusHtml = `
+                <div class="notification warning" style="margin: 16px 0;">
+                    <strong>User is Muted</strong><br/>
+                    Reason: ${escapeHtml(muteReason || 'N/A')}<br/>
+                    ${isMutePermanent ? 'Permanent mute' : `Temporary until: ${muteUntilStr}`}
+                </div>
+            `;
+        } else {
+            muteStatusHtml = '<div class="notification success" style="margin: 16px 0;">User is not muted</div>';
+        }
 
         let ipsHtml = '';
         if (ips.length > 0) {
@@ -1548,9 +1591,11 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                             Last seen: ${lastSeen})
                             <button 
                                 type="button" 
-                                class="anchor-submit-button" 
+                                data-ip="${ipEscaped}"
+                                data-csrf="${getCsrfToken(req)}"
+                                class="anchor-submit-button ban-ip-btn" 
                                 style="margin-left: 8px;" 
-                                onclick="banIP('${ipEscaped}', '${getCsrfToken(req)}')">
+                                >
                                 Ban IP
                             </button>
                         </li>
@@ -1605,6 +1650,43 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                                 <button type="submit" class="btn-submit" onclick="return confirm('Unban user ${userId}?')">Unban User</button>
                             </form>
                         `;
+        
+        const muteActionsHtml = !isMuted ? `
+                            <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px;">
+                                <h5 style="margin-top: 0;">Permanent Mute</h5>
+                                <form method="POST" action="/account/admin/mute-user">
+                                    <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
+                                    <input type="hidden" name="userId" value="${userId}" />
+                                    <div style="margin-bottom: 8px;">
+                                        <label style="display: block; margin-bottom: 4px; font-weight: 600;">Mute Reason:</label>
+                                        <input type="text" name="reason" placeholder="Enter reason for mute" required style="width: 100%; max-width: 500px; padding: 8px; box-sizing: border-box;" />
+                                    </div>
+                                    <button type="submit" class="btn-submit" onclick="return confirm('Permanently mute user ${userId}? This action requires a reason.')">Permanently Mute User</button>
+                                </form>
+                            </div>
+                            <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px;">
+                                <h5 style="margin-top: 0;">Temporary Mute</h5>
+                                <form method="POST" action="/account/admin/mute-user-temp">
+                                    <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
+                                    <input type="hidden" name="userId" value="${userId}" />
+                                    <div style="margin-bottom: 8px;">
+                                        <label style="display: block; margin-bottom: 4px; font-weight: 600;">Mute Reason:</label>
+                                        <input type="text" name="reason" placeholder="Enter reason for mute" required style="width: 100%; max-width: 500px; padding: 8px; box-sizing: border-box;" />
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <label style="display: block; margin-bottom: 4px; font-weight: 600;">Mute Until:</label>
+                                        <input type="datetime-local" name="mutedUntil" required style="padding: 8px;" />
+                                    </div>
+                                    <button type="submit" class="btn-submit">Temporarily Mute User</button>
+                                </form>
+                            </div>
+                        ` : `
+                            <form method="POST" action="/account/admin/unmute-user" style="display: inline;">
+                                <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
+                                <input type="hidden" name="userId" value="${userId}" />
+                                <button type="submit" class="btn-submit" onclick="return confirm('Unmute user ${userId}?')">Unmute User</button>
+                            </form>
+                        `;
 
         res.send(`
             <div id="user-details-content">
@@ -1615,11 +1697,13 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                 ${usernameHtml}
                 
                 ${banStatusHtml}
+                ${muteStatusHtml}
                 
                 <div style="margin-top: 24px;">
                     <h4>Actions:</h4>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
                         ${banActionsHtml}
+                        ${muteActionsHtml}
                     </div>
                 </div>
                 
@@ -1770,6 +1854,133 @@ router.post('/admin/unban-user', requireAdmin, csrfProtection, async (req, res) 
         }
     } catch (error) {
         console.error('Unban user error:', error);
+        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+    }
+});
+
+// Route: Mute User
+router.post('/admin/mute-user', requireAdmin, csrfProtection, async (req, res) => {
+    try {
+        const userId = parseInt(req.body.userId, 10);
+        const reason = sanitizeString(req.body.reason);
+        
+        if (!userId || isNaN(userId)) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+        }
+        
+        if (!reason || reason.trim().length === 0) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Mute reason is required'));
+        }
+        
+        try {
+            const apiResponse = await makeApiRequest('/api/admin/mute-user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${req.session.token}`
+                },
+                body: {
+                    userId,
+                    reason: reason.trim()
+                }
+            });
+            
+            if (apiResponse.success) {
+                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} muted successfully`));
+            } else {
+                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to mute user'));
+            }
+        } catch (error) {
+            console.error('API request error:', error);
+            const errorMessage = extractApiErrorMessage(error);
+            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+        }
+    } catch (error) {
+        console.error('Mute user error:', error);
+        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+    }
+});
+
+// Route: Mute User (Temporary)
+router.post('/admin/mute-user-temp', requireAdmin, csrfProtection, async (req, res) => {
+    try {
+        const userId = parseInt(req.body.userId, 10);
+        const reason = sanitizeString(req.body.reason);
+        const mutedUntil = req.body.mutedUntil;
+        
+        if (!userId || isNaN(userId)) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+        }
+        
+        if (!reason || reason.trim().length === 0) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Mute reason is required'));
+        }
+        
+        if (!mutedUntil) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Mute expiration date is required'));
+        }
+        
+        try {
+            const apiResponse = await makeApiRequest('/api/admin/mute-user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${req.session.token}`
+                },
+                body: {
+                    userId,
+                    reason: reason.trim(),
+                    mutedUntil: new Date(mutedUntil).toISOString()
+                }
+            });
+            
+            const muteUntilStr = new Date(mutedUntil).toLocaleString();
+            if (apiResponse.success) {
+                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} temporarily muted until ${muteUntilStr}`));
+            } else {
+                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to mute user'));
+            }
+        } catch (error) {
+            console.error('API request error:', error);
+            const errorMessage = extractApiErrorMessage(error);
+            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+        }
+    } catch (error) {
+        console.error('Mute user error:', error);
+        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+    }
+});
+
+// Route: Unmute User
+router.post('/admin/unmute-user', requireAdmin, csrfProtection, async (req, res) => {
+    try {
+        const userId = parseInt(req.body.userId, 10);
+        
+        if (!userId || isNaN(userId)) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+        }
+        
+        try {
+            const apiResponse = await makeApiRequest('/api/admin/unmute-user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${req.session.token}`
+                },
+                body: {
+                    userId
+                }
+            });
+            
+            if (apiResponse.success) {
+                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} unmuted successfully`));
+            } else {
+                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to unmute user'));
+            }
+        } catch (error) {
+            console.error('API request error:', error);
+            const errorMessage = extractApiErrorMessage(error);
+            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+        }
+    } catch (error) {
+        console.error('Unmute user error:', error);
         return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
     }
 });

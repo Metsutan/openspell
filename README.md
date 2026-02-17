@@ -60,37 +60,37 @@ Please always remember to take backups, download, and keep a hold of anything pr
 |--------|-------|
 | `eat` | ✅ Tentatively implemented |
 | `drink` | ✅ Tentatively implemented |
-| `open` (item) | TODO - opening containers |
+| `open` (item) | ✅ Tentatively implemented |
 | `offer` | ✅ Tentatively implemented |
 | `revoke` | ✅ Tentatively implemented |
 | `rub` | ✅ Tentatively implemented |
-| `dropx` | TODO - drop specific quantity |
-| `look_at` | TODO - clue scrolls |
-| `dig` | TODO - clue scrolls |
-| `discard` | TODO - clue scrolls|
-| `blow` | TODO |
+| `dropx` | ✅ Tentatively implemented |
+| `look_at`| ✅ Tentatively implemented |
+| `dig` | ✅ Tentatively implemented |
+| `discard` | ✅ Tentatively implemented |
+| `blow` | 🚫 Does not exist |
 
 ### Admin/Moderator Commands
 
 | Command | Status |
 |---------|--------|
 | `/bank` | Not implemented |
-| `/mute` | Not implemented |
-| `/ban` | Not implemented |
+| `/mute` | ✅ Tentatively implemented |
+| `/ban`  | ✅ Tentatively implemented |
 | `/kick` | Not implemented |
 
 ### Major Systems
 
 | System | Notes |
 |--------|-------|
-| **Trading** | Protocol exists (`UpdateTradeStatus`), no handlers |
-| **Following** | Movement works, execute logic empty |
-| **Friends List** | Not implemented - Requires chat server |
+| **Trading** | ✅ Tentatively implemented |
+| **Following** | ✅ Tentatively implemented |
+| **Friends List** | Implemented in `apps/chat` (friend/block/PM service) |
 | **Player Moderation UI** | Moderate action is stub |
 | **Captcha/Anti-bot** | Protocol exists, no implementation |
-| **Appearance Customization** | Protocol exists, no handler |
-| **Quest Event Triggers** | Service exists, not wired to conversations |
-| **NPC Item Rewards** | Infrastructure exists, not wired |
+| **Appearance Customization** | ✅ Tentatively implemented |
+| **Quest Event Triggers** | ✅ Tentatively implemented |
+| **NPC Item Rewards** | ✅ Tentatively implemented |
 
 ### Combat System
 
@@ -455,7 +455,7 @@ You update the repo on the server and build images there.
 | **Web** | `apps/web/web-server.js` | 8887 | HTTP(S) | SSR website, session management, game page delivery |
 | **API** | `apps/api/api-server.js` | 3002 | HTTP(S) | Source of truth: auth, worlds, hiscores, game tokens |
 | **Game** | `apps/game/src/index.ts` | 8888 | Socket.IO | Real-time game logic, player state, combat, movement |
-| **Chat** | `apps/chat/` | 8765 | (planned) | Not implemented |
+| **Chat** | `apps/chat/src/index.ts` | 8765 | Socket.IO | Friend list, PM routing, block list |
 
 ---
 

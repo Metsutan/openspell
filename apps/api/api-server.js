@@ -1511,6 +1511,188 @@ app.get('/api/admin/user-ban-status/:userId', requireWebServerSecret, verifyToke
   }
 });
 
+// Mute a user (permanent or temporary)
+app.post('/api/admin/mute-user', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { userId, reason, mutedUntil } = req.body;
+    
+    if (!userId || typeof userId !== 'number') {
+      return res.status(400).json({ error: 'User ID is required and must be a number' });
+    }
+    
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      return res.status(400).json({ error: 'Mute reason is required and must be a non-empty string' });
+    }
+    
+    // Validate mutedUntil if provided
+    let mutedUntilDate = null;
+    if (mutedUntil) {
+      mutedUntilDate = new Date(mutedUntil);
+      if (isNaN(mutedUntilDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid mutedUntil date format' });
+      }
+      if (mutedUntilDate <= new Date()) {
+        return res.status(400).json({ error: 'mutedUntil must be in the future' });
+      }
+    }
+    
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, isAdmin: true }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Prevent muting admins (safety check)
+    if (user.isAdmin) {
+      return res.status(403).json({ error: 'Cannot mute admin users' });
+    }
+    
+    // Update user mute status
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        mutedUntil: mutedUntilDate,
+        muteReason: reason.trim()
+      },
+      select: {
+        id: true,
+        username: true,
+        mutedUntil: true,
+        muteReason: true
+      }
+    });
+    
+    res.json({
+      success: true,
+      user: updatedUser,
+      message: mutedUntilDate ? 'User temporarily muted' : 'User permanently muted'
+    });
+  } catch (error) {
+    console.error('Mute user error:', error);
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Unmute a user
+app.post('/api/admin/unmute-user', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId || typeof userId !== 'number') {
+      return res.status(400).json({ error: 'User ID is required and must be a number' });
+    }
+    
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, muteReason: true }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (!user.muteReason) {
+      return res.status(400).json({ error: 'User is not muted' });
+    }
+    
+    // Remove mute
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        mutedUntil: null,
+        muteReason: null
+      },
+      select: {
+        id: true,
+        username: true,
+        mutedUntil: true,
+        muteReason: true
+      }
+    });
+    
+    res.json({
+      success: true,
+      user: updatedUser,
+      message: 'User unmuted successfully'
+    });
+  } catch (error) {
+    console.error('Unmute user error:', error);
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get mute status for a user
+app.get('/api/admin/user-mute-status/:userId', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        mutedUntil: true,
+        muteReason: true
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // If temporary mute has expired, clear it immediately.
+    const now = new Date();
+    const isExpired = user.muteReason && user.mutedUntil && user.mutedUntil <= now;
+    if (isExpired) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          mutedUntil: null,
+          muteReason: null
+        }
+      });
+      return res.json({
+        isMuted: false,
+        isPermanent: false,
+        mutedUntil: null,
+        muteReason: null
+      });
+    }
+    
+    const isMuted = !!user.muteReason;
+    const isPermanent = isMuted && !user.mutedUntil;
+    
+    res.json({
+      isMuted,
+      isPermanent,
+      mutedUntil: user.mutedUntil,
+      muteReason: user.muteReason
+    });
+  } catch (error) {
+    console.error('Get user mute status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get all IPs associated with a user
 app.get('/api/admin/user-ips/:userId', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
   try {
@@ -1801,6 +1983,8 @@ app.get('/api/admin/search-users', requireWebServerSecret, verifyToken, verifyAd
           isAdmin: true,
           bannedUntil: true,
           banReason: true,
+          mutedUntil: true,
+          muteReason: true,
           createdAt: true
         },
         orderBy: [

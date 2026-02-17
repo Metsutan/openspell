@@ -72,6 +72,9 @@ export interface CommandContext {
   /** Get a player's state by their user ID */
   getPlayerState: (userId: number) => import("../../world/PlayerState").PlayerState | undefined;
 
+  /** Disconnect a currently connected player; returns true if disconnected */
+  disconnectPlayer: (userId: number, reason?: string) => boolean;
+
   // --- Skill Level Broadcast ---
   /**
    * Send a skill level increased broadcast to nearby players.

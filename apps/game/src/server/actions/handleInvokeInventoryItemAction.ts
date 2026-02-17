@@ -20,6 +20,7 @@ import { applyWeightChange } from "../../world/systems/WeightCalculator";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { createEntityHitpointsChangedEvent } from "../events/GameEvents";
 import { DelayType } from "../systems/DelaySystem";
+import { handleOpenItemAction } from "./item-actions/handleOpenItemAction";
 
 const DEFAULT_DIG_DELAY_TICKS = 4;
 
@@ -563,31 +564,57 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
     }
   };
 
-  // Switch on the item action type
-  switch (payload.Action) {
-    case ItemAction.drop: {
+  const handleDropAction = (isDropX: boolean) => {
       const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
       if (!inventoryPayloadItem) {
         sendActionResponse(false);
-        return;
+        return false;
       }
 
       const dropItemDef = ctx.itemCatalog?.getDefinitionById(inventoryPayloadItem.itemId);
       if (dropItemDef?.isOnlyDiscardable) {
         logInvalid("drop_only_discardable", { itemId: inventoryPayloadItem.itemId });
         sendActionResponse(false);
-        return;
+        return false;
       }
+
+      let amountToDrop = inventoryPayloadItem.amount;
+      if (isDropX) {
+        if (!dropItemDef?.isStackable) {
+          logInvalid("dropx_unstackable_item", { itemId: inventoryPayloadItem.itemId });
+          sendActionResponse(false);
+          return false;
+        }
+
+        const requestedAmount = Number(payload.Amount);
+        if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
+          logInvalid("dropx_invalid_amount", { requestedAmount, itemId: inventoryPayloadItem.itemId });
+          sendActionResponse(false);
+          return false;
+        }
+
+        amountToDrop = Math.min(requestedAmount, inventoryPayloadItem.amount);
+        if (amountToDrop <= 0) {
+          logInvalid("dropx_clamped_to_zero", { requestedAmount, amountAtSlot: inventoryPayloadItem.amount });
+          sendActionResponse(false);
+          return false;
+        }
+      }
+
+      const dropPayload: InvokeInventoryItemActionPayload = {
+        ...payload,
+        Amount: amountToDrop
+      };
 
       // Step 1: Remove item from inventory
       const removedItem = ctx.world.inventorySystem.removeItemFromInventoryAtSlot(
         { enqueueUserMessage: ctx.enqueueUserMessage, itemCatalog: ctx.itemCatalog! },
         playerState,
-        payload
+        dropPayload
       );
 
       if (!removedItem) {
-        return;
+        return false;
       }
 
       // Step 2: Spawn item at player's current location
@@ -624,17 +651,24 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         MenuType: payload.MenuType,
         Slot: payload.Slot,
         ItemID: payload.ItemID,
-        Amount: payload.Amount,
+        Amount: removedItem[1],
         IsIOU: payload.IsIOU,
         Success: true,
         Data: null
       });
       
-      ctx.enqueueUserMessage(ctx.userId, GameAction.InvokedInventoryItemAction, successPayload);
-      ctx.inventoryService.sendWeightUpdate(ctx.userId, playerState);
+      ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, successPayload);
+      ctx.inventoryService.sendWeightUpdate(ctx.userId!, playerState);
       
       
       // TODO: implement PlayerWeightChanged
+      return true;
+  };
+
+  // Switch on the item action type
+  switch (payload.Action) {
+    case ItemAction.drop: {
+      handleDropAction(false);
       break;
     }
 
@@ -819,7 +853,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.open:
-      handleNotImplementedAction("open");
+      handleOpenItemAction({
+        ctx,
+        playerState,
+        payload,
+        logInvalid
+      });
       break;
 
     case ItemAction.check_price: {
@@ -1188,7 +1227,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.dropx:
-      handleNotImplementedAction("dropx");
+      handleDropAction(true);
       break;
 
     case ItemAction.look_at:

@@ -28,6 +28,8 @@ model User {
   timePlayed        Int       @default(0) // Total time played in milliseconds
   bannedUntil       DateTime? // If set, user is banned until this time (null = permanent ban if banReason is set)
   banReason         String?   // Reason for the ban (null = not banned)
+  mutedUntil        DateTime? // If set, user is muted until this time (null = permanent mute if muteReason is set)
+  muteReason        String?   // Reason for the mute (null = not muted)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   
@@ -62,9 +64,43 @@ model User {
   anomalyAlerts     AnomalyAlert[]
   anomalyAlertDismissals AnomalyAlert[] @relation("AnomalyAlertDismisser")
   anomalyAlertActions AnomalyAlertAction[]
+  friends           ChatFriend[] @relation("ChatFriendOwner")
+  friendedBy        ChatFriend[] @relation("ChatFriendTarget")
+  blockedUsers      ChatBlock[] @relation("ChatBlockOwner")
+  blockedBy         ChatBlock[] @relation("ChatBlockTarget")
   
   @@map("users")
   @@index([lastLoginAt])
+}
+
+model ChatFriend {
+  id           Int      @id @default(autoincrement())
+  ownerUserId  Int
+  targetUserId Int
+  createdAt    DateTime @default(now())
+
+  owner        User     @relation("ChatFriendOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  target       User     @relation("ChatFriendTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@map("chat_friends")
+  @@unique([ownerUserId, targetUserId])
+  @@index([ownerUserId])
+  @@index([targetUserId])
+}
+
+model ChatBlock {
+  id            Int      @id @default(autoincrement())
+  ownerUserId   Int
+  blockedUserId Int
+  createdAt     DateTime @default(now())
+
+  owner         User     @relation("ChatBlockOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  blockedUser   User     @relation("ChatBlockTarget", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@map("chat_blocks")
+  @@unique([ownerUserId, blockedUserId])
+  @@index([ownerUserId])
+  @@index([blockedUserId])
 }
 
 model Session {

@@ -10,7 +10,8 @@ import {
   disconnectDb,
   sendWorldHeartbeat,
   recomputeHiscores,
-  removeOnlinePresenceByServerId
+  removeOnlinePresenceByServerId,
+  getActiveAccountBansForUserIds
 } from "../db";
 import { GameAction } from "../protocol/enums/GameAction";
 import { ClientActionTypes, isClientActionType, type ClientActionType } from "../protocol/enums/ClientActionType";
@@ -117,6 +118,13 @@ type GameServerConfig = {
   serverId?: number;
 };
 
+type PendingDisconnect = {
+  userId: number;
+  username: string;
+  disconnectedAtMs: number;
+  forceLogoutAtMs: number;
+};
+
 export class GameServer {
   private readonly app = express();
   private readonly server: http.Server | https.Server;
@@ -148,13 +156,20 @@ export class GameServer {
   private readonly stateMachine: StateMachine;
   private static readonly NPC_MAX_MOVE_ATTEMPTS_PER_TICK = 6;
   private static readonly DISCONNECT_SAVE_TIMEOUT_MS = 2_000;
+  private static readonly DISCONNECT_BASE_LOGOUT_DELAY_MS = 10_000;
+  private static readonly DISCONNECT_COMBAT_RESET_DELAY_MS = 30_000;
+  private static readonly DISCONNECT_COMBAT_LOGOUT_MAX_MS = 5 * 60_000;
   private readonly serverId: number;
+  private readonly pendingDisconnectsByUserId = new Map<number, PendingDisconnect>();
 
   // Idle/AFK detection
   private readonly lastActivityTickByUserId = new Map<number, number>();
   private readonly idleWarningsSentToUserId = new Set<number>();
   private static readonly IDLE_WARNING_TICKS = 1400; // 14 minutes
   private static readonly IDLE_DISCONNECT_TICKS = 1500; // 15 minutes
+  private static readonly BAN_ENFORCEMENT_INTERVAL_MS = 30_000;
+  private readonly banEnforcementIntervalTicks: number;
+  private banEnforcementInFlight = false;
 
   // Throttle repeated protocol action failures to avoid log spam
   private protocolErrorThrottleLastMs = 0;
@@ -249,6 +264,10 @@ export class GameServer {
     this.world = new World(config.tickMs);
     this.clock = new InGameClock({ initialHour: 1, msPerHour: 150_000 });
     this.serverId = this.parseServerId(config.serverId ?? process.env.SERVER_ID);
+    this.banEnforcementIntervalTicks = Math.max(
+      1,
+      Math.floor(GameServer.BAN_ENFORCEMENT_INTERVAL_MS / Math.max(1, config.tickMs))
+    );
     this.playerPersistence = new PlayerPersistenceManager(this.dbEnabled, this.playerStatesByUserId, this.serverId);
     this.antiCheatRealtime = new AntiCheatRealtimeService(this.serverId, this.dbEnabled);
     this.antiCheatAnalyzer = new AntiCheatAnalyzerService(this.serverId, this.dbEnabled);
@@ -1035,6 +1054,12 @@ export class GameServer {
 
     // Idle/AFK System - Check for inactive players
     this.checkIdlePlayers();
+    this.processPendingDisconnects();
+
+    // Account ban enforcement safety net for bans issued outside the game server.
+    if (this.dbEnabled && this.tick % this.banEnforcementIntervalTicks === 0) {
+      void this.enforceActiveAccountBans();
+    }
 
     // Update Clients System
     const tmp = this.outgoingNow;
@@ -1128,38 +1153,19 @@ export class GameServer {
       if (connectedUserId === null) return;
       const userId = connectedUserId;
       const username = connectedUsername ?? "";
+      const logoutRequested = (socket.data as { logoutRequested?: boolean }).logoutRequested === true;
+      (socket.data as { logoutRequested?: boolean }).logoutRequested = false;
 
-      // Cancel any active movement
-      this.pathfindingSystem.cancelMovementPlan({ type: EntityType.Player, id: userId });
+      // Always detach socket and idle tracking immediately.
+      this.socketsByUserId.delete(userId);
+      this.lastActivityTickByUserId.delete(userId);
+      this.idleWarningsSentToUserId.delete(userId);
 
-      // Clear targeting
-      this.targetingService.clearPlayerTargetOnDisconnect(userId);
-      this.targetingService.clearAllNPCsTargetingPlayer(userId);
-      this.tradingService?.onPlayerDisconnected(userId);
-
-      // Clear any NPCs that were targeting this player
-      for (const npc of this.npcStates.values()) {
-        if (npc.aggroTarget?.type === EntityType.Player && npc.aggroTarget.id === userId) {
-          this.aggroSystem.dropNpcAggro(npc.id);
-        }
+      if (logoutRequested) {
+        await this.performFullDisconnectCleanup(userId, username);
+      } else {
+        this.schedulePendingDisconnect(userId, username);
       }
-
-      // Despawn any instanced NPCs owned by this player and clear per-session kill tracking.
-      this.instancedNpcService?.handlePlayerLogout(userId);
-
-      // Remove from spatial index
-      this.spatialIndex.removePlayer(userId);
-
-      // Save bank if loaded (before removing player state)
-      try {
-        await this.bankingService.saveBankToDatabase(this.playerStatesByUserId.get(userId)!);
-      } catch (err) {
-        console.error(`[banking] Failed to save bank on disconnect for user ${userId}:`, err);
-      }
-
-      // Delegate to ConnectionService for full disconnect handling
-      await this.connectionService.handleDisconnect(userId, username, GameServer.DISCONNECT_SAVE_TIMEOUT_MS);
-      this.antiCheatRealtime?.recordSessionEnd(userId);
 
       // Reset local state
       connectedUserId = null;
@@ -1181,9 +1187,18 @@ export class GameServer {
       if (result) {
         connectedUserId = result.userId;
         connectedUsername = result.username;
+        this.pendingDisconnectsByUserId.delete(result.userId);
         // Track initial activity
         this.lastActivityTickByUserId.set(result.userId, this.tick);
         this.antiCheatRealtime?.recordSessionStart(result.userId);
+      } else {
+        // Login was rejected (e.g. banned/invalid token). Close socket so the client
+        // doesn't remain connected in an unauthenticated limbo state.
+        setTimeout(() => {
+          if (socket.connected) {
+            socket.disconnect(true);
+          }
+        }, 25);
       }
     });
 
@@ -1196,6 +1211,12 @@ export class GameServer {
         payload
       });
       try {
+        if (connectedUserId === null) {
+          // Unauthenticated socket should not send gameplay packets.
+          socket.disconnect(true);
+          return;
+        }
+
         const clientAction: ClientActionPayload = decodeClientActionPayload(payload);
         if (!isClientActionType(clientAction.ActionType as number)) {
           // Ignore unknown/unsupported client commands for now.
@@ -1232,13 +1253,89 @@ export class GameServer {
 
     socket.on("disconnect", async () => {
       await cleanupConnectedUser();
-
-      // Clean up idle tracking
-      if (connectedUserId !== null) {
-        this.lastActivityTickByUserId.delete(connectedUserId);
-        this.idleWarningsSentToUserId.delete(connectedUserId);
-      }
     });
+  }
+
+  private async performFullDisconnectCleanup(userId: number, username: string): Promise<void> {
+    this.pendingDisconnectsByUserId.delete(userId);
+
+    // Cancel any active movement
+    this.pathfindingSystem.cancelMovementPlan({ type: EntityType.Player, id: userId });
+
+    // Clear targeting
+    this.targetingService.clearPlayerTargetOnDisconnect(userId);
+    this.targetingService.clearAllNPCsTargetingPlayer(userId);
+    this.tradingService?.onPlayerDisconnected(userId);
+
+    // Clear any NPCs that were targeting this player
+    for (const npc of this.npcStates.values()) {
+      if (npc.aggroTarget?.type === EntityType.Player && npc.aggroTarget.id === userId) {
+        this.aggroSystem.dropNpcAggro(npc.id);
+      }
+    }
+
+    // Despawn any instanced NPCs owned by this player and clear per-session kill tracking.
+    this.instancedNpcService?.handlePlayerLogout(userId);
+
+    // Remove from spatial index
+    this.spatialIndex.removePlayer(userId);
+
+    // Save bank if loaded (before removing player state)
+    const playerState = this.playerStatesByUserId.get(userId);
+    if (playerState) {
+      try {
+        await this.bankingService.saveBankToDatabase(playerState);
+      } catch (err) {
+        console.error(`[banking] Failed to save bank on disconnect for user ${userId}:`, err);
+      }
+    }
+
+    // Delegate to ConnectionService for full disconnect handling
+    await this.connectionService.handleDisconnect(userId, username, GameServer.DISCONNECT_SAVE_TIMEOUT_MS);
+    this.antiCheatRealtime?.recordSessionEnd(userId);
+  }
+
+  private schedulePendingDisconnect(userId: number, username: string): void {
+    const nowMs = Date.now();
+    this.pendingDisconnectsByUserId.set(userId, {
+      userId,
+      username,
+      disconnectedAtMs: nowMs,
+      forceLogoutAtMs: nowMs + GameServer.DISCONNECT_COMBAT_LOGOUT_MAX_MS
+    });
+  }
+
+  private processPendingDisconnects(): void {
+    if (this.pendingDisconnectsByUserId.size === 0) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    for (const pending of this.pendingDisconnectsByUserId.values()) {
+      const playerState = this.playerStatesByUserId.get(pending.userId);
+      if (!playerState) {
+        this.pendingDisconnectsByUserId.delete(pending.userId);
+        continue;
+      }
+
+      // Always enforce a hard cap for safety.
+      if (nowMs >= pending.forceLogoutAtMs) {
+        this.pendingDisconnectsByUserId.delete(pending.userId);
+        void this.performFullDisconnectCleanup(pending.userId, pending.username);
+        continue;
+      }
+
+      const baseReadyAt = pending.disconnectedAtMs + GameServer.DISCONNECT_BASE_LOGOUT_DELAY_MS;
+      const combatReadyAt = playerState.lastIncomingCombatHitAtMs > 0
+        ? playerState.lastIncomingCombatHitAtMs + GameServer.DISCONNECT_COMBAT_RESET_DELAY_MS
+        : 0;
+      const readyAt = Math.max(baseReadyAt, combatReadyAt);
+
+      if (nowMs >= readyAt) {
+        this.pendingDisconnectsByUserId.delete(pending.userId);
+        void this.performFullDisconnectCleanup(pending.userId, pending.username);
+      }
+    }
   }
 
   // Action Context Builder
@@ -1297,6 +1394,9 @@ export class GameServer {
       },
       scheduleServerShutdown: (minutes: number, requestedByUserId?: number) => {
         return this.scheduleServerShutdown(minutes, requestedByUserId);
+      },
+      disconnectUser: (targetUserId: number, reason?: string) => {
+        return this.disconnectUserSocket(targetUserId, reason);
       }
     };
   }
@@ -1693,6 +1793,68 @@ export class GameServer {
         `[presence] Failed to clear online rows for server ${this.serverId} during ${phase}:`,
         (err as Error)?.message ?? err
       );
+    }
+  }
+
+  private disconnectUserSocket(userId: number, reason?: string): boolean {
+    const socket = this.socketsByUserId.get(userId);
+    if (!socket || !socket.connected) {
+      return false;
+    }
+
+    if (reason) {
+      this.messageService.sendServerInfo(userId, reason);
+    }
+
+    try {
+      const loggedOutPayload = buildLoggedOutPayload({ EntityID: userId });
+      socket.emit(GameAction.LoggedOut.toString(), loggedOutPayload);
+    } catch {
+      // best effort
+    }
+
+    setTimeout(() => {
+      try {
+        socket.disconnect(true);
+      } catch {
+        // best effort
+      }
+    }, 50);
+
+    return true;
+  }
+
+  private async enforceActiveAccountBans(): Promise<void> {
+    if (this.banEnforcementInFlight) {
+      return;
+    }
+    if (this.socketsByUserId.size === 0) {
+      return;
+    }
+
+    this.banEnforcementInFlight = true;
+    try {
+      const connectedUserIds = Array.from(this.socketsByUserId.keys());
+      const bannedUsers = await getActiveAccountBansForUserIds(connectedUserIds);
+      if (bannedUsers.length === 0) {
+        return;
+      }
+
+      for (const banned of bannedUsers) {
+        const disconnected = this.disconnectUserSocket(
+          banned.userId,
+          "Your account has been banned."
+        );
+        if (disconnected) {
+          console.log(
+            `[moderation] Disconnected banned user ${banned.userId} (reason: ${banned.banReason ?? "No reason provided"})`
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("[moderation] Failed account-ban enforcement sweep:", (err as Error)?.message ?? err);
+    } finally {
+      this.banEnforcementInFlight = false;
     }
   }
 

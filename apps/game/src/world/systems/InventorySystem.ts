@@ -87,9 +87,6 @@ export class InventorySystem {
 
     ctx.enqueueUserMessage(playerState.userId!, GameAction.RemovedItemFromInventoryAtSlot, removePayload);
 
-    console.log(
-      `[InventorySystem] Removed ${amountToRemove}x item ${expectedItemId} from slot ${slot} for user ${playerState.userId}`
-    );
 
     const removedWeight = itemWeight * amountToRemove;
     playerState.inventoryWeight -= removedWeight;

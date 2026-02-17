@@ -4,6 +4,7 @@ import { executeCommand } from "../commands";
 import type { CommandContext } from "../commands/types";
 import type { ActionHandler } from "./types";
 import { RegExpMatcher, TextCensor, englishDataset, englishRecommendedTransformers, asteriskCensorStrategy } from 'obscenity';
+import { clearUserMuteByUserId } from "../../db";
 
 /**
  * Initialize obscenity filter to detect and censor obscenities (excluding mild curses).
@@ -41,7 +42,7 @@ function censorMessage(text: string): string {
  * Handles public chat messages from players.
  * Routes commands to command system, handles global chat, and local messages.
  */
-export const handlePublicMessage: ActionHandler = (ctx, actionData) => {
+export const handlePublicMessage: ActionHandler = async (ctx, actionData) => {
   if (ctx.userId === null) return;
   
   const publicMessage = decodePublicMessagePayload(actionData);
@@ -64,6 +65,13 @@ export const handlePublicMessage: ActionHandler = (ctx, actionData) => {
     if (command === "g") {
       const globalMessage = rawArgs.join(" ").trim();
       if (!globalMessage) return; // Nothing to broadcast
+
+      const muteMessage = getMuteBlockMessage(playerState);
+      if (muteMessage) {
+        ctx.messageService.sendServerInfo(ctx.userId, muteMessage, MessageStyle.Warning);
+        return;
+      }
+
       const censoredGlobalMessage = censorMessage(globalMessage);
       ctx.messageService.sendGlobalMessage(ctx.userId, playerState.displayName ?? playerState.username, censoredGlobalMessage, playerType);
       return;
@@ -83,6 +91,12 @@ export const handlePublicMessage: ActionHandler = (ctx, actionData) => {
     return;
   }
   playerState.lastLocalMessageTick = ctx.currentTick;
+
+  const muteMessage = getMuteBlockMessage(playerState);
+  if (muteMessage) {
+    ctx.messageService.sendServerInfo(ctx.userId, muteMessage, MessageStyle.Warning);
+    return;
+  }
 
   // Send the public message to nearby players (with censoring applied)
   const censoredMessage = censorMessage(publicMessage.Message as string);
@@ -150,6 +164,9 @@ function buildCommandContext(ctx: ActionContext, playerState: PlayerState): Comm
     },
     getPlayerState: (userId: number) => {
       return ctx.playerStatesByUserId.get(userId);
+    },
+    disconnectPlayer: (userId: number, reason?: string) => {
+      return ctx.disconnectUser(userId, reason);
     },
     sendSkillLevelIncreasedBroadcast: (
       targetUserId: number,
@@ -223,3 +240,48 @@ import { MessageStyle } from "../../protocol/enums/MessageStyle";
 import type { ActionContext } from "./types";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { States } from "../../protocol/enums/States";
+
+function formatRemainingDuration(timeRemainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(timeRemainingMs / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return `${days} day${days !== 1 ? "s" : ""}, ${hours} hour${hours !== 1 ? "s" : ""}`;
+  }
+  if (hours > 0) {
+    return `${hours} hour${hours !== 1 ? "s" : ""}, ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  }
+  if (minutes > 0) {
+    return `${minutes} minute${minutes !== 1 ? "s" : ""}, ${seconds} second${seconds !== 1 ? "s" : ""}`;
+  }
+  return `${seconds} second${seconds !== 1 ? "s" : ""}`;
+}
+
+function getMuteBlockMessage(playerState: PlayerState): string | null {
+  const muteStatus = playerState.getMuteStatus(Date.now());
+  if (muteStatus.isExpired) {
+    // Expired temporary mute; clear in-memory immediately and persist cleanup asynchronously.
+    playerState.clearMuteState();
+    void clearUserMuteByUserId(playerState.userId).catch((err) => {
+      console.warn("[handlePublicMessage] Failed to clear expired mute:", (err as Error)?.message ?? err);
+    });
+    return null;
+  }
+
+  if (!muteStatus.isMuted) {
+    return null;
+  }
+
+  if (muteStatus.isPermanent) {
+    return "You are permanently muted.";
+  }
+
+  if (muteStatus.timeRemainingMs === null) {
+    return "You're muted.";
+  }
+
+  return `You're muted for ${formatRemainingDuration(muteStatus.timeRemainingMs)}.`;
+}

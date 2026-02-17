@@ -422,6 +422,9 @@ export class PlayerState {
   public singleCastSpellId: number | null = null; // Single-cast spell queued for next magic attack
   public readonly questProgress: Map<number, QuestProgress>; // Quest progress tracking (questId -> progress)
   public needsInitialAppearanceSetup = false; // Ephemeral: set for first-spawn login flow only
+  public mutedUntil: Date | null; // Account mute expiry (null means permanent if muteReason is set)
+  public muteReason: string | null; // Account mute reason (null means not muted)
+  public lastIncomingCombatHitAtMs: number = 0; // Last time this player took non-zero combat damage
   
   // Cached equipment bonuses (recalculated on equip/unequip)
   public accuracyBonus: number = 0; // Total accuracy bonus from all equipped items
@@ -451,7 +454,9 @@ export class PlayerState {
     timePlayed: number = 0,
     playerType: number = 0,
     inventoryWeight: number = 0,
-    equippedWeight: number = 0
+    equippedWeight: number = 0,
+    mutedUntil: Date | null = null,
+    muteReason: string | null = null
   ) {
     this.abilities = {
       [PlayerAbility.Stamina]: clampAbilityValue(abilities[PlayerAbility.Stamina]),
@@ -465,6 +470,8 @@ export class PlayerState {
     this.playerType = playerType;
     this.inventoryWeight = Math.max(0, inventoryWeight);
     this.equippedWeight = Math.max(0, equippedWeight);
+    this.mutedUntil = mutedUntil;
+    this.muteReason = muteReason;
     this.markClean();
     this.rebuildBoostedSkillTracking();
   }
@@ -1001,6 +1008,58 @@ export class PlayerState {
       completed: completed ?? existing?.completed ?? false
     });
     this.flagQuestProgressDirty();
+  }
+
+  /**
+   * Returns the player's current mute status from in-memory account moderation fields.
+   */
+  getMuteStatus(nowMs: number = Date.now()): { isMuted: boolean; isPermanent: boolean; timeRemainingMs: number | null; isExpired: boolean } {
+    if (!this.muteReason) {
+      return { isMuted: false, isPermanent: false, timeRemainingMs: null, isExpired: false };
+    }
+
+    if (this.mutedUntil === null) {
+      return { isMuted: true, isPermanent: true, timeRemainingMs: null, isExpired: false };
+    }
+
+    const remaining = this.mutedUntil.getTime() - nowMs;
+    if (remaining <= 0) {
+      return { isMuted: false, isPermanent: false, timeRemainingMs: 0, isExpired: true };
+    }
+
+    return { isMuted: true, isPermanent: false, timeRemainingMs: remaining, isExpired: false };
+  }
+
+  /**
+   * Applies mute state from moderation actions/database.
+   */
+  setMuteState(mutedUntil: Date | null, muteReason: string): void {
+    this.mutedUntil = mutedUntil;
+    this.muteReason = muteReason;
+  }
+
+  /**
+   * Clears in-memory mute state.
+   */
+  clearMuteState(): void {
+    this.mutedUntil = null;
+    this.muteReason = null;
+  }
+
+  /**
+   * Records that the player took incoming combat damage.
+   * This is intentionally in-memory only and used for combat logout restrictions.
+   */
+  noteIncomingCombatHit(atMs: number = Date.now()): void {
+    this.lastIncomingCombatHitAtMs = Math.max(0, Math.floor(atMs));
+  }
+
+  /**
+   * Returns true when the player took incoming combat damage within the given window.
+   */
+  wasHitWithin(windowMs: number, nowMs: number = Date.now()): boolean {
+    if (this.lastIncomingCombatHitAtMs <= 0) return false;
+    return (nowMs - this.lastIncomingCombatHitAtMs) < windowMs;
   }
 
   /**

@@ -7,6 +7,7 @@ import { createPlayerTeleportedEvent, type Position } from "../events/GameEvents
 import type { SpatialIndexManager } from "../systems/SpatialIndexManager";
 import { buildCastedTeleportSpellPayload } from "../../protocol/packets/actions/CastedTeleportSpell";
 import { TeleportType } from "../../protocol/enums/TeleportType";
+import { WildernessService } from "./WildernessService";
 
 export interface TeleportServiceDependencies {
   playerStatesByUserId: Map<number, PlayerState>;
@@ -77,7 +78,7 @@ export class TeleportService {
 
     // Validation (can be disabled for admin commands)
     if (validate) {
-      const validation = this.validateTeleport(userId, x, y, mapLevel);
+      const validation = this.validateTeleport(userId, x, y, mapLevel, type);
       if (!validation.success) {
         return validation;
       }
@@ -200,7 +201,8 @@ export class TeleportService {
     userId: number,
     x: number,
     y: number,
-    mapLevel: MapLevel
+    mapLevel: MapLevel,
+    teleportType: TeleportType
   ): TeleportResult {
     const playerState = this.deps.playerStatesByUserId.get(userId);
     if (!playerState) {
@@ -216,6 +218,13 @@ export class TeleportService {
     // Basic coordinate validation
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       return { success: false, reason: "Invalid coordinates" };
+    }
+
+    if (
+      teleportType === TeleportType.Teleport
+      && !WildernessService.canTeleport(playerState.x, playerState.y, playerState.mapLevel)
+    ) {
+      return { success: false, reason: WildernessService.TELEPORT_BLOCK_MESSAGE };
     }
 
     return { success: true };

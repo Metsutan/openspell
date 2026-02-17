@@ -108,6 +108,9 @@ export interface ActionContext {
 
   /** Schedule a graceful server shutdown countdown */
   scheduleServerShutdown: (minutes: number, requestedByUserId?: number) => { scheduled: boolean; reason?: string };
+
+  /** Disconnect an authenticated user socket by user ID */
+  disconnectUser: (userId: number, reason?: string) => boolean;
 }
 
 /**

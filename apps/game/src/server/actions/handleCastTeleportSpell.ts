@@ -5,6 +5,7 @@ import { decodeCastTeleportSpellPayload } from "../../protocol/packets/actions/C
 import { buildCastedTeleportSpellPayload } from "../../protocol/packets/actions/CastedTeleportSpell";
 import { TeleportType } from "../../protocol/enums/TeleportType";
 import type { MapLevel } from "../../world/Location";
+import { States } from "../../protocol/enums/States";
 import { RequirementsChecker } from "../services/RequirementsChecker";
 import { DelayType } from "../systems/DelaySystem";
 import type { ActionHandler } from "./types";
@@ -147,6 +148,8 @@ export const handleCastTeleportSpell: ActionHandler = (ctx, actionData) => {
     userId: ctx.userId,
     type: DelayType.NonBlocking,
     ticks: TELEPORT_DELAY_TICKS,
+    state: States.TeleportingState,
+    restoreState: States.IdleState,
     onComplete: (userId) => {
       const state = ctx.playerStatesByUserId.get(userId);
       if (!state) return;
@@ -154,12 +157,16 @@ export const handleCastTeleportSpell: ActionHandler = (ctx, actionData) => {
       const x = Math.floor(Math.random() * (destination.xMax - destination.xMin + 1)) + destination.xMin;
       const y = Math.floor(Math.random() * (destination.yMax - destination.yMin + 1)) + destination.yMin;
 
-      ctx.teleportService.teleportPlayer(userId, x, y, destination.mapLevel, {
+      const teleportResult = ctx.teleportService.teleportPlayer(userId, x, y, destination.mapLevel, {
         type: TeleportType.Teleport,
         spellId,
         broadcastSpellCast: false,
         validate: true
       });
+
+      if (!teleportResult.success && teleportResult.reason) {
+        ctx.messageService.sendServerInfo(userId, teleportResult.reason);
+      }
     }
   });
 

@@ -123,8 +123,6 @@ export class ItemManager {
       { itemId, amount, isIOU }
     ));
 
-    console.log(`[ItemManager] Spawned ground item ${itemDef.name} (x${amount}) at (${x}, ${y}, L${mapLevel})`);
-
     return state;
   }
 
@@ -165,8 +163,6 @@ export class ItemManager {
 
       // Remove from spatial index (will be re-added when it respawns)
       this.spatialIndexManager.removeItem(groundItemId);
-
-      console.log(`[ItemManager] Item ${groundItemId} picked up, will respawn in ${state.respawnTicks} ticks`);
     } else {
       // Dynamic item or permanent removal - delete completely
       this.eventBus.emit(createItemDespawnedEvent(
@@ -181,7 +177,6 @@ export class ItemManager {
       // Remove from state map
       this.groundItemStates.delete(groundItemId);
 
-      console.log(`[ItemManager] Removed ground item ${groundItemId} (reason: ${reason})`);
     }
 
     return true;
@@ -248,13 +243,11 @@ export class ItemManager {
           { itemId: state.itemId, amount: state.amount, isIOU: state.isIOU }
         ));
 
-        console.log(`[ItemManager] Item ${state.id} respawned at (${state.x}, ${state.y})`);
       }
 
       // Check if item should become visible to all players
       if (state.isPresent && state.visibleToAllAtTick !== null && currentTick >= state.visibleToAllAtTick) {
         const itemDef = this.itemCatalog.getDefinitionById(state.itemId);
-        console.log(`[ItemManager] Item ${state.id} (${itemDef?.name ?? state.itemId}) became visible to all players`);
         
         // Mark as visible to all
         state.visibleToUserId = null;

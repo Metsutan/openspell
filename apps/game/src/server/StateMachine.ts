@@ -478,6 +478,15 @@ export class StateMachine {
                 // startPicklocking(entityRef);
                 break;
 
+            case States.TeleportingState: {
+                // Defensive cleanup: teleport windups should never continue an existing path.
+                const entityKey = this.context.makeEntityKey(entityRef);
+                if (this.context.hasMovementPlan(entityKey)) {
+                    this.context.cancelMovementPlan(entityRef);
+                }
+                break;
+            }
+
             case States.UsingItemOnEntityState:
                 // Start item-on-entity action (placeholder for future implementation)
                 // startItemOnEntityAction(entityRef);

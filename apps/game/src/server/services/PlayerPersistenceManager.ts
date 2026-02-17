@@ -630,6 +630,14 @@ export class PlayerPersistenceManager {
     const timePlayed = userRow?.timePlayed ?? 0;
     const playerType = userRow?.playerType ?? 0;
     const displayName = userRow?.displayName ?? username;
+    const muteRows = await prisma.$queryRaw<Array<{ mutedUntil: Date | null; muteReason: string | null }>>`
+      SELECT "mutedUntil", "muteReason"
+      FROM "users"
+      WHERE "id" = ${userId}
+      LIMIT 1
+    `;
+    const mutedUntil = muteRows[0]?.mutedUntil ?? null;
+    const muteReason = muteRows[0]?.muteReason ?? null;
 
     let mapLevel: MapLevel = MAP_LEVELS.Overworld;
     let x = 0;
@@ -738,7 +746,9 @@ export class PlayerPersistenceManager {
       timePlayed,
       playerType,
       inventoryWeight,
-      equippedWeight
+      equippedWeight,
+      mutedUntil,
+      muteReason
     );
     
     // Initialize combat level based on combat skills
