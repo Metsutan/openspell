@@ -1188,6 +1188,48 @@ router.get('/admin', requireAdmin, async (req, res) => {
                     await banIP(this.dataset.ip, this.dataset.csrf);
                 });
             });
+
+            // Confirm forms that previously used inline onclick handlers.
+            document.querySelectorAll('.admin-confirm-form').forEach(form => {
+                if (form.dataset.handlerAttached) return;
+                form.dataset.handlerAttached = 'true';
+                form.addEventListener('submit', function(e) {
+                    const message = this.dataset.confirmMessage || 'Are you sure?';
+                    if (!window.confirm(message)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+
+            // Delete-user form uses typed confirmation to satisfy strict CSP (no inline handlers).
+            document.querySelectorAll('.admin-delete-user-form').forEach(form => {
+                if (form.dataset.handlerAttached) return;
+                form.dataset.handlerAttached = 'true';
+                form.addEventListener('submit', function(e) {
+                    const userId = this.dataset.userId;
+                    const expected = 'DELETE USER ' + userId;
+                    const typed = window.prompt(
+                        'Type exactly ' + expected + ' to permanently delete user ' + userId + '.'
+                    );
+                    if (typed === null || typed !== expected) {
+                        if (typed !== null) {
+                            window.alert('Confirmation text did not match.');
+                        }
+                        e.preventDefault();
+                        return;
+                    }
+
+                    if (!window.confirm('Final warning: permanently delete user ' + userId + '?')) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    const confirmationInput = this.querySelector('input[name="confirmation"]');
+                    if (confirmationInput) {
+                        confirmationInput.value = typed;
+                    }
+                });
+            });
         }
 
         function attachAntiCheatHandlers() {
@@ -1617,14 +1659,14 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
         const banActionsHtml = !isBanned ? `
                             <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px;">
                                 <h5 style="margin-top: 0;">Permanent Ban</h5>
-                                <form method="POST" action="/account/admin/ban-user">
+                                <form method="POST" action="/account/admin/ban-user" class="admin-confirm-form" data-confirm-message="Permanently ban user ${userId}? This action requires a reason.">
                                     <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
                                     <input type="hidden" name="userId" value="${userId}" />
                                     <div style="margin-bottom: 8px;">
                                         <label style="display: block; margin-bottom: 4px; font-weight: 600;">Ban Reason:</label>
                                         <input type="text" name="reason" placeholder="Enter reason for ban" required style="width: 100%; max-width: 500px; padding: 8px; box-sizing: border-box;" />
                                     </div>
-                                    <button type="submit" class="btn-submit" onclick="return confirm('Permanently ban user ${userId}? This action requires a reason.')">Permanently Ban User</button>
+                                    <button type="submit" class="btn-submit">Permanently Ban User</button>
                                 </form>
                             </div>
                             <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px;">
@@ -1644,24 +1686,24 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                                 </form>
                             </div>
                         ` : `
-                            <form method="POST" action="/account/admin/unban-user" style="display: inline;">
+                            <form method="POST" action="/account/admin/unban-user" style="display: inline;" class="admin-confirm-form" data-confirm-message="Unban user ${userId}?">
                                 <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
                                 <input type="hidden" name="userId" value="${userId}" />
-                                <button type="submit" class="btn-submit" onclick="return confirm('Unban user ${userId}?')">Unban User</button>
+                                <button type="submit" class="btn-submit">Unban User</button>
                             </form>
                         `;
         
         const muteActionsHtml = !isMuted ? `
                             <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px;">
                                 <h5 style="margin-top: 0;">Permanent Mute</h5>
-                                <form method="POST" action="/account/admin/mute-user">
+                                <form method="POST" action="/account/admin/mute-user" class="admin-confirm-form" data-confirm-message="Permanently mute user ${userId}? This action requires a reason.">
                                     <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
                                     <input type="hidden" name="userId" value="${userId}" />
                                     <div style="margin-bottom: 8px;">
                                         <label style="display: block; margin-bottom: 4px; font-weight: 600;">Mute Reason:</label>
                                         <input type="text" name="reason" placeholder="Enter reason for mute" required style="width: 100%; max-width: 500px; padding: 8px; box-sizing: border-box;" />
                                     </div>
-                                    <button type="submit" class="btn-submit" onclick="return confirm('Permanently mute user ${userId}? This action requires a reason.')">Permanently Mute User</button>
+                                    <button type="submit" class="btn-submit">Permanently Mute User</button>
                                 </form>
                             </div>
                             <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px;">
@@ -1681,11 +1723,32 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                                 </form>
                             </div>
                         ` : `
-                            <form method="POST" action="/account/admin/unmute-user" style="display: inline;">
+                            <form method="POST" action="/account/admin/unmute-user" style="display: inline;" class="admin-confirm-form" data-confirm-message="Unmute user ${userId}?">
                                 <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
                                 <input type="hidden" name="userId" value="${userId}" />
-                                <button type="submit" class="btn-submit" onclick="return confirm('Unmute user ${userId}?')">Unmute User</button>
+                                <button type="submit" class="btn-submit">Unmute User</button>
                             </form>
+                        `;
+
+        const deleteUserActionsHtml = (isBanned && isPermanent) ? `
+                            <div style="margin-bottom: 16px; padding: 16px; background: #2a1616; border: 1px solid #7a1f1f; border-radius: 8px; width: 100%;">
+                                <h5 style="margin-top: 0; color: #ff9b9b;">Danger Zone: Permanently Delete User</h5>
+                                <p style="margin: 0 0 12px 0;">
+                                    This permanently deletes this account and all user-linked data.
+                                    This action cannot be undone.
+                                </p>
+                                <form method="POST" action="/account/admin/delete-user" class="admin-delete-user-form" data-user-id="${userId}">
+                                    <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
+                                    <input type="hidden" name="userId" value="${userId}" />
+                                    <input type="hidden" name="confirmation" value="" />
+                                    <button type="submit" class="btn-submit" style="background: #8e2525; border-color: #aa3333;">Delete User</button>
+                                </form>
+                            </div>
+                        ` : `
+                            <div style="margin-bottom: 16px; padding: 16px; background: var(--menu-selected-item-bg-color); border-radius: 8px; width: 100%;">
+                                <h5 style="margin-top: 0;">Delete User</h5>
+                                <p style="margin: 0;">User deletion is only available for permanently banned users.</p>
+                            </div>
                         `;
 
         res.send(`
@@ -1704,6 +1767,7 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
                         ${banActionsHtml}
                         ${muteActionsHtml}
+                        ${deleteUserActionsHtml}
                     </div>
                 </div>
                 
@@ -1985,6 +2049,48 @@ router.post('/admin/unmute-user', requireAdmin, csrfProtection, async (req, res)
     }
 });
 
+// Route: Delete User (permanently banned users only)
+router.post('/admin/delete-user', requireAdmin, csrfProtection, async (req, res) => {
+    try {
+        const userId = parseInt(req.body.userId, 10);
+        const confirmation = sanitizeString(req.body.confirmation);
+
+        if (!userId || isNaN(userId)) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+        }
+
+        if (!confirmation || confirmation !== `DELETE USER ${userId}`) {
+            return res.redirect('/account/admin?error=' + encodeURIComponent(`Confirmation must match exactly: DELETE USER ${userId}`));
+        }
+
+        try {
+            const apiResponse = await makeApiRequest('/api/admin/delete-user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${req.session.token}`
+                },
+                body: {
+                    userId,
+                    confirmation
+                }
+            });
+
+            if (apiResponse.success) {
+                return res.redirect('/account/admin?success=' + encodeURIComponent(apiResponse.message || `User ${userId} deleted successfully`));
+            } else {
+                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to delete user'));
+            }
+        } catch (error) {
+            console.error('API request error:', error);
+            const errorMessage = extractApiErrorMessage(error);
+            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+        }
+    } catch (error) {
+        console.error('Delete user error:', error);
+        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+    }
+});
+
 
 // Route: Ban IP
 router.post('/admin/ban-ip', requireAdmin, csrfProtection, async (req, res) => {
@@ -2107,7 +2213,7 @@ router.get('/admin/banned-ips', requireAdmin, async (req, res) => {
                                         <form method="POST" action="/account/admin/unban-ip" style="display: inline;">
                                             <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
                                             <input type="hidden" name="ip" value="${ipEscaped}" />
-                                            <button type="submit" class="anchor-submit-button" onclick="return confirm('Unban IP ${ipEscaped}?')">Unban</button>
+                                            <button type="submit" class="anchor-submit-button">Unban</button>
                                         </form>
                                     </td>
                                 </tr>

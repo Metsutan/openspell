@@ -6,6 +6,8 @@ import { gridToWorld, worldToGrid } from "../../../world/gridTransforms";
 import type { MapLevel } from "../../../world/Location";
 import type { ActionContext } from "../types";
 
+const DEFAULT_CLICK_MAX_SEARCH_RADIUS = 64;
+
 /**
  * Builds a movement path using A* pathfinding.
  * Shared utility for action handlers that need pathfinding.
@@ -25,7 +27,12 @@ export function buildMovementPath(
 
   const gridStart = worldToGrid(startX, startY, grid);
   const gridTarget = worldToGrid(targetX, targetY, grid);
-  const candidate = astarPathfinding(grid, gridStart, gridTarget);
+  const candidate = astarPathfinding(
+    grid,
+    gridStart,
+    gridTarget,
+    DEFAULT_CLICK_MAX_SEARCH_RADIUS
+  );
   
   if (candidate && candidate.length > 1) {
     return candidate.map((p) => gridToWorld(p, grid));
@@ -71,7 +78,7 @@ export function buildMovementPathAdjacent(
   targetY: number,
   mapLevel: MapLevel,
   forceAdjacent: boolean = false,
-  maxSearchRadius: number | null = null,
+  maxSearchRadius: number | null = DEFAULT_CLICK_MAX_SEARCH_RADIUS,
   allowDiagonal: boolean = true
 ): Point[] | null {
   const grid = ctx.pathfindingSystem.getPathingGridForLevel(mapLevel);
@@ -193,7 +200,7 @@ export function buildMovementPathWithinRange(
   targetY: number,
   mapLevel: MapLevel,
   range: number,
-  maxSearchRadius: number | null = null,
+  maxSearchRadius: number | null = DEFAULT_CLICK_MAX_SEARCH_RADIUS,
   requireLOS: boolean = false
 ): Point[] | null {
   if (range <= 1) {

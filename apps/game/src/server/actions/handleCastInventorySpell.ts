@@ -1,13 +1,11 @@
 import { ClientActionTypes } from "../../protocol/enums/ClientActionType";
-import { EntityType } from "../../protocol/enums/EntityType";
-import { GameAction } from "../../protocol/enums/GameAction";
 import { MenuType } from "../../protocol/enums/MenuType";
 import { decodeCastInventorySpellPayload } from "../../protocol/packets/actions/CastInventorySpell";
-import { buildCastedInventorySpellPayload } from "../../protocol/packets/actions/CastedInventorySpell";
 import { SKILLS } from "../../world/PlayerState";
 import { RequirementsChecker } from "../services/RequirementsChecker";
 import type { ActionHandler } from "./types";
 import { isValidSlotIndex } from "../../world/systems/InventoryManager";
+import { createPlayerCastedInventorySpellEvent } from "../events/GameEvents";
 
 const COIN_ITEM_ID = 6;
 
@@ -143,30 +141,24 @@ export const handleCastInventorySpell: ActionHandler = (ctx, actionData) => {
     }
   }
 
-  const castedPayload = buildCastedInventorySpellPayload({
-    EntityID: ctx.userId,
-    EntityType: EntityType.Player,
-    SpellID: spellId,
-    TargetItemID: itemId
-  });
-  const viewers = ctx.spatialIndex.getPlayersViewingPosition(
-    playerState.mapLevel,
-    playerState.x,
-    playerState.y
+  ctx.eventBus.emit(
+    createPlayerCastedInventorySpellEvent(
+      ctx.userId,
+      spellId,
+      itemId,
+      {
+        mapLevel: playerState.mapLevel,
+        x: playerState.x,
+        y: playerState.y
+      }
+    )
   );
-
-  ctx.enqueueUserMessage(ctx.userId, GameAction.CastedInventorySpell, castedPayload);
-  for (const viewer of viewers) {
-    if (viewer.id !== ctx.userId) {
-      ctx.enqueueUserMessage(viewer.id, GameAction.CastedInventorySpell, castedPayload);
-    }
-  }
 
   ctx.experienceService.addSkillXp(
     playerState,
     SKILLS.magic,
     spellDefinition.exp ?? 0,
-    { forceGainedExp: true }
+    { sendGainedExp: false }
   );
 };
 

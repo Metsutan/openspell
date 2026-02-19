@@ -16,6 +16,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { RegExpMatcher, englishDataset, englishRecommendedTransformers } = require('obscenity');
 const emailService = require('./services/email');
 
 const app = express();
@@ -76,6 +77,11 @@ const ANTI_CHEAT_AUTOTUNE_STEP_PCT = parseFloat(process.env.ANTI_CHEAT_AUTOTUNE_
 const EMAIL_BLOCK_PLUS_ADDRESSING = process.env.EMAIL_BLOCK_PLUS_ADDRESSING !== 'false'; // default true
 const EMAIL_BLOCK_DISPOSABLE = process.env.EMAIL_BLOCK_DISPOSABLE !== 'false'; // default true
 const EMAIL_NORMALIZE_GMAIL_DOTS = process.env.EMAIL_NORMALIZE_GMAIL_DOTS !== 'false'; // default true
+
+const displayNameProfanityMatcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers
+});
 
 // Worlds (game server list) configuration
 const WORLD_REGISTRATION_SECRET = process.env.WORLD_REGISTRATION_SECRET || null;
@@ -1004,6 +1010,14 @@ function validateAndNormalizeEmail(email) {
   };
 }
 
+function hasProhibitedDisplayNameContent(displayName) {
+  if (typeof displayName !== 'string' || displayName.trim().length === 0) {
+    return false;
+  }
+
+  return displayNameProfanityMatcher.getAllMatches(displayName).length > 0;
+}
+
 // ==================== AUTHENTICATION ====================
 
 // Register new user
@@ -1044,6 +1058,10 @@ app.post('/api/auth/register', requireWebServerSecret, async (req, res) => {
     // Determine final display name (defaults to lowercase username if not provided)
     // Display name CAN be uppercase/mixed case
     const finalDisplayName = displayName && displayName.trim() ? displayName.trim() : lowercaseUsername;
+
+    if (hasProhibitedDisplayNameContent(finalDisplayName)) {
+      return res.status(400).json({ error: 'That username/displayname contains prohibited content' });
+    }
     
     // Build OR conditions for uniqueness check
     const orConditions = [{ username: lowercaseUsername }, { displayName: finalDisplayName }];
@@ -1289,6 +1307,10 @@ app.put('/api/auth/display-name', requireWebServerSecret, verifyToken, verifyAdm
     }
     
     const trimmedDisplayName = displayName.trim();
+
+    if (hasProhibitedDisplayNameContent(trimmedDisplayName)) {
+      return res.status(400).json({ error: 'That contains prohibited content' });
+    }
     
     // Get the current user to check their current display name
     const currentUser = await prisma.user.findUnique({
@@ -1470,6 +1492,118 @@ app.post('/api/admin/unban-user', requireWebServerSecret, verifyToken, verifyAdm
     }
     
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Permanently delete a user (admin only)
+app.post('/api/admin/delete-user', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { userId, confirmation } = req.body;
+
+    if (!userId || typeof userId !== 'number') {
+      return res.status(400).json({ error: 'User ID is required and must be a number' });
+    }
+
+    const expectedConfirmation = `DELETE USER ${userId}`;
+    if (!confirmation || typeof confirmation !== 'string' || confirmation.trim() !== expectedConfirmation) {
+      return res.status(400).json({ error: `Confirmation must match exactly: ${expectedConfirmation}` });
+    }
+
+    const deletedUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          isAdmin: true,
+          banReason: true,
+          bannedUntil: true
+        }
+      });
+
+      if (!user) {
+        const err = new Error('USER_NOT_FOUND');
+        err.code = 'USER_NOT_FOUND';
+        throw err;
+      }
+
+      if (user.isAdmin) {
+        const err = new Error('CANNOT_DELETE_ADMIN');
+        err.code = 'CANNOT_DELETE_ADMIN';
+        throw err;
+      }
+
+      const isPermanentlyBanned = !!user.banReason && !user.bannedUntil;
+      if (!isPermanentlyBanned) {
+        const err = new Error('USER_NOT_PERMANENTLY_BANNED');
+        err.code = 'USER_NOT_PERMANENTLY_BANNED';
+        throw err;
+      }
+
+      const onlineUser = await tx.onlineUser.findUnique({
+        where: { userId: user.id },
+        select: { id: true, serverId: true }
+      });
+
+      if (onlineUser) {
+        const onlineWorld = await tx.world.findUnique({
+          where: { serverId: onlineUser.serverId },
+          select: { lastHeartbeat: true }
+        });
+        const stalePresence = isHeartbeatStale(
+          onlineWorld?.lastHeartbeat ?? null,
+          WORLD_HEARTBEAT_TIMEOUT_SEC
+        );
+
+        if (stalePresence) {
+          await tx.onlineUser.delete({ where: { id: onlineUser.id } });
+        } else {
+          const err = new Error('USER_ONLINE');
+          err.code = 'USER_ONLINE';
+          throw err;
+        }
+      }
+
+      await tx.user.delete({
+        where: { id: user.id }
+      });
+
+      return {
+        id: user.id,
+        username: user.username
+      };
+    });
+
+    console.log(
+      `[admin] User ${deletedUser.id} (${deletedUser.username}) was deleted by admin ${req.userId}`
+    );
+
+    return res.json({
+      success: true,
+      deletedUser,
+      message: `User ${deletedUser.id} deleted successfully`
+    });
+  } catch (error) {
+    const errorCode = error?.code;
+
+    if (errorCode === 'USER_NOT_FOUND' || error?.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (errorCode === 'CANNOT_DELETE_ADMIN') {
+      return res.status(403).json({ error: 'Cannot delete admin users' });
+    }
+
+    if (errorCode === 'USER_NOT_PERMANENTLY_BANNED') {
+      return res.status(403).json({ error: 'Only permanently banned users can be deleted' });
+    }
+
+    if (errorCode === 'USER_ONLINE') {
+      return res.status(409).json({ error: 'User appears online and must be offline before deletion' });
+    }
+
+    console.error('Delete user error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -3794,6 +3928,8 @@ app.get('/api/hiscores/:skill', requireWebServerSecret, async (req, res) => {
     const { skill: skillSlug } = req.params;
     const limit = parseInt(req.query.limit) || 25;
     const offset = parseInt(req.query.offset) || 0;
+    const minLevel = Number.isFinite(Number(req.query.minLevel)) ? Number(req.query.minLevel) : null;
+    const excludeUsername = typeof req.query.excludeUsername === 'string' ? req.query.excludeUsername.trim() : '';
     const serverId = parseServerId(req.query.serverId);
     if (!serverId) {
       return res.status(400).json({ error: 'serverId is required' });
@@ -3821,6 +3957,33 @@ app.get('/api/hiscores/:skill', requireWebServerSecret, async (req, res) => {
       persistenceId,
       experience: { gt: 0 } // only ranked entries
     };
+
+    // Optional query-time filters used by the web hiscores page.
+    // This keeps pagination/counting correct while avoiding DB data mutation.
+    if (minLevel !== null) {
+      where.level = { gt: minLevel };
+    }
+    // Exclude permanently banned users from hiscores.
+    // Permanent ban = has banReason and no bannedUntil.
+    const userFilters = [
+      {
+        NOT: {
+          AND: [
+            { banReason: { not: null } },
+            { bannedUntil: null }
+          ]
+        }
+      }
+    ];
+    if (excludeUsername) {
+      userFilters.push({
+        username: {
+          not: excludeUsername,
+          mode: 'insensitive'
+        }
+      });
+    }
+    where.user = { AND: userFilters };
 
     const [total, playerSkills] = await Promise.all([
       prisma.playerSkill.count({ where }),
@@ -3885,7 +4048,13 @@ app.get('/api/hiscores/player/:displayName', requireWebServerSecret, async (req,
         OR: [
           { displayName: displayName },
           { username: displayName }
-        ]
+        ],
+        NOT: {
+          AND: [
+            { banReason: { not: null } },
+            { bannedUntil: null }
+          ]
+        }
       },
       select: {
         id: true,
@@ -3895,6 +4064,25 @@ app.get('/api/hiscores/player/:displayName', requireWebServerSecret, async (req,
     });
     
     if (!user) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    // Keep player lookup consistent with overall hiscores visibility:
+    // only return profiles for users with total level 27+.
+    const overallSkillId = await getSkillIdBySlug('overall');
+    if (!overallSkillId) {
+      return res.status(500).json({ error: 'Overall skill is not seeded' });
+    }
+    const overallEntry = await prisma.playerSkill.findFirst({
+      where: {
+        userId: user.id,
+        persistenceId,
+        skillId: overallSkillId,
+        level: { gt: 26 }
+      },
+      select: { id: true }
+    });
+    if (!overallEntry) {
       return res.status(404).json({ error: 'Player not found' });
     }
 

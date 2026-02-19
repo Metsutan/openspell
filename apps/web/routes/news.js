@@ -69,7 +69,7 @@ router.get('/archives', async (req, res) => {
         ? monthNews.map(item => {
             const formattedDate = formatDate(item.date);
             return `            <div class="news-item">
-    <img class="news-thumb" width="180" height="120" src="${item.thumbnail || '/images/news/thumbnails/logo1.jpg'}" alt="${escapeHtml(item.title)}" title="${escapeHtml(item.title)}" />
+    <img class="news-thumb" width="180" height="120" src="${item.thumbnail || '/images/logo.png'}" alt="${escapeHtml(item.title)}" title="${escapeHtml(item.title)}" />
     <div>
         <div class="news-h"><a href="/news/${item.slug}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a></div>
         <div class="news-meta"><a href="#" title="${escapeHtml(item.type || 'Game')}">${escapeHtml(item.type || 'Game')}</a> | ${formattedDate}</div>
@@ -164,7 +164,7 @@ router.get('/archives/:year/:month', async (req, res) => {
         ? monthNews.map(item => {
             const formattedDate = formatDate(item.date);
             return `            <div class="news-item">
-    <img class="news-thumb" width="180" height="120" src="${item.thumbnail || '/images/news/thumbnails/logo1.jpg'}" alt="${escapeHtml(item.title)}" title="${escapeHtml(item.title)}" />
+    <img class="news-thumb" width="180" height="120" src="${item.thumbnail || '/images/logo.png'}" alt="${escapeHtml(item.title)}" title="${escapeHtml(item.title)}" />
     <div>
         <div class="news-h"><a href="/news/${item.slug}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a></div>
         <div class="news-meta"><a href="#" title="${escapeHtml(item.type || 'Game')}">${escapeHtml(item.type || 'Game')}</a> | ${formattedDate}</div>

@@ -74,6 +74,9 @@ export const handleMovementPath: ActionHandler = (ctx, actionData) => {
 
   // Calculate player movement speed (sprinting = 2, walking = 1)
   const speed = playerState.settings[PlayerSetting.IsSprinting] === 1 ? 2 : 1;
+
+  // Moving away from a skilling station should close any open skilling menu.
+  ctx.skillingMenuService.closeMenu(ctx.userId, false);
   
   // Schedule movement plan via PathfindingSystem
   ctx.pathfindingSystem.scheduleMovementPlan(entityRef, playerState.mapLevel, path, speed);

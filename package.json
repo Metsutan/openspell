@@ -1,6 +1,7 @@
 {
 	"scripts": {
 		"protocol:generate": "node apps/game/tools/generate-protocol-from-factory.js --overwrite",
+		"env:secrets": "node scripts/update-shared-secrets.js",
 		"postinstall": "pnpm run protocol:generate"
 	},
 	"dependencies": {

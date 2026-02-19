@@ -679,7 +679,7 @@ export async function recomputeHiscores(userIds: number[], serverIdOverride?: nu
       req.end();
     });
     
-    console.log(`[hiscores] Recomputed overall and ranks for ${userIds.length} player(s)`);
+    //console.log(`[hiscores] Recomputed overall and ranks for ${userIds.length} player(s)`);
   } catch (error) {
     // Non-fatal: hiscores can be out of sync temporarily
     console.warn(`[hiscores] Failed to recompute hiscores:`, (error as Error)?.message ?? error);

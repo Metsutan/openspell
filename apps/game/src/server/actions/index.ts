@@ -19,9 +19,22 @@ import { handleCastSingleCombatOrStatusSpell } from "./handleCastSingleCombatOrS
 import { handleCastInventorySpell } from "./handleCastInventorySpell";
 import { handleUpdateTradeStatus } from "./handleUpdateTradeStatus";
 import { handleChangeAppearance } from "./handleChangeAppearance";
+import { decodeInvokeInventoryItemActionPayload } from "../../protocol/packets/actions/InvokeInventoryItemAction";
+import { decodePerformActionOnEntityPayload } from "../../protocol/packets/actions/PerformActionOnEntity";
+import { buildInvokedInventoryItemActionPayload } from "../../protocol/packets/actions/InvokedInventoryItemAction";
+import { GameAction } from "../../protocol/enums/GameAction";
+import { ItemAction } from "../../protocol/enums/ItemAction";
+import { Action } from "../../protocol/enums/Actions";
+import { EntityType } from "../../protocol/enums/EntityType";
+import { checkGroundItemRange } from "./entity-actions/shared";
 
 // Re-export types for convenience
 export type { ActionContext, ActionDefinition, ActionHandler } from "./types";
+
+const STUN_ALLOWED_ITEM_ACTIONS = new Set<number>([
+  ItemAction.eat,
+  ItemAction.drink
+]);
 
 // ============================================================================
 // Action Registry
@@ -158,6 +171,7 @@ export async function dispatchClientAction(
   actionData: unknown
 ): Promise<void> {
   const actionDef = ACTIONS[actionType];
+  const playerState = ctx.userId !== null ? ctx.playerStatesByUserId.get(ctx.userId) ?? null : null;
 
   if (!actionDef) {
     // Action not registered - silently ignore or log for debugging
@@ -171,9 +185,13 @@ export async function dispatchClientAction(
     return;
   }
 
-  // Block all actions while player is dead (except logout which is always allowed)
-  if (ctx.userId !== null && actionType !== ClientActionTypes.Logout) {
-    const playerState = ctx.playerStatesByUserId.get(ctx.userId);
+  // Block actions while player is dead.
+  // While dead, only logout and public chat are allowed.
+  if (
+    ctx.userId !== null &&
+    actionType !== ClientActionTypes.Logout &&
+    actionType !== ClientActionTypes.PublicMessage
+  ) {
     if (playerState && playerState.currentState === States.PlayerDeadState) {
       // Player is dead - silently ignore the action
       // They will be respawned automatically after the death delay
@@ -181,19 +199,84 @@ export async function dispatchClientAction(
     }
   }
 
-  // Block all actions while player has a blocking delay (stunned, channeling, etc.)
-  // Blocking delays prevent ALL actions except logout
+  // Block actions while player is stun-locked.
+  // We treat either an active blocking delay OR explicit StunnedState as stun lock,
+  // since some flows rely on state checks and some rely on delay checks.
   if (ctx.userId !== null && actionType !== ClientActionTypes.Logout) {
-    if (ctx.delaySystem.hasBlockingDelay(ctx.userId)) {
-      // Player has a blocking delay (e.g., stunned from failed pickpocket)
-      // Silently ignore the action - the delay start message already informed them
-      return;
+    const isStunLocked =
+      ctx.delaySystem.hasBlockingDelay(ctx.userId) ||
+      playerState?.currentState === States.StunnedState;
+
+    if (isStunLocked) {
+      // Always allow chatting while stunned.
+      if (actionType === ClientActionTypes.PublicMessage) {
+        // continue to normal handler
+      } else if (actionType === ClientActionTypes.InvokeInventoryItemAction) {
+        try {
+          const payload = decodeInvokeInventoryItemActionPayload(actionData);
+          const itemAction = Number(payload.Action);
+
+          if (STUN_ALLOWED_ITEM_ACTIONS.has(itemAction)) {
+            // Allow safe consumable actions while stunned.
+          } else {
+            const failurePayload = buildInvokedInventoryItemActionPayload({
+              Action: payload.Action,
+              MenuType: payload.MenuType,
+              Slot: payload.Slot,
+              ItemID: payload.ItemID,
+              Amount: payload.Amount,
+              IsIOU: payload.IsIOU,
+              Success: false,
+              Data: null
+            });
+            ctx.enqueueUserMessage(ctx.userId, GameAction.InvokedInventoryItemAction, failurePayload);
+            return;
+          }
+        } catch {
+          // Malformed invoke payload - block while stunned.
+          return;
+        }
+      } else if (actionType === ClientActionTypes.PerformActionOnEntity) {
+        try {
+          const payload = decodePerformActionOnEntityPayload(actionData);
+          const targetAction = Number(payload.TargetAction);
+          const entityType = Number(payload.EntityType);
+          const entityId = Number(payload.EntityID);
+
+          const isGroundItemGrab = targetAction === Action.Grab && entityType === EntityType.Item;
+          if (!isGroundItemGrab || !Number.isInteger(entityId) || !playerState || !ctx.itemManager) {
+            return;
+          }
+
+          const groundItem = ctx.itemManager.getGroundItem(entityId);
+          if (!groundItem || groundItem.mapLevel !== playerState.mapLevel) {
+            return;
+          }
+
+          // Allow ONLY immediate pickup while stunned; pathfinding-based pickup stays blocked.
+          if (!checkGroundItemRange(ctx, playerState, groundItem)) {
+            return;
+          }
+        } catch {
+          // Malformed perform-action payload - block while stunned.
+          return;
+        }
+      } else {
+        // Player has a blocking delay (e.g., stunned from failed pickpocket)
+        // Ignore disallowed actions while stunned.
+        return;
+      }
     }
   }
 
-  // Interrupt non-blocking delays when player tries to perform a new action
-  // Non-blocking delays are cancellable (e.g., pickpocket windup, skilling delays)
-  if (ctx.userId !== null && actionType !== ClientActionTypes.Logout) {
+  // Interrupt non-blocking delays when player tries to perform a new action.
+  // Chat should not cancel active delays; it is not gameplay state/action.
+  // Non-blocking delays remain cancellable for normal gameplay actions.
+  if (
+    ctx.userId !== null &&
+    actionType !== ClientActionTypes.Logout &&
+    actionType !== ClientActionTypes.PublicMessage
+  ) {
     if (ctx.delaySystem.hasActiveDelay(ctx.userId)) {
       // Has a non-blocking delay - interrupt it and proceed with new action
       ctx.delaySystem.interruptDelay(ctx.userId, false); // Don't send interrupt message

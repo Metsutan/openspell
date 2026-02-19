@@ -308,9 +308,9 @@ export class PlayerDeathDropService {
         });
       }
 
-      console.log(
-        `[PlayerDeathDropService] Dropped ${item.amount}x ${itemName} at (${x}, ${y}, L${mapLevel})`
-      );
+      // console.log(
+      //   `[PlayerDeathDropService] Dropped ${item.amount}x ${itemName} at (${x}, ${y}, L${mapLevel})`
+      // );
     }
   }
 

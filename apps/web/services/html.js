@@ -68,6 +68,7 @@ ${hiscoresWorlds.map(world => {
 ${hiscoresNavItem}
                             <div class="nav-item"><a href="/rules" title="Rules">RULES</a></div>
 ${SHOW_DISCORD_LINK && DISCORD_LINK ? `                            <div class="nav-item"><a href="${escapeHtml(DISCORD_LINK)}" title="Community" target="_blank" rel="noopener noreferrer">COMMUNITY</a></div>` : ''}
+                            <div class="nav-item"><a href="https://github.com/GammaParadox/openspell" title="Source" target="_blank" rel="noopener noreferrer">SOURCE</a></div>
                             <div id="map-nav" class="nav-item"><a href="/worldmap" title="World Map">WORLD MAP</a></div>
                         </nav>
                         <div id="hd-r-sec">

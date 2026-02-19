@@ -40,9 +40,9 @@ import type { EquipmentService } from "./EquipmentService";
 import type { VisibilitySystem } from "../systems/VisibilitySystem";
 import type { ExperienceService } from "./ExperienceService";
 import type { ShakingService } from "./ShakingService";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildObtainedResourcePayload } from "../../protocol/packets/actions/ObtainedResource";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 // =============================================================================
 // Constants
@@ -236,6 +236,17 @@ export class WoodcuttingService {
             return false;
         }
 
+        // Must have capacity for at least one log before starting woodcutting.
+        const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
+            playerState.userId,
+            treeConfig.logItemId,
+            0 // Not IOU
+        );
+        if (availableCapacity < 1) {
+            this.config.messageService.sendServerInfo(playerState.userId, "Your inventory is full.");
+            return false;
+        }
+
         // Check forestry level requirement for tree
         // Use effective level (includes potions - equipment bonuses like forestry pendants)
         let playerLevel = playerState.getSkillBoostedLevel(SKILLS.forestry);
@@ -289,13 +300,19 @@ export class WoodcuttingService {
         this.activeSessions.set(playerState.userId, session);
 
         // Send StartedSkilling packet
-        const skillingPayload = buildStartedSkillingPayload({
-            PlayerEntityID: playerState.userId,
-            TargetID: entityState.id,
-            Skill: SkillClientReference.Forestry,
-            TargetType: EntityType.Environment
-        });
-        this.config.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, skillingPayload);
+        this.config.eventBus.emit(
+            createPlayerStartedSkillingEvent(
+                playerState.userId,
+                entityState.id,
+                SkillClientReference.Forestry,
+                EntityType.Environment,
+                {
+                    mapLevel: playerState.mapLevel,
+                    x: playerState.x,
+                    y: playerState.y
+                }
+            )
+        );
 
         // Start initial delay (axe-dependent)
         // After delay completes, WoodcuttingSystem will take over tick-based processing
@@ -437,6 +454,11 @@ export class WoodcuttingService {
         });
         this.config.enqueueUserMessage(player.userId, GameAction.ObtainedResource, obtainedPayload);
 
+        const treeDepleted = session.resourcesRemaining <= 0;
+        if (treeDepleted) {
+            this.scheduleTreeRespawn(tree);
+        }
+
         // Check if inventory has space after giving item
         const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
             player.userId,
@@ -447,14 +469,12 @@ export class WoodcuttingService {
         if (availableCapacity < 1) {
             // Inventory is full - stop session
             this.config.messageService.sendServerInfo(player.userId, "Your inventory is full.");
-            this.endSession(player.userId, undefined, false); // Don't send "stopped chopping" - StateMachine handles it
+            this.endSession(player.userId, undefined, treeDepleted);
             return;
         }
 
-        // Check if tree is depleted
-        if (session.resourcesRemaining <= 0) {
+        if (treeDepleted) {
             this.endSession(player.userId, undefined, true); // Tree depleted
-            this.scheduleTreeRespawn(tree);
         } else {
             // Continue chopping - next attempt after axe cooldown
             session.nextAttemptTick = currentTick + session.axeConfig.initialDelay;

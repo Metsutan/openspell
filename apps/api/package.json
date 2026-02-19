@@ -31,7 +31,8 @@
     "express": "^4.22.1",
     "express-session": "^1.18.2",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^7.0.12"
+    "nodemailer": "^7.0.12",
+    "obscenity": "^0.4.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.4",

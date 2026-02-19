@@ -44,6 +44,9 @@ importers:
       nodemailer:
         specifier: ^7.0.12
         version: 7.0.12
+      obscenity:
+        specifier: ^0.4.6
+        version: 0.4.6
     devDependencies:
       nodemon:
         specifier: ^3.1.4

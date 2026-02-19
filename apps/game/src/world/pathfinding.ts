@@ -260,6 +260,20 @@ function performAstarSearch(
         const index = openSet.pop()!;
         touch(ws, index);
 
+        const x = index % width;
+        const y = (index / width) | 0;
+
+        // Enforce hard search radius boundary from the start tile.
+        // This must happen before goal checks so out-of-radius goals are rejected.
+        if (radiusSquared !== null) {
+            const dx = x - start.x;
+            const dy = y - start.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq > radiusSquared) {
+                continue;
+            }
+        }
+
         if (goalMatchers(index)) {
             return reconstructPathFromIntParents(ws.comeFrom, width, index);
         }
@@ -269,19 +283,6 @@ function performAstarSearch(
         // (But now you don't have 'current.cost', so do:
         // if (currentF !== ws.fScore[index]) continue;  // not useful
         // Better: keep duplicates and rely on gScore check below.
-
-        const x = index % width;
-        const y = (index / width) | 0;
-
-        // Check if we're beyond the search radius
-        if (radiusSquared !== null) {
-            const dx = x - start.x;
-            const dy = y - start.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq > radiusSquared) {
-                continue; // Skip tiles beyond search radius
-            }
-        }
 
         const currentG = ws.gScore[index];
         const flags = grid.getOrAllBlockedValue(x, y);
@@ -294,6 +295,14 @@ function performAstarSearch(
             const nx = x + dx;
             const ny = y + dy;
             if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+
+            // Keep neighbors outside radius out of the open set entirely.
+            if (radiusSquared !== null) {
+              const ndx = nx - start.x;
+              const ndy = ny - start.y;
+              const nDistSq = ndx * ndx + ndy * ndy;
+              if (nDistSq > radiusSquared) continue;
+            }
           
             // 2) destination tile closed?
             const nFlags = grid.getOrAllBlockedValue(nx, ny);

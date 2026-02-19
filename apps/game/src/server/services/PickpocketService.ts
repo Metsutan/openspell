@@ -36,12 +36,11 @@ import type { EventBus } from "../events/EventBus";
 import type { CombatSystem } from "../systems/CombatSystem";
 import type { NPCState } from "../state/EntityState";
 import type { PacketAuditService } from "./PacketAuditService";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildGainedExpPayload } from "../../protocol/packets/actions/GainedExp";
 import { buildEntityStunnedPayload } from "../../protocol/packets/actions/EntityStunned";
 import { buildStartedTargetingPayload } from "../../protocol/packets/actions/StartedTargeting";
 import { buildStoppedTargetingPayload } from "../../protocol/packets/actions/StoppedTargeting";
-import { createEntityForcedPublicMessageEvent } from "../events/GameEvents";
+import { createEntityForcedPublicMessageEvent, createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 // Static assets path
 const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
@@ -238,13 +237,19 @@ export class PickpocketService {
     // 3. Send StartedSkilling packet
     // Note: Client expects skill reference 10 (Smithing slot) for pickpocket animation
     // This is a client-side quirk - the actual XP goes to Crime skill
-    const skillingPayload = buildStartedSkillingPayload({
-      PlayerEntityID: playerState.userId,
-      TargetID: npcState.id,
-      Skill: SkillClientReference.Crime, // = 10
-      TargetType: EntityType.NPC
-    });
-    this.config.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, skillingPayload);
+    this.config.eventBus.emit(
+      createPlayerStartedSkillingEvent(
+        playerState.userId,
+        npcState.id,
+        SkillClientReference.Crime, // = 10
+        EntityType.NPC,
+        {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y
+        }
+      )
+    );
 
     // Start 2-tick non-blocking delay
     const delayStarted = this.config.delaySystem.startDelay({
@@ -434,7 +439,7 @@ export class PickpocketService {
     npc: NPCState,
     pickpocketDef: PickpocketDefinition
   ): void {
-    console.log(`[PickpocketService] Player ${player.userId} failed to pickpocket NPC ${npc.id}`);
+    //console.log(`[PickpocketService] Player ${player.userId} failed to pickpocket NPC ${npc.id}`);
 
     // Apply damage (NPC attacks player)
     const npcRef = { type: EntityType.NPC, id: npc.id };

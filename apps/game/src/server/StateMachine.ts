@@ -12,6 +12,7 @@ import type { ItemInteractionService } from "./services/ItemInteractionService";
 import { GameAction } from "../protocol/enums/GameAction";
 import { SkillClientReference } from "../world/PlayerState";
 import { buildStoppedBankingPayload } from "../protocol/packets/actions/StoppedBanking";
+import { buildStoppedShoppingPayload } from "../protocol/packets/actions/StoppedShopping";
 import { buildStoppedSkillingPayload } from "../protocol/packets/actions/StoppedSkilling";
 
 /**
@@ -226,10 +227,15 @@ export class StateMachine {
                 break;
 
             case States.ShoppingState:
-                // Clear current shop ID when player exits shopping
+                // Close shop interface and clear current shop ID when player exits shopping
                 if (entityRef.type === EntityType.Player) {
                     const playerState = this.context.getPlayerState(entityRef.id);
                     if (playerState) {
+                        const stoppedPayload = buildStoppedShoppingPayload({
+                            ShopID: playerState.currentShopId,
+                            EntityID: entityRef.id
+                        });
+                        this.context.enqueueUserMessage(entityRef.id, GameAction.StoppedShopping, stoppedPayload);
                         playerState.currentShopId = null;
                     }
                 }
@@ -334,6 +340,14 @@ export class StateMachine {
             case States.PotionMakingState:
             case States.CraftingAtTableState:
                 if (entityRef.type === EntityType.Player) {
+                    if (state === States.CraftingAtTableState) {
+                        const stoppedPayload = buildStoppedSkillingPayload({
+                            PlayerEntityID: entityRef.id,
+                            Skill: SkillClientReference.Crafting,
+                            DidExhaustResources: false
+                        });
+                        this.context.enqueueUserMessage(entityRef.id, GameAction.StoppedSkilling, stoppedPayload);
+                    }
                     const itemInteractionService = this.context.getItemInteractionService();
                     itemInteractionService?.cancelItemOnItemSession(entityRef.id, false);
                     const message = this.getSkillingStopMessage(state);

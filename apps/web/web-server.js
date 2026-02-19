@@ -33,9 +33,11 @@ const WEB_HOSTNAME = (() => {
 })();
 function buildCspHeaderValue(nonce) {
     const nonceValue = nonce ? ` 'nonce-${nonce}'` : '';
-    const httpScheme = IS_HTTPS ? 'https' : 'http';
-    const wsScheme = IS_HTTPS ? 'wss' : 'ws';
-    return `default-src 'self';base-uri 'self';block-all-mixed-content;connect-src ${httpScheme}://${WEB_HOSTNAME}:${API_PORT} ${httpScheme}://${WEB_HOSTNAME}:${PORT} ${httpScheme}://${WEB_HOSTNAME}:${GAME_PORT} ${wsScheme}://${WEB_HOSTNAME}:${GAME_PORT} ${httpScheme}://*.${WEB_HOSTNAME}:* ${wsScheme}://*.${WEB_HOSTNAME}:* ${httpScheme}://${WEB_HOSTNAME}:${CHAT_PORT} ${wsScheme}://${WEB_HOSTNAME}:${CHAT_PORT} https://www.google.com https://www.gstatic.com https://recaptcha.google.com data: blob:;font-src 'self' https: data:;frame-src www.google.com imgur.com https://recaptcha.google.com;frame-ancestors 'self';img-src 'self' data: blob: *.imgur.com ${httpScheme}://${WEB_HOSTNAME}:${PORT} https://www.gstatic.com;object-src 'none';script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net 'unsafe-eval'${nonceValue};script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests;worker-src 'self' blob:`;
+    // CSP should reflect the browser-facing origin (typically HTTPS behind reverse proxy),
+    // not whether this Node process terminates TLS locally.
+    const httpScheme = 'https';
+    const wsScheme = 'wss';
+    return `default-src 'self';base-uri 'self';block-all-mixed-content;connect-src 'self' ${httpScheme}://${WEB_HOSTNAME}:${API_PORT} ${httpScheme}://${WEB_HOSTNAME}:${PORT} ${httpScheme}://${WEB_HOSTNAME}:${GAME_PORT} ${wsScheme}://${WEB_HOSTNAME}:${GAME_PORT} ${httpScheme}://*.${WEB_HOSTNAME}:* ${wsScheme}://*.${WEB_HOSTNAME}:* ${httpScheme}://${WEB_HOSTNAME}:${CHAT_PORT} ${wsScheme}://${WEB_HOSTNAME}:${CHAT_PORT} https://www.google.com https://www.gstatic.com https://recaptcha.google.com data: blob:;font-src 'self' https: data:;frame-src www.google.com imgur.com https://recaptcha.google.com;frame-ancestors 'self';img-src 'self' data: blob: *.imgur.com ${httpScheme}://${WEB_HOSTNAME}:${PORT} https://www.gstatic.com;object-src 'none';script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net 'unsafe-eval'${nonceValue};script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests;worker-src 'self' blob:`;
 }
 
 // reCAPTCHA configuration
@@ -338,7 +340,7 @@ app.get('/', async (req, res) => {
 
     const newsSummaryItems = latestNews.map(item => {
         const formattedDate = formatDate(item.date);
-        const thumbnail = item.thumbnail || '/images/news/thumbnails/logo1.jpg';
+        const thumbnail = item.thumbnail || '/images/logo.png';
         return `                <div class="news-item">
     <img class="news-thumb" width="180" height="120" src="${thumbnail}" alt="${escapeHtml(item.title)}" title="${escapeHtml(item.title)}" />
     <div>
@@ -618,7 +620,7 @@ app.get('/rules', async (req, res) => {
                     <span class="rule-num">3</span>
                     <div class="rule-body">
                         <strong class="rule-h">Moderation decisions are final.</strong>
-                        <p class="rule-desc">We are not required to provide evidence, debate rulings, or issue warnings before taking action. You are welcome to appeal a ban at <a href="mailto:official@openspell.dev" class="rule-link">official@openspell.dev</a>.</p>
+                        <p class="rule-desc">We are not required to provide evidence, debate rulings, or issue warnings before taking action. You are welcome to appeal a ban at <a href="mailto:support@openspell.dev" class="rule-link">support@openspell.dev</a>.</p>
                     </div>
                 </li>
                 <li class="rule">
@@ -626,6 +628,13 @@ app.get('/rules', async (req, res) => {
                     <div class="rule-body">
                         <strong class="rule-h">Don't bot on non-botting servers.</strong>
                         <p class="rule-desc">You will be banned permanently on your first offense. Any attempt to subvert an IP ban will result in permanent removal. This rule exists to protect fair play and prevent the toxic, accusatory culture that unchecked botting creates. If you'd like to bot, you're welcome to play on the botting server.</p>
+                    </div>
+                </li>
+                <li class="rule">
+                    <span class="rule-num">5</span>
+                    <div class="rule-body">
+                        <strong class="rule-h">Account limit: one main and one alternate account.</strong>
+                        <p class="rule-desc">Players may use a maximum of two accounts at a time across the servers (your main account plus one alternate account). If you are found playing more than two accounts at once, all associated accounts may be punished.</p>
                     </div>
                 </li>
             </ol>
@@ -751,10 +760,21 @@ async function fetchWorlds() {
 }
 
 // Helper: Fetch hiscores from API
-async function fetchHiscores(skill, page = 1, limit = 25, serverId) {
+async function fetchHiscores(skill, page = 1, limit = 25, serverId, options = {}) {
     try {
         const offset = (page - 1) * limit;
-        const response = await makeApiRequest(`/api/hiscores/${skill}?limit=${limit}&offset=${offset}&serverId=${serverId}`);
+        const query = new URLSearchParams({
+            limit: String(limit),
+            offset: String(offset),
+            serverId: String(serverId)
+        });
+        if (options.excludeUsername) {
+            query.set('excludeUsername', options.excludeUsername);
+        }
+        if (Number.isFinite(Number(options.minLevel))) {
+            query.set('minLevel', String(options.minLevel));
+        }
+        const response = await makeApiRequest(`/api/hiscores/${skill}?${query.toString()}`);
         return response;
     } catch (error) {
         console.error(`Error fetching hiscores for ${skill}:`, error);
@@ -810,8 +830,16 @@ app.get('/hiscores/:skill', async (req, res) => {
         return res.status(404).send('Skill not found');
     }
     
+    // Display rules:
+    // - Hide username "admin" from all hiscore tables.
+    // - For overall only, hide accounts at total level 26 or below.
+    const hiscoresFilterOptions = {
+        excludeUsername: 'admin',
+        ...(skill === 'overall' ? { minLevel: 26 } : {})
+    };
+
     // Fetch hiscores data from API
-    const hiscoresData = await fetchHiscores(skill, page, limit, selectedServerId);
+    const hiscoresData = await fetchHiscores(skill, page, limit, selectedServerId, hiscoresFilterOptions);
     const players = hiscoresData.items || [];
     const total = hiscoresData.total || 0;
     const totalPages = Math.ceil(total / limit);
@@ -961,20 +989,24 @@ ${paginationHtml}
 
 // Route: Player search (POST)
 app.post('/hiscores/player', csrfProtection, async (req, res) => {
-    const { username, serverId } = req.body;
+    const { serverId } = req.body ?? {};
+    const rawUsername = req.body?.username;
+    const username = typeof rawUsername === 'string' ? rawUsername.trim() : '';
     
-    if (!username || !username.trim()) {
+    if (!username) {
         return res.redirect('/hiscores?error=' + encodeURIComponent('Username is required'));
     }
     
     // Redirect to player page
     const serverIdValue = parseServerId(serverId) || 1;
-    return res.redirect(`/hiscores/player/${encodeURIComponent(username.trim())}?serverId=${serverIdValue}`);
+    return res.redirect(`/hiscores/player/${encodeURIComponent(username)}?serverId=${serverIdValue}`);
 });
 
 // Route: Player stats page
 app.get('/hiscores/player/:displayName', async (req, res) => {
     const { displayName } = req.params;
+    const normalizedDisplayName = String(displayName || '').trim().toLowerCase();
+    const isHiddenHiscoresUser = normalizedDisplayName === 'admin';
     
     // Get user info for header
     const user = await getUserInfo(req, false);
@@ -993,8 +1025,10 @@ app.get('/hiscores/player/:displayName', async (req, res) => {
         return res.status(500).send('Unable to load skills. Please try again later.');
     }
     
-    // Fetch player stats from API
-    const playerStats = await fetchPlayerStats(displayName, selectedServerId);
+    // Fetch player stats from API (except hidden hiscores users).
+    const playerStats = isHiddenHiscoresUser
+        ? null
+        : await fetchPlayerStats(displayName, selectedServerId);
     
     if (!playerStats || !playerStats.player) {
         const skillsMenu = skills.map(s => {

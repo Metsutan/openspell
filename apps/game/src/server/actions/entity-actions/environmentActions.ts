@@ -15,6 +15,7 @@
 import { Action } from "../../../protocol/enums/Actions";
 import { EntityType } from "../../../protocol/enums/EntityType";
 import { GameAction } from "../../../protocol/enums/GameAction";
+import { States } from "../../../protocol/enums/States";
 import { PlayerSetting } from "../../../protocol/enums/PlayerSetting";
 import { MenuType } from "../../../protocol/enums/MenuType";
 import { MessageStyle } from "../../../protocol/enums/MessageStyle";
@@ -219,6 +220,11 @@ export function handleEnvironmentAction(
  */
 export function processPendingEnvironmentActions(ctx: ActionContext): void {
   for (const playerState of ctx.playerStatesByUserId.values()) {
+    if (playerState.currentState === States.PlayerDeadState) {
+      playerState.pendingAction = null;
+      continue;
+    }
+
     const pending = playerState.pendingAction;
     if (!pending || pending.entityType !== EntityType.Environment) {
       continue;

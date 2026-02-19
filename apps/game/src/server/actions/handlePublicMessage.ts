@@ -1,5 +1,6 @@
 import { PlayerType } from "../../protocol/enums/PlayerType";
 import { decodePublicMessagePayload } from "../../protocol/packets/actions/PublicMessage";
+import { ClientActionTypes } from "../../protocol/enums/ClientActionType";
 import { executeCommand } from "../commands";
 import type { CommandContext } from "../commands/types";
 import type { ActionHandler } from "./types";
@@ -18,6 +19,39 @@ const matcher = new RegExpMatcher({
 // Use asterisk strategy to censor with repeated * characters
 const censor = new TextCensor().setStrategy(asteriskCensorStrategy());
 const LOCAL_CHAT_MIN_INTERVAL_TICKS = 2;
+const CHAT_MAX_LENGTH = 80;
+
+type ChatValidationResult =
+  | { ok: true; trimmed: string }
+  | { ok: false; reason: string; details?: Record<string, unknown> };
+
+function validateChatMessageText(message: string): ChatValidationResult {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return { ok: false, reason: "empty_message_after_trim" };
+  }
+
+  if (trimmed.length > CHAT_MAX_LENGTH) {
+    return {
+      ok: false,
+      reason: "message_too_long",
+      details: { length: trimmed.length, maxLength: CHAT_MAX_LENGTH }
+    };
+  }
+
+  // Client should only send basic printable ASCII for chat text.
+  // Any non-printable/non-ASCII characters are considered tampered payloads.
+  if (/[^ -~]/.test(trimmed)) {
+    return { ok: false, reason: "message_contains_non_ascii_or_control_chars" };
+  }
+
+  // Reject content that would require HTML encoding on output.
+  if (/[<>]/.test(trimmed)) {
+    return { ok: false, reason: "message_contains_html_sensitive_chars" };
+  }
+
+  return { ok: true, trimmed };
+}
 /**
  * Censors obscenities in a message, excluding mild curse words.
  * @param text The message text to censor
@@ -51,8 +85,29 @@ export const handlePublicMessage: ActionHandler = async (ctx, actionData) => {
   const playerState = ctx.playerStatesByUserId.get(ctx.userId);
   if (!playerState) return;
 
+  const logInvalid = (reason: string, details?: Record<string, unknown>) => {
+    ctx.packetAudit?.logInvalidPacket({
+      userId: ctx.userId,
+      packetName: "PublicMessage",
+      actionType: ClientActionTypes.PublicMessage,
+      reason,
+      payload: publicMessage,
+      details
+    });
+  };
+
+  if (typeof publicMessage.Message !== "string") {
+    logInvalid("invalid_message_type", { messageType: typeof publicMessage.Message });
+    return;
+  }
+
   const messageText = publicMessage.Message;
-  const trimmedMessageText = (messageText as string).trim().slice(0, 80);
+  const validation = validateChatMessageText(messageText);
+  if (!validation.ok) {
+    logInvalid(validation.reason, validation.details);
+    return;
+  }
+  const trimmedMessageText = validation.trimmed;
   const playerType = playerState.playerType as PlayerType;
 
   // Command handling: messages starting with "/" are treated as commands.
@@ -63,8 +118,12 @@ export const handlePublicMessage: ActionHandler = async (ctx, actionData) => {
 
     // Handle /g (global chat) inline since it's a chat feature, not a command
     if (command === "g") {
-      const globalMessage = rawArgs.join(" ").trim();
-      if (!globalMessage) return; // Nothing to broadcast
+      const globalMessage = rawArgs.join(" ");
+      const globalValidation = validateChatMessageText(globalMessage);
+      if (!globalValidation.ok) {
+        logInvalid(`global_${globalValidation.reason}`, globalValidation.details);
+        return;
+      }
 
       const muteMessage = getMuteBlockMessage(playerState);
       if (muteMessage) {
@@ -72,7 +131,7 @@ export const handlePublicMessage: ActionHandler = async (ctx, actionData) => {
         return;
       }
 
-      const censoredGlobalMessage = censorMessage(globalMessage);
+      const censoredGlobalMessage = censorMessage(globalValidation.trimmed);
       ctx.messageService.sendGlobalMessage(ctx.userId, playerState.displayName ?? playerState.username, censoredGlobalMessage, playerType);
       return;
     }
@@ -99,7 +158,7 @@ export const handlePublicMessage: ActionHandler = async (ctx, actionData) => {
   }
 
   // Send the public message to nearby players (with censoring applied)
-  const censoredMessage = censorMessage(publicMessage.Message as string);
+  const censoredMessage = censorMessage(trimmedMessageText);
   ctx.messageService.sendPublicMessage(ctx.userId, censoredMessage, publicMessage.Style as MessageStyle);
 };
 

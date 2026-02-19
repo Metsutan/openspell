@@ -36,7 +36,7 @@ export const handleSwitchToIdleState: ActionHandler = (ctx, actionData) => {
   // Decode payload (contains a Switch field, though we don't need it)
   const payload = decodeSwitchToIdleStatePayload(actionData);
   
-  console.log(`[handleSwitchToIdleState] Player ${ctx.userId} switching to idle state (from ${States[playerState.currentState]})`);
+  //console.log(`[handleSwitchToIdleState] Player ${ctx.userId} switching to idle state (from ${States[playerState.currentState]})`);
 
   // Clear any pending actions (NPC interactions, seamless pathfinding)
   if (playerState.pendingAction) {

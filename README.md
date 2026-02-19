@@ -5,7 +5,7 @@ A browser-based MMORPG with a TypeScript game server, Express API, and SSR web f
 
 ## Foreword
 
-This is very rough, it's maybe 70% complete but there's a lot still missing. I don't have the time or, candidly, the interest to dedicate myself exclusively to this project and I'd love it if the community took over. It's roughly playable in a sense but it needs many commits and even some architectural re-design to truly be scalable. For example the web server and api server are both just javascript files instead of typescript. This is almost a proof of concept more than a serious attempt at a robust replacement. However, as it is ~200-500 players would most likely be fine.
+OpenSpell is now in Alpha - a large portion of the game is playable and under development. There are still missing features, known bugs, and areas of the codebase that need architectural improvement to scale beyond their current state. That said, the foundation is there and the game is functional. Community contributions are welcome and encouraged — if you see something that can be improved, open a pull request.
 
 This repository comes with many of the assets *except* the client. To get the client you'll need to gather it yourself from the official website and place it in the `apps\shared-assets\base\js\client` path. This can be done with f12 and the Network tab of Chrome Developer tools. Just look for a `client.61.js` file and copy that. You might need to also look at the `assetsClient` while you're there if the client number has changed.
 

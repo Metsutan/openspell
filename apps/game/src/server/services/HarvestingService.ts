@@ -27,10 +27,10 @@ import type { EquipmentService } from "./EquipmentService";
 import type { VisibilitySystem } from "../systems/VisibilitySystem";
 import type { ExperienceService } from "./ExperienceService";
 import type { WorldEntityDefinition } from "../../world/entities/WorldEntityCatalog";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildObtainedResourcePayload } from "../../protocol/packets/actions/ObtainedResource";
 import type { PacketAuditService } from "./PacketAuditService";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 // =============================================================================
 // Constants
@@ -281,6 +281,17 @@ export class HarvestingService {
       return false;
     }
 
+    // Must have capacity for at least one harvested item before starting.
+    const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
+      playerState.userId,
+      harvestableConfig.itemId,
+      0
+    );
+    if (availableCapacity < 1) {
+      this.config.messageService.sendServerInfo(playerState.userId, "Your inventory is full.");
+      return false;
+    }
+
     // Check harvesting level requirement (boosted by potions)
     let playerLevel = playerState.getSkillBoostedLevel(SKILLS.harvesting);
     if (playerLevel < harvestableConfig.requiredLevel) {
@@ -333,13 +344,19 @@ export class HarvestingService {
 
     this.activeSessions.set(playerState.userId, session);
 
-    const skillingPayload = buildStartedSkillingPayload({
-      PlayerEntityID: playerState.userId,
-      TargetID: entityState.id,
-      Skill: SkillClientReference.Harvesting,
-      TargetType: EntityType.Environment
-    });
-    this.config.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, skillingPayload);
+    this.config.eventBus.emit(
+      createPlayerStartedSkillingEvent(
+        playerState.userId,
+        entityState.id,
+        SkillClientReference.Harvesting,
+        EntityType.Environment,
+        {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y
+        }
+      )
+    );
 
     const delayStarted = this.config.delaySystem.startDelay({
       userId: playerState.userId,
@@ -444,6 +461,11 @@ export class HarvestingService {
     });
     this.config.enqueueUserMessage(player.userId, GameAction.ObtainedResource, obtainedPayload);
 
+    const plantDepleted = session.resourcesRemaining <= 0;
+    if (plantDepleted) {
+      this.schedulePlantRespawn(plant);
+    }
+
     const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
       player.userId,
       harvestableConfig.itemId,
@@ -451,13 +473,12 @@ export class HarvestingService {
     );
     if (availableCapacity < 1) {
       this.config.messageService.sendServerInfo(player.userId, "Your inventory is full.");
-      this.endSession(player.userId, undefined, false);
+      this.endSession(player.userId, undefined, plantDepleted);
       return;
     }
 
-    if (session.resourcesRemaining <= 0) {
+    if (plantDepleted) {
       this.endSession(player.userId, undefined, true);
-      this.schedulePlantRespawn(plant);
     } else {
       session.nextAttemptTick = currentTick + 1;
     }

@@ -26,10 +26,10 @@ import type { ItemCatalog, ItemDefinition } from "../../world/items/ItemCatalog"
 import type { EquipmentService } from "./EquipmentService";
 import type { VisibilitySystem } from "../systems/VisibilitySystem";
 import type { ExperienceService } from "./ExperienceService";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildObtainedResourcePayload } from "../../protocol/packets/actions/ObtainedResource";
 import type { PacketAuditService } from "./PacketAuditService";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 // =============================================================================
 // Constants
@@ -257,6 +257,17 @@ export class MiningService {
       return false;
     }
 
+    // Must have capacity for at least one ore before starting.
+    const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
+      playerState.userId,
+      oreItemId,
+      0
+    );
+    if (availableCapacity < 1) {
+      this.config.messageService.sendServerInfo(playerState.userId, "Your inventory is full.");
+      return false;
+    }
+
     const session: MiningSession = {
       userId: playerState.userId,
       rockId: entityState.id,
@@ -269,13 +280,19 @@ export class MiningService {
 
     this.activeSessions.set(playerState.userId, session);
 
-    const skillingPayload = buildStartedSkillingPayload({
-      PlayerEntityID: playerState.userId,
-      TargetID: entityState.id,
-      Skill: SkillClientReference.Mining,
-      TargetType: EntityType.Environment
-    });
-    this.config.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, skillingPayload);
+    this.config.eventBus.emit(
+      createPlayerStartedSkillingEvent(
+        playerState.userId,
+        entityState.id,
+        SkillClientReference.Mining,
+        EntityType.Environment,
+        {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y
+        }
+      )
+    );
 
     const delayStarted = this.config.delaySystem.startDelay({
       userId: playerState.userId,
@@ -364,31 +381,48 @@ export class MiningService {
     this.rockResources.set(rock.id, remaining - 1);
     session.resourcesRemaining = remaining - 1;
 
-    const obtainedItemId = this.rollRareDrop() ?? session.oreItemId;
-    this.config.inventoryService.giveItem(player.userId, obtainedItemId, 1, 0);
+    const oreItemId = session.oreItemId;
+    this.config.inventoryService.giveItem(player.userId, oreItemId, 1, 0);
 
-    const itemDef = this.config.itemCatalog.getDefinitionById(obtainedItemId);
-    this.awardXpFromItem(player, itemDef);
+    const oreItemDef = this.config.itemCatalog.getDefinitionById(oreItemId);
+    this.awardXpFromItem(player, oreItemDef);
 
-    const obtainedPayload = buildObtainedResourcePayload({
-      ItemID: obtainedItemId
+    const oreObtainedPayload = buildObtainedResourcePayload({
+      ItemID: oreItemId
     });
-    this.config.enqueueUserMessage(player.userId, GameAction.ObtainedResource, obtainedPayload);
+    this.config.enqueueUserMessage(player.userId, GameAction.ObtainedResource, oreObtainedPayload);
+
+    const rareDropItemId = this.rollRareDrop();
+    if (rareDropItemId !== null) {
+      this.config.inventoryService.giveItem(player.userId, rareDropItemId, 1, 0);
+
+      const rareItemDef = this.config.itemCatalog.getDefinitionById(rareDropItemId);
+      this.awardXpFromItem(player, rareItemDef);
+
+      const rareObtainedPayload = buildObtainedResourcePayload({
+        ItemID: rareDropItemId
+      });
+      this.config.enqueueUserMessage(player.userId, GameAction.ObtainedResource, rareObtainedPayload);
+    }
+
+    const rockDepleted = session.resourcesRemaining <= 0;
+    if (rockDepleted) {
+      this.scheduleRockRespawn(rock);
+    }
 
     const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
       player.userId,
-      obtainedItemId,
+      oreItemId,
       0
     );
     if (availableCapacity < 1) {
       this.config.messageService.sendServerInfo(player.userId, "Your inventory is full.");
-      this.endSession(player.userId, undefined, false);
+      this.endSession(player.userId, undefined, rockDepleted);
       return;
     }
 
-    if (session.resourcesRemaining <= 0) {
+    if (rockDepleted) {
       this.endSession(player.userId, undefined, true);
-      this.scheduleRockRespawn(rock);
     } else {
       session.nextAttemptTick = currentTick + session.pickaxeConfig.minimumMineTime;
     }

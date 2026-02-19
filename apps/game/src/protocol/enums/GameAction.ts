@@ -99,7 +99,7 @@ export enum GameAction {
   UsedItemOnEntity = 91,
   InsertAtBankStorageSlot = 92,
   InsertedAtBankStorageSlot = 93,
-RemovedItemFromInventoryAtSlot = 94,
+  RemovedItemFromInventoryAtSlot = 94,
   AddedItemAtInventorySlot = 95,
   ShowLootMenu = 96,
   ReorganizeInventorySlots = 97,

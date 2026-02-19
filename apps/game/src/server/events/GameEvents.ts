@@ -97,6 +97,23 @@ export interface PlayerStoppedTargetingEvent extends GameEventBase {
   userId: number;
 }
 
+export interface PlayerStartedSkillingEvent extends GameEventBase {
+  type: "PlayerStartedSkilling";
+  userId: number;
+  targetId: number | null;
+  skillClientRef: number;
+  targetType: EntityType;
+  position: Position;
+}
+
+export interface PlayerCastedInventorySpellEvent extends GameEventBase {
+  type: "PlayerCastedInventorySpell";
+  userId: number;
+  spellId: number;
+  targetItemId: number;
+  position: Position;
+}
+
 export interface PlayerWentThroughDoorEvent extends GameEventBase {
   type: "PlayerWentThroughDoor";
   userId: number;
@@ -341,6 +358,8 @@ export type PlayerEvent =
   | PlayerTeleportedEvent
   | PlayerStartedTargetingEvent
   | PlayerStoppedTargetingEvent
+  | PlayerStartedSkillingEvent
+  | PlayerCastedInventorySpellEvent
   | PlayerWentThroughDoorEvent
   | PlayerDiedEvent
   | PlayerEquipmentChangedEvent;
@@ -479,6 +498,40 @@ export function createPlayerStoppedTargetingEvent(
     type: "PlayerStoppedTargeting",
     timestamp: createTimestamp(),
     userId
+  };
+}
+
+export function createPlayerStartedSkillingEvent(
+  userId: number,
+  targetId: number | null,
+  skillClientRef: number,
+  targetType: EntityType,
+  position: Position
+): PlayerStartedSkillingEvent {
+  return {
+    type: "PlayerStartedSkilling",
+    timestamp: createTimestamp(),
+    userId,
+    targetId,
+    skillClientRef,
+    targetType,
+    position
+  };
+}
+
+export function createPlayerCastedInventorySpellEvent(
+  userId: number,
+  spellId: number,
+  targetItemId: number,
+  position: Position
+): PlayerCastedInventorySpellEvent {
+  return {
+    type: "PlayerCastedInventorySpell",
+    timestamp: createTimestamp(),
+    userId,
+    spellId,
+    targetItemId,
+    position
   };
 }
 

@@ -160,6 +160,11 @@ export class MovementSystem {
       const playerState = this.config.playerStates.get(entityRef.id);
       if (!playerState) return false;
 
+      // Dead players cannot continue stale movement plans.
+      if (playerState.currentState === States.PlayerDeadState) {
+        return false;
+      }
+
       // Defensive guard: if the player changed map levels (teleport/door) while this plan
       // was queued, this plan is stale and must not continue stepping.
       if (playerState.mapLevel !== plan.mapLevel) {
@@ -237,12 +242,16 @@ export class MovementSystem {
    */
   private clearMovementPlan(entityKey: string, plan: MovementPlan): void {
     this.config.movementPlans.delete(entityKey);
-    if (!plan.preserveStateOnComplete) {
+    const isDeadPlayerPlan = plan.entityRef.type === EntityType.Player &&
+      this.config.playerStates.get(plan.entityRef.id)?.currentState === States.PlayerDeadState;
+
+    // Never force dead players to idle via stale movement cleanup.
+    if (!isDeadPlayerPlan && !plan.preserveStateOnComplete) {
       this.config.stateMachine.setState(plan.entityRef, States.IdleState);
     }
-    
-    // Execute completion callback if present
-    if (plan.onComplete) {
+
+    // Skip completion callbacks for dead players to prevent queued interactions.
+    if (!isDeadPlayerPlan && plan.onComplete) {
       plan.onComplete();
     }
   }

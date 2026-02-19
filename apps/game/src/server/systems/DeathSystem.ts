@@ -340,6 +340,10 @@ export class DeathSystem {
       // Clear any active delays (pickpocket, stun, etc.) to prevent memory leak
       this.config.delaySystem.clearDelay(userId);
 
+      // Clear queued interactions immediately on death so they cannot execute
+      // during the death animation window.
+      player.pendingAction = null;
+
       // Add to dead players map
       this.deadPlayers.set(userId, {
         userId,

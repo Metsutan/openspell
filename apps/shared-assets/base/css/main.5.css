@@ -384,6 +384,9 @@ input[type=week] {
 .news-thumb {
     width: 180px;
     height: 120px;
+    object-fit: contain;
+    object-position: center;
+    background-color: rgba(0, 0, 0, 0.25);
     margin-right: 24px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
@@ -410,6 +413,16 @@ input[type=week] {
 .art-body {
     line-height: 22px;
 }
+
+.news-article-head {
+    text-align: center;
+}
+
+.news-article.art-body {
+    text-align: left;
+}
+
+
 .news-desc > a {
     font-weight: 600;
 }
@@ -866,7 +879,8 @@ input[type=submit]:disabled,
     color: var(--disabled-font-color);
 }
 
-.flex-center {
+.flex-center,
+.flexbox-with-centered-content {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1023,10 +1037,9 @@ input[type=submit]:disabled,
         border: none;
         border-radius: 8px;
         background: none;
-        width: 100%;
+        width: 40px;
         height: 100%;
-        margin: 0;
-        padding: 0;
+        padding: 10px;
     }
 
     #hb-icon {

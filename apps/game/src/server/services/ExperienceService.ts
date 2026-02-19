@@ -51,41 +51,6 @@ export enum CombatStyle {
   Shared = 7       // Accuracy + Strength + Defense
 }
 
-/**
- * Set of skill slugs that are considered combat skills.
- * These skills should use IncreaseCombatExp packets instead of GainedExp.
- */
-const COMBAT_SKILLS: Set<SkillSlug> = new Set([
-  SKILLS.hitpoints,
-  SKILLS.accuracy,
-  SKILLS.defense,
-  SKILLS.strength,
-  SKILLS.range,
-  SKILLS.magic
-]);
-
-/**
- * Skills where the client derives XP from ObtainedResource.
- * Suppress GainedExp to avoid double XP display.
- */
-const RESOURCE_XP_SKILLS: Set<SkillSlug> = new Set([
-  SKILLS.forestry,
-  SKILLS.fishing,
-  SKILLS.mining,
-  SKILLS.harvesting
-]);
-
-/**
- * Skills where the client derives XP from CreatedItem.
- * Suppress GainedExp to avoid double XP display.
- */
-const CREATED_ITEM_XP_SKILLS: Set<SkillSlug> = new Set([
-  SKILLS.crafting,
-  SKILLS.smithing,
-  SKILLS.potionmaking,
-  SKILLS.enchanting
-]);
-
 export interface ExperienceServiceConfig {
   /** Enqueue a message to a specific user */
   enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => void;
@@ -216,9 +181,9 @@ export class ExperienceService {
    * This is the UNIFIED method that all systems should use for XP gains.
    * 
    * Behavior:
-   * - Non-combat skills: Sends GainedExp packet
-   * - Combat skills: Does NOT send GainedExp (client already handled IncreaseCombatExp)
-   * - Both: Emit PlayerSkillLevelIncreased event if level up occurs
+  * - Always updates server-side XP + level state
+  * - Sends GainedExp packet only when explicitly requested
+  * - Emits PlayerSkillLevelIncreased event if level up occurs
    * 
    * Usage examples:
    * - Woodcutting: experienceService.addSkillXp(player, SKILLS.forestry, 20)
@@ -233,26 +198,19 @@ export class ExperienceService {
     player: PlayerState,
     skillSlug: SkillSlug,
     xp: number,
-    options?: { forceGainedExp?: boolean }
+    options?: { sendGainedExp?: boolean }
   ): void {
     if (xp <= 0) return;
 
     const skillClientRef = skillToClientRef(skillSlug);
     if (skillClientRef === null) return; // Skip 'overall'
 
-    const isCombatSkill = COMBAT_SKILLS.has(skillSlug);
-    const forceGainedExp = options?.forceGainedExp === true;
+    const sendGainedExp = options?.sendGainedExp === true;
 
     // Add XP using PlayerState method (which marks dirty and handles boosted level)
     const result = player.addSkillXp(skillSlug, xp);
 
-    // Send GainedExp packet for NON-combat skills only (except client-derived XP skills)
-    // Combat skills already received IncreaseCombatExp packet
-    if (
-      (!isCombatSkill || forceGainedExp) &&
-      !RESOURCE_XP_SKILLS.has(skillSlug) &&
-      !CREATED_ITEM_XP_SKILLS.has(skillSlug)
-    ) {
+    if (sendGainedExp) {
       const gainedExpPayload = buildGainedExpPayload({
         Skill: skillClientRef,
         Amount: xp

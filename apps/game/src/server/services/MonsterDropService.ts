@@ -464,7 +464,7 @@ export class MonsterDropService {
     
     if (drops.length > 0) {
       const npcDef = this.config.entityCatalog.getDefinitionById(npcDefinitionId);
-      console.log(`[MonsterDropService] ${npcDef?.name ?? `NPC ${npcDefinitionId}`} dropped ${drops.length} item(s)`);
+      //console.log(`[MonsterDropService] ${npcDef?.name ?? `NPC ${npcDefinitionId}`} dropped ${drops.length} item(s)`);
       this.spawnLoot(drops, mapLevel, x, y, killerUserId);
     }
   }

@@ -50,6 +50,9 @@ export interface ConnectionInfo {
  * Handles login flow, session setup, and disconnect cleanup.
  */
 export class ConnectionService {
+  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP = 2;
+  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP_MESSAGE = "Only 2 accounts are allowed per person.";
+
   constructor(private readonly deps: ConnectionServiceDependencies) {}
 
   private rejectLoginAndCloseSocket(socket: Socket, payload: unknown): null {
@@ -107,6 +110,20 @@ export class ConnectionService {
         if (userBanResult) {
           const banMessage = formatBanMessage(userBanResult, username);
           return this.rejectLoginAndCloseSocket(socket, [banMessage]);
+        }
+      }
+
+      // Limit concurrently connected accounts per IP.
+      if (clientIP) {
+        const activeUserIdsFromIP = this.getActiveUserIdsForIP(clientIP);
+        const isAlreadyConnectedFromIP = activeUserIdsFromIP.has(userId);
+        if (
+          !isAlreadyConnectedFromIP &&
+          activeUserIdsFromIP.size >= ConnectionService.MAX_ACTIVE_ACCOUNTS_PER_IP
+        ) {
+          return this.rejectLoginAndCloseSocket(socket, [
+            ConnectionService.MAX_ACTIVE_ACCOUNTS_PER_IP_MESSAGE
+          ]);
         }
       }
 
@@ -287,5 +304,27 @@ export class ConnectionService {
     }
     
     return null;
+  }
+
+  private normalizeIPAddress(ip: string): string {
+    return ip.replace(/^::ffff:/, "").trim().toLowerCase();
+  }
+
+  private getActiveUserIdsForIP(ip: string): Set<number> {
+    const normalizedTargetIP = this.normalizeIPAddress(ip);
+    const userIds = new Set<number>();
+
+    for (const [activeUserId, activeSocket] of this.deps.socketsByUserId.entries()) {
+      const activeSocketIP = this.extractClientIP(activeSocket);
+      if (!activeSocketIP) {
+        continue;
+      }
+
+      if (this.normalizeIPAddress(activeSocketIP) === normalizedTargetIP) {
+        userIds.add(activeUserId);
+      }
+    }
+
+    return userIds;
   }
 }

@@ -302,9 +302,9 @@ export class ConversationService {
           
           // Skip options that don't meet requirements
           if (!requirementCheck.passed) {
-            console.log(
-              `[ConversationService] Player ${userId} doesn't meet requirements for option ${option.id}: ${requirementCheck.failureReason}`
-            );
+            //console.log(
+            //  `[ConversationService] Player ${userId} doesn't meet requirements for option ${option.id}: ${requirementCheck.failureReason}`
+            //);
             continue;
           }
         }
@@ -467,10 +467,10 @@ export class ConversationService {
     const previous = playerState.getQuestProgress(questId);
     this.questProgressService.applyQuestProgressToPlayer(playerState, questId, checkpoint, { completed });
 
-    console.log(
-      `[ConversationService] Advanced quest ${questId} to checkpoint ${checkpoint} for player ${userId}` +
-      ` (completed=${completed}, previous=${previous?.checkpoint ?? 0})`
-    );
+    // console.log(
+    //   `[ConversationService] Advanced quest ${questId} to checkpoint ${checkpoint} for player ${userId}` +
+    //   ` (completed=${completed}, previous=${previous?.checkpoint ?? 0})`
+    // );
   }
 
   /**

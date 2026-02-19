@@ -106,8 +106,13 @@ export function executePickupGroundItem(
     }
   }
 
-  // Check if player has inventory space
-  if (!playerState.hasInventorySpace()) {
+  // Check whether this specific item can be added (supports stacking into existing stacks).
+  const availableCapacity = ctx.inventoryService.calculateAvailableCapacity(
+    playerState.userId,
+    groundItem.itemId,
+    groundItem.isIOU ? 1 : 0
+  );
+  if (availableCapacity <= 0) {
     ctx.messageService.sendServerInfo(playerState.userId, "Your inventory is full.");
     return;
   }

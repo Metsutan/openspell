@@ -38,6 +38,10 @@ export const TEMPORARY_ITEM_DECAY_TICKS = 100;
  * Item ID for coins/gold.
  */
 const COIN_ITEM_ID = 6;
+const SHOP_SELL_GENERAL_BASE_PERCENT = 75;
+const SHOP_SELL_DEFINITION_BASE_PERCENT = 100;
+const SHOP_SELL_CHANGE_PERCENT = 1;
+const SHOP_SELL_MIN_PERCENT = 30;
 
 /**
  * Runtime state for a single shop slot.
@@ -164,17 +168,22 @@ export class ShopSystem {
             }
           }
         }
-        // Handle permanent item restocking
-        else if (!slot.isTemporary && slot.currentAmount < slot.maxAmount) {
+        // Handle permanent item normalization (toward max/default stock).
+        // If understocked, it restocks up; if overstocked from player sells, it decays down.
+        else if (!slot.isTemporary && slot.currentAmount !== slot.maxAmount) {
           slot.ticksUntilRestock--;
 
-          // Time to restock
+          // Time to move one step toward default stock
           if (slot.ticksUntilRestock <= 0) {
-            slot.currentAmount++;
+            if (slot.currentAmount < slot.maxAmount) {
+              slot.currentAmount++;
+            } else {
+              slot.currentAmount--;
+            }
             changedSlots.push({ slotIndex: i, itemId: slot.itemId, amount: slot.currentAmount });
 
-            // Reset timer if still not at max
-            if (slot.currentAmount < slot.maxAmount) {
+            // Reset timer if still not at default stock
+            if (slot.currentAmount !== slot.maxAmount) {
               slot.ticksUntilRestock = slot.restockSpeed;
             } else {
               slot.ticksUntilRestock = 0;
@@ -215,6 +224,98 @@ export class ShopSystem {
   }
 
   /**
+   * Returns true if the item is part of the shop's original definition.
+   */
+  isDefinitionItem(shopId: number, itemId: number): boolean {
+    const shopDef = this.deps.shopCatalog.getShopById(shopId);
+    if (!shopDef) {
+      return false;
+    }
+
+    return shopDef.items.some(item => item.id === itemId);
+  }
+
+   /**
+   * Gets the default stock amount from the shop definition for an item.
+   * Returns 0 for items that are not part of the shop definition.
+   */
+  private getDefaultStockAmount(shopId: number, itemId: number): number {
+    const shopDef = this.deps.shopCatalog.getShopById(shopId);
+    if (!shopDef) {
+      return 0;
+    }
+
+    const item = shopDef.items.find(defItem => defItem.id === itemId);
+    return item ? item.amount : 0;
+  }
+
+  /**
+   * Calculates total sell payout for an amount using OSRS-like overstock scaling.
+   *
+   * Each item sold is priced independently as stock increases:
+   * price = value * (max(minPercent, basePercent - overstock * changePercent) / 100)
+   * Minimum payout is 1 coin per sold item.
+   */
+  private calculateSellPayout(
+    itemValue: number,
+    basePercent: number,
+    defaultStockAmount: number,
+    currentStockAmount: number,
+    amount: number
+  ): number {
+    let total = 0;
+
+    for (let i = 0; i < amount; i++) {
+      const stockAfterPreviousSales = currentStockAmount + i;
+      const overstock = Math.max(0, stockAfterPreviousSales - defaultStockAmount);
+      const effectivePercent = Math.max(
+        SHOP_SELL_MIN_PERCENT,
+        basePercent - (overstock * SHOP_SELL_CHANGE_PERCENT)
+      );
+      const itemPayout = Math.floor((itemValue * effectivePercent) / 100);
+      total += Math.max(1, itemPayout);
+    }
+
+    return total;
+  }
+
+  /**
+   * Quotes how many coins the shop would pay for the given item amount right now.
+   * Uses the same stock-sensitive pricing logic as sellItem().
+   */
+  getSellPayoutQuote(shopId: number, itemId: number, amount: number): number {
+    if (amount <= 0) {
+      return 0;
+    }
+
+    const itemDef = this.deps.itemCatalog.getDefinitionById(itemId);
+    if (!itemDef) {
+      return 0;
+    }
+
+    const shopState = this.shopStates.get(shopId);
+    if (!shopState) {
+      return 0;
+    }
+
+    const isDefinitionItem = this.isDefinitionItem(shopId, itemId);
+    const existingSlot = shopState.slots.find(s => s && s.itemId === itemId) ?? null;
+    const defaultStockAmount = this.getDefaultStockAmount(shopId, itemId);
+    const currentStockAmount = existingSlot?.currentAmount ?? 0;
+    const basePercent = isDefinitionItem
+      ? SHOP_SELL_DEFINITION_BASE_PERCENT
+      : SHOP_SELL_GENERAL_BASE_PERCENT;
+
+    return this.calculateSellPayout(
+      itemDef.cost,
+      basePercent,
+      defaultStockAmount,
+      currentStockAmount,
+      amount
+    );
+  }
+
+  /**
    * Gets the number of temporary items currently in a shop.
    * Useful for debugging and monitoring.
    */
@@ -230,6 +331,7 @@ export class ShopSystem {
    * 
    * This is the centralized method for reducing shop stock that:
    * - Decreases the stock amount at the specified slot
+   * - Removes temporary slots when stock reaches 0
    * - Starts restock timer if not already running (for permanent items)
    * - Sends UpdatedShopStock packet to the player
    * 
@@ -268,8 +370,12 @@ export class ShopSystem {
     // Reduce shop stock
     slot.currentAmount -= amount;
 
-    // Start restock timer if not already running (and not temporary)
-    if (!slot.isTemporary && slot.currentAmount < slot.maxAmount && slot.ticksUntilRestock === 0) {
+    // Temporary slots are transient: once depleted, remove them entirely.
+    if (slot.isTemporary && slot.currentAmount === 0) {
+      shopState.slots[slotIndex] = null;
+      this.temporaryLotsBySlot.delete(this.getLotKey(shopId, slotIndex));
+    } else if (!slot.isTemporary && slot.currentAmount < slot.maxAmount && slot.ticksUntilRestock === 0) {
+      // Start restock timer if not already running for permanent items
       slot.ticksUntilRestock = slot.restockSpeed;
     }
 
@@ -482,8 +588,9 @@ export class ShopSystem {
    * - Sends UpdatedShopStock packet to all players viewing the shop
    * 
    * Pricing:
-   * - If shop has item in stock: pays itemDef.cost
-   * - If shop doesn't have item: pays 0.75x itemDef.cost
+   * - Definition items start at 100% and decrease by 1% per item over default stock
+   * - Non-definition items start at 75% and decrease by 1% per item over stock 0
+   * - Sell payout floor is 30% of item value
    * - Shop sells temporary items at 1.25x itemDef.cost
    * 
    * @param userId - The player selling the item
@@ -539,28 +646,20 @@ export class ShopSystem {
       }
     }
 
+    // Check if this item is part of the shop's original definition.
+    // Pricing should be definition-based, not current stock-based.
+    const isDefinitionItem = this.isDefinitionItem(shopId, itemId);
+
     // Find if this item already exists in the shop (including slots with 0 stock)
     const existingSlotIndex = shopState.slots.findIndex(s => s && s.itemId === itemId);
     const existingSlot = existingSlotIndex >= 0 ? shopState.slots[existingSlotIndex] : null;
 
     // Check if shop accepts this item BEFORE doing any transactions
-    if (!existingSlot && !shopState.canBuyTemporaryItems) {
-      // Shop doesn't have the item and doesn't buy temporary items
+    if (!isDefinitionItem && !shopState.canBuyTemporaryItems) {
+      // Shop doesn't define the item and doesn't buy temporary items
       this.deps.messageService.sendServerInfo(userId, "The shop isn't interested in buying that item.");
       return false;
     }
-
-    // Calculate sell price (what player receives)
-    let sellPricePerItem: number;
-    if (existingSlot) {
-      // Shop has the item: pay full itemDef.cost
-      sellPricePerItem = Math.floor(itemDef.cost);
-    } else {
-      // Shop doesn't have the item: pay 0.75x itemDef.cost
-      sellPricePerItem = Math.floor(itemDef.cost * 0.75);
-    }
-
-    const totalSellPrice = sellPricePerItem * amount;
 
     // Remove item from player inventory
     const removeResult = this.deps.inventoryService.removeItem(userId, itemId, amount, isIOU);
@@ -575,16 +674,23 @@ export class ShopSystem {
       return false;
     }
 
-    // Give coins to player
-    const giveResult = this.deps.inventoryService.giveItem(userId, COIN_ITEM_ID, totalSellPrice, 0);
-    if (giveResult.added === 0) {
-      console.error(`[ShopSystem] Failed to give coins to player ${userId}`);
-      // Note: Items already removed, coins will overflow to ground if inventory full
+    const payout = this.getSellPayoutQuote(shopId, itemId, removeResult.removed);
+    if (payout > 0) {
+      // Give coins to player
+      const giveResult = this.deps.inventoryService.giveItem(userId, COIN_ITEM_ID, payout, 0);
+      if (giveResult.added === 0) {
+        console.error(`[ShopSystem] Failed to give coins to player ${userId}`);
+        // Note: Items already removed, coins will overflow to ground if inventory full
+      }
     }
 
     if (existingSlot) {
       // Item exists in shop - add to existing stock
       existingSlot.currentAmount += removeResult.removed;
+      if (!existingSlot.isTemporary && existingSlot.currentAmount > existingSlot.maxAmount && existingSlot.ticksUntilRestock === 0) {
+        // Start normalization timer for permanent overstock.
+        existingSlot.ticksUntilRestock = existingSlot.restockSpeed;
+      }
       if (existingSlot.isTemporary) {
         this.addTemporaryLot(shopId, existingSlotIndex, userId, removeResult.removed);
       }

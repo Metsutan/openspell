@@ -3,7 +3,6 @@ import { MenuType } from "../../protocol/enums/MenuType";
 import { States } from "../../protocol/enums/States";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { buildOpenedSkillingMenuPayload } from "../../protocol/packets/actions/OpenedSkillingMenu";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildCreatedItemPayload } from "../../protocol/packets/actions/CreatedItem";
 import type { CreateItemPayload } from "../../protocol/packets/actions/CreateItem";
@@ -16,7 +15,9 @@ import type { MessageService } from "./MessageService";
 import type { DelaySystem } from "../systems/DelaySystem";
 import { DelayType } from "../systems/DelaySystem";
 import type { StateMachine } from "../StateMachine";
+import type { EventBus } from "../events/EventBus";
 import type { PacketAuditService } from "./PacketAuditService";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 type SkillingMenuDefinition = {
   menuType: MenuType;
@@ -38,6 +39,7 @@ export interface SkillingMenuServiceConfig {
   experienceService: ExperienceService;
   delaySystem: DelaySystem;
   stateMachine: StateMachine;
+  eventBus: EventBus;
   packetAudit?: PacketAuditService | null;
 }
 
@@ -252,6 +254,9 @@ const CRAFT_OUTPUT_AMOUNT_BY_ITEM_ID: Record<number, number> = {
 };
 
 const CRAFT_INTERVAL_TICKS = 5;
+const IRON_BAR_ITEM_ID = 148;
+const PIG_IRON_BAR_ITEM_ID = 383;
+const PIG_IRON_CHANCE = 0.4;
 
 type CraftingSession = {
   userId: number;
@@ -273,6 +278,21 @@ export class SkillingMenuService {
   handlePlayerDisconnect(userId: number): void {
     this.activeMenusByUserId.delete(userId);
     this.cancelSession(userId, false);
+  }
+
+  closeMenu(userId: number, didExhaustResources: boolean = false): void {
+    const activeMenu = this.activeMenusByUserId.get(userId);
+    if (!activeMenu) {
+      return;
+    }
+
+    const stoppedPayload = buildStoppedSkillingPayload({
+      PlayerEntityID: userId,
+      Skill: getSkillReferenceForMenu(activeMenu.menuType),
+      DidExhaustResources: didExhaustResources
+    });
+    this.config.enqueueUserMessage(userId, GameAction.StoppedSkilling, stoppedPayload);
+    this.activeMenusByUserId.delete(userId);
   }
 
   openMenu(userId: number, targetId: number, menuType: MenuType): boolean {
@@ -354,6 +374,15 @@ export class SkillingMenuService {
     if (!playerState) {
       logInvalid("player_state_missing");
       //this.config.messageService.sendServerInfo(userId, "Player state not found.");
+      return;
+    }
+
+    if (
+      playerState.currentState === States.MovingState ||
+      playerState.currentState === States.MovingTowardTargetState
+    ) {
+      this.closeMenu(userId, false);
+      //logInvalid("player_is_moving", { state: playerState.currentState });
       return;
     }
 
@@ -450,13 +479,22 @@ export class SkillingMenuService {
       menuDefinition.state
     );
 
-    const startedPayload = buildStartedSkillingPayload({
-      PlayerEntityID: userId,
-      TargetID: activeMenu.targetId,
-      Skill: getSkillReferenceForMenu(menuDefinition.menuType),
-      TargetType: EntityType.Environment
-    });
-    this.config.enqueueUserMessage(userId, GameAction.StartedSkilling, startedPayload);
+    const playerState = this.config.playerStatesByUserId.get(userId);
+    if (playerState) {
+      this.config.eventBus.emit(
+        createPlayerStartedSkillingEvent(
+          userId,
+          activeMenu.targetId,
+          getSkillReferenceForMenu(menuDefinition.menuType),
+          EntityType.Environment,
+          {
+            mapLevel: playerState.mapLevel,
+            x: playerState.x,
+            y: playerState.y
+          }
+        )
+      );
+    }
 
     const session: CraftingSession = {
       userId,
@@ -519,10 +557,11 @@ export class SkillingMenuService {
       return;
     }
 
-    const outputAmount = getCraftOutputAmount(session.itemId);
+    const outputItemId = resolveCraftOutputItemId(session.menuType, session.itemId);
+    const outputAmount = getCraftOutputAmount(outputItemId);
     const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
       userId,
-      session.itemId,
+      outputItemId,
       0
     );
     if (availableCapacity + recipeIngredients.length < outputAmount) {
@@ -553,14 +592,15 @@ export class SkillingMenuService {
       }
     }
 
-    const giveResult = this.config.inventoryService.giveItem(userId, session.itemId, outputAmount, 0);
+    const giveResult = this.config.inventoryService.giveItem(userId, outputItemId, outputAmount, 0);
     if (giveResult.added < outputAmount) {
       this.config.messageService.sendServerInfo(userId, "Your inventory is full.");
       this.endSession(userId, false);
       return;
     }
 
-    const expFromObtaining = itemDefinition.expFromObtaining;
+    const outputDefinition = this.config.itemCatalog.getDefinitionById(outputItemId);
+    const expFromObtaining = outputDefinition?.expFromObtaining ?? itemDefinition.expFromObtaining;
     if (expFromObtaining && isSkillSlug(expFromObtaining.skill)) {
       const xpAmount = expFromObtaining.amount * outputAmount;
       if (xpAmount > 0) {
@@ -569,7 +609,7 @@ export class SkillingMenuService {
     }
 
     const createdPayload = buildCreatedItemPayload({
-      ItemID: session.itemId,
+      ItemID: outputItemId,
       Amount: outputAmount,
       RecipeInstancesToRemove: 1
     });
@@ -622,6 +662,7 @@ export class SkillingMenuService {
       DidExhaustResources: didExhaustResources
     });
     this.config.enqueueUserMessage(userId, GameAction.StoppedSkilling, stoppedPayload);
+    this.activeMenusByUserId.delete(userId);
   }
 
   private stopCraftingForRequirement(userId: number, menuType: MenuType, message: string): void {
@@ -685,6 +726,13 @@ function isCraftableItem(definition: ItemDefinition): boolean {
 
 function getCraftOutputAmount(itemId: number): number {
   return CRAFT_OUTPUT_AMOUNT_BY_ITEM_ID[itemId] ?? 1;
+}
+
+function resolveCraftOutputItemId(menuType: MenuType, requestedItemId: number): number {
+  if (menuType === MenuType.Smelting && requestedItemId === IRON_BAR_ITEM_ID) {
+    return Math.random() < PIG_IRON_CHANCE ? PIG_IRON_BAR_ITEM_ID : IRON_BAR_ITEM_ID;
+  }
+  return requestedItemId;
 }
 
 function getSkillReferenceForMenu(menuType: MenuType): SkillClientReference {

@@ -13,7 +13,6 @@ import { buildCreatedItemPayload } from "../../protocol/packets/actions/CreatedI
 import { buildStartedTargetingPayload } from "../../protocol/packets/actions/StartedTargeting";
 import { buildStoppedTargetingPayload } from "../../protocol/packets/actions/StoppedTargeting";
 import { isSkillSlug, skillToClientRef } from "../../world/PlayerState";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import type { DelaySystem } from "../systems/DelaySystem";
 import { DelayType } from "../systems/DelaySystem";
 import type { StateMachine } from "../StateMachine";
@@ -21,6 +20,8 @@ import { States } from "../../protocol/enums/States";
 import { EntityType } from "../../protocol/enums/EntityType";
 import { InventoryManager } from "../../world/systems/InventoryManager";
 import type { PacketAuditService } from "./PacketAuditService";
+import type { EventBus } from "../events/EventBus";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 export interface ItemInteractionServiceDependencies {
   inventoryService: InventoryService;
@@ -31,6 +32,7 @@ export interface ItemInteractionServiceDependencies {
   enchantingService: EnchantingService | null;
   worldEntityCatalog: WorldEntityCatalog | null;
   playerStatesByUserId: Map<number, PlayerState>;
+  eventBus: EventBus;
   delaySystem: DelaySystem;
   stateMachine: StateMachine;
   enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => void;
@@ -451,20 +453,38 @@ export class ItemInteractionService {
       return null;
     }
 
-    if (Number.isInteger(actionIndex)) {
-      const index = Number(actionIndex);
-      const candidate = actions[index];
-      if (candidate && candidate.targetItemId === usedOnItemId) {
-        return { action: candidate, index, useItemId, usedOnItemId };
+    const matchingActionIndices: number[] = [];
+    for (let i = 0; i < actions.length; i += 1) {
+      if (actions[i]?.targetItemId === usedOnItemId) {
+        matchingActionIndices.push(i);
       }
     }
-
-    const index = actions.findIndex((entry) => entry.targetItemId === usedOnItemId);
-    if (index === -1) {
+    if (matchingActionIndices.length === 0) {
       return null;
     }
 
-    return { action: actions[index], index, useItemId, usedOnItemId };
+    if (Number.isInteger(actionIndex)) {
+      const requestedIndex = Number(actionIndex);
+
+      const pairAbsoluteIndex = matchingActionIndices[requestedIndex];
+      if (pairAbsoluteIndex !== undefined) {
+        const candidate = actions[pairAbsoluteIndex];
+        if (candidate) {
+          return { action: candidate, index: requestedIndex, useItemId, usedOnItemId };
+        }
+      }
+
+      const absoluteCandidate = actions[requestedIndex];
+      if (absoluteCandidate && absoluteCandidate.targetItemId === usedOnItemId) {
+        const pairIndex = matchingActionIndices.indexOf(requestedIndex);
+        if (pairIndex !== -1) {
+          return { action: absoluteCandidate, index: pairIndex, useItemId, usedOnItemId };
+        }
+      }
+    }
+
+    const firstPairAbsoluteIndex = matchingActionIndices[0];
+    return { action: actions[firstPairAbsoluteIndex], index: 0, useItemId, usedOnItemId };
   }
 
   private getCraftCount(action: ItemOnItemAction, amountToCreate?: number): number {
@@ -610,13 +630,19 @@ export class ItemInteractionService {
     if (session.skillToCreate) {
       const skillRef = skillToClientRef(session.skillToCreate);
       if (skillRef !== null) {
-        const startedPayload = buildStartedSkillingPayload({
-          PlayerEntityID: playerState.userId,
-          TargetID: null,
-          Skill: skillRef,
-          TargetType: EntityType.Environment
-        });
-        this.deps.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, startedPayload);
+        this.deps.eventBus.emit(
+          createPlayerStartedSkillingEvent(
+            playerState.userId,
+            null,
+            skillRef,
+            EntityType.Environment,
+            {
+              mapLevel: playerState.mapLevel,
+              x: playerState.x,
+              y: playerState.y
+            }
+          )
+        );
       }
     }
 
@@ -722,13 +748,19 @@ export class ItemInteractionService {
         });
         this.deps.enqueueUserMessage(playerState.userId, GameAction.StoppedTargeting, untargetingPayload);
 
-        const startedPayload = buildStartedSkillingPayload({
-          PlayerEntityID: playerState.userId,
-          TargetID: session.targetId,
-          Skill: skillRef,
-          TargetType: session.targetType
-        });
-        this.deps.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, startedPayload);
+        this.deps.eventBus.emit(
+          createPlayerStartedSkillingEvent(
+            playerState.userId,
+            session.targetId,
+            skillRef,
+            session.targetType,
+            {
+              mapLevel: playerState.mapLevel,
+              x: playerState.x,
+              y: playerState.y
+            }
+          )
+        );
       }
     }
   }
@@ -771,6 +803,10 @@ export class ItemInteractionService {
       this.deps.messageService.sendServerInfo(userId, "Your inventory is full.");
       this.endItemOnEntitySession(userId, true);
       return;
+    }
+
+    if (session.recipe.expSkill && session.recipe.expAmount > 0) {
+      this.deps.experienceService.addSkillXp(player, session.recipe.expSkill, session.recipe.expAmount);
     }
 
     const createdPayload = buildCreatedItemPayload({

@@ -22,6 +22,8 @@ import { States } from "../../protocol/enums/States";
 import { buildShowDamagePayload } from "../../protocol/packets/actions/ShowDamage";
 import { buildFiredProjectilePayload } from "../../protocol/packets/actions/FiredProjectile";
 import { buildPlayerDiedPayload } from "../../protocol/packets/actions/PlayerDied";
+import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
+import { buildCastedInventorySpellPayload } from "../../protocol/packets/actions/CastedInventorySpell";
 
 import { EventBus } from "../events/EventBus";
 import type {
@@ -52,7 +54,9 @@ import type {
   Position,
   EntityRef,
   PlayerStartedTargetingEvent,
-  PlayerStoppedTargetingEvent
+  PlayerStoppedTargetingEvent,
+  PlayerStartedSkillingEvent,
+  PlayerCastedInventorySpellEvent
 } from "../events/GameEvents";
 
 import {
@@ -302,6 +306,8 @@ export class VisibilitySystem {
       this.eventBus.on("PlayerWentThroughDoor", (e) => this.handlePlayerWentThroughDoor(e)),
       this.eventBus.on("PlayerStartedTargeting", (e) => this.handlePlayerStartedTargeting(e)),
       this.eventBus.on("PlayerStoppedTargeting", (e) => this.handlePlayerStoppedTargeting(e)),
+      this.eventBus.on("PlayerStartedSkilling", (e) => this.handlePlayerStartedSkilling(e)),
+      this.eventBus.on("PlayerCastedInventorySpell", (e) => this.handlePlayerCastedInventorySpell(e)),
       this.eventBus.on("PlayerDied", (e) => this.handlePlayerDied(e)),
       
       // NPC events
@@ -687,6 +693,42 @@ export class VisibilitySystem {
     const packet = this.packetBuilder.buildStoppedTargeting(entityRef);
 
     // Send to self
+    this.packetSender.sendToUser(event.userId, packet);
+    for (const viewerId of watchers) {
+      this.packetSender.sendToUser(viewerId, packet);
+    }
+  }
+
+  private handlePlayerStartedSkilling(event: PlayerStartedSkillingEvent): void {
+    const entityRef: EntityRef = { type: EntityType.Player, id: event.userId };
+    const entityKey = this.spatialIndex.makeEntityKey(EntityType.Player, event.userId);
+
+    const watchers = this.viewerState.getWatchers(entityKey);
+    const payload = buildStartedSkillingPayload({
+      PlayerEntityID: event.userId,
+      TargetID: event.targetId,
+      Skill: event.skillClientRef,
+      TargetType: event.targetType
+    });
+    const packet = { action: GameAction.StartedSkilling, payload };
+
+    this.packetSender.sendToUser(event.userId, packet);
+    for (const viewerId of watchers) {
+      this.packetSender.sendToUser(viewerId, packet);
+    }
+  }
+
+  private handlePlayerCastedInventorySpell(event: PlayerCastedInventorySpellEvent): void {
+    const entityKey = this.spatialIndex.makeEntityKey(EntityType.Player, event.userId);
+    const watchers = this.viewerState.getWatchers(entityKey);
+    const payload = buildCastedInventorySpellPayload({
+      EntityID: event.userId,
+      EntityType: EntityType.Player,
+      SpellID: event.spellId,
+      TargetItemID: event.targetItemId
+    });
+    const packet = { action: GameAction.CastedInventorySpell, payload };
+
     this.packetSender.sendToUser(event.userId, packet);
     for (const viewerId of watchers) {
       this.packetSender.sendToUser(viewerId, packet);

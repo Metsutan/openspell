@@ -321,6 +321,21 @@ export class TradingService {
       return false;
     }
 
+    const itemDef = this.config.itemCatalog.getDefinitionById(expectedItemId);
+    if (!itemDef) {
+      this.logInvalid(userId, "InvokeInventoryItemAction", "offer_trade_item_missing_definition", payload, {
+        expectedItemId
+      });
+      sendOfferResponse(false);
+      return false;
+    }
+
+    if (!itemDef.isTradeable) {
+      this.config.messageService.sendServerInfo(userId, "You can't trade that item");
+      sendOfferResponse(false);
+      return false;
+    }
+
     const requestedAmount = Number(payload.Amount);
     if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
       this.logInvalid(userId, "InvokeInventoryItemAction", "offer_trade_item_invalid_amount", payload, {

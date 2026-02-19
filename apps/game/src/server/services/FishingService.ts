@@ -27,9 +27,9 @@ import type { ItemCatalog } from "../../world/items/ItemCatalog";
 import type { EquipmentService } from "./EquipmentService";
 import type { VisibilitySystem } from "../systems/VisibilitySystem";
 import type { ExperienceService } from "./ExperienceService";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildObtainedResourcePayload } from "../../protocol/packets/actions/ObtainedResource";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 // =============================================================================
 // Constants
@@ -276,6 +276,17 @@ export class FishingService {
       return false;
     }
 
+    // Must have capacity for at least one fish before starting.
+    const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
+      playerState.userId,
+      rodSpotFish.itemId,
+      0
+    );
+    if (availableCapacity < 1) {
+      this.config.messageService.sendServerInfo(playerState.userId, "Your inventory is full.");
+      return false;
+    }
+
     // Check if spot has resources remaining
     if (!this.hasSpotResources(entityState)) {
       this.config.messageService.sendServerInfo(
@@ -305,13 +316,19 @@ export class FishingService {
     this.activeSessions.set(playerState.userId, session);
 
     // Send StartedSkilling packet
-    const skillingPayload = buildStartedSkillingPayload({
-      PlayerEntityID: playerState.userId,
-      TargetID: entityState.id,
-      Skill: SkillClientReference.Fishing,
-      TargetType: EntityType.Environment
-    });
-    this.config.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, skillingPayload);
+    this.config.eventBus.emit(
+      createPlayerStartedSkillingEvent(
+        playerState.userId,
+        entityState.id,
+        SkillClientReference.Fishing,
+        EntityType.Environment,
+        {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y
+        }
+      )
+    );
 
     // Start initial delay (rod-dependent)
     const delayStarted = this.config.delaySystem.startDelay({
@@ -456,6 +473,11 @@ export class FishingService {
     // Roll extra drops (rare spot-specific drops)
     this.rollExtraDrops(player.userId, spot.type);
 
+    const spotDepleted = session.resourcesRemaining <= 0;
+    if (spotDepleted) {
+      this.scheduleSpotRespawn(spot);
+    }
+
     // Check if inventory has space after giving item
     const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
       player.userId,
@@ -464,13 +486,12 @@ export class FishingService {
     );
     if (availableCapacity < 1) {
       this.config.messageService.sendServerInfo(player.userId, "Your inventory is full.");
-      this.endSession(player.userId, undefined, false);
+      this.endSession(player.userId, undefined, spotDepleted);
       return;
     }
 
-    if (session.resourcesRemaining <= 0) {
+    if (spotDepleted) {
       this.endSession(player.userId, undefined, true);
-      this.scheduleSpotRespawn(spot);
     } else {
       session.nextAttemptTick = currentTick + session.rodConfig.castDelay;
     }

@@ -1,6 +1,7 @@
 import type { MapLevel } from "./Location";
 import type { WorldModel, PathingGrid } from "./WorldModel";
 import { worldToGrid } from "./gridTransforms";
+import { PathingDirection } from "./pathfinding";
 
 /**
  * Point on a 2D grid
@@ -135,12 +136,46 @@ export class LineOfSightSystem {
     const from = worldToGrid(Math.floor(fromX), Math.floor(fromY), grid);
     const to = worldToGrid(Math.floor(toX), Math.floor(toY), grid);
 
-    return grid.isMovementBlocked(
-      from.x,
-      from.y,
-      to.x,
-      to.y
-    );
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    // Keep existing semantics for non-adjacent checks.
+    if (absDx > 1 || absDy > 1) {
+      return grid.isMovementBlocked(from.x, from.y, to.x, to.y);
+    }
+
+    // Same tile is never "melee blocked".
+    if (absDx === 0 && absDy === 0) {
+      return false;
+    }
+
+    // For diagonal adjacency, allow interaction if at least one of the two
+    // cardinal approach edges is clear. This preserves wall/fence blocking
+    // while avoiding over-strict diagonal rejection.
+    if (absDx === 1 && absDy === 1) {
+      const fromFlags = grid.getOrAllBlockedValue(from.x, from.y);
+      const stepX = dx > 0 ? 1 : -1;
+      const stepY = dy > 0 ? 1 : -1;
+
+      const xDir = stepX > 0 ? PathingDirection.East : PathingDirection.West;
+      const yDir = stepY > 0 ? PathingDirection.North : PathingDirection.South;
+
+      const xEdgeBlocked = (fromFlags & (1 << xDir)) !== 0;
+      const yEdgeBlocked = (fromFlags & (1 << yDir)) !== 0;
+
+      const xTileBlocked = grid.getOrAllBlockedValue(from.x + stepX, from.y) === 0xff;
+      const yTileBlocked = grid.getOrAllBlockedValue(from.x, from.y + stepY) === 0xff;
+
+      const xPathBlocked = xEdgeBlocked || xTileBlocked;
+      const yPathBlocked = yEdgeBlocked || yTileBlocked;
+
+      return xPathBlocked && yPathBlocked;
+    }
+
+    // Cardinal adjacency uses directional movement blockers directly.
+    return grid.isMovementBlocked(from.x, from.y, to.x, to.y);
   }
 
   /**

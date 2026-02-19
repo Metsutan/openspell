@@ -36,7 +36,7 @@ type ChatTokenPayload = {
 
 type ChatSession = {
   userId: number;
-  username: string;
+  displayName: string;
   playerType: number;
   serverId: number;
   socket: Socket;
@@ -47,20 +47,50 @@ type LoginPayload = {
   server: number;
 };
 
-type UsernameRow = {
+type DisplayNameRow = {
   id: number;
-  username: string;
+  displayName: string | null;
 };
 
 type ModerationRow = {
   id: number;
-  username: string;
+  displayName: string | null;
   playerType: number;
   banReason: string | null;
   bannedUntil: Date | null;
   muteReason: string | null;
   mutedUntil: Date | null;
 };
+
+const CHAT_MAX_LENGTH = 80;
+
+type ChatValidationResult =
+  | { ok: true; trimmed: string }
+  | { ok: false };
+
+function validateChatMessageText(message: string): ChatValidationResult {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return { ok: false };
+  }
+
+  if (trimmed.length > CHAT_MAX_LENGTH) {
+    return { ok: false };
+  }
+
+  // Client should only send basic printable ASCII for chat text.
+  // Any non-printable/non-ASCII characters are considered tampered payloads.
+  if (/[^ -~]/.test(trimmed)) {
+    return { ok: false };
+  }
+
+  // Reject content that would require HTML encoding on output.
+  if (/[<>]/.test(trimmed)) {
+    return { ok: false };
+  }
+
+  return { ok: true, trimmed };
+}
 
 const prisma = getPrisma();
 const app = express();
@@ -104,8 +134,14 @@ function censorMessage(text: string): string {
   return censor.applyTo(text, matches);
 }
 
-function normalizeUsername(value: string): string {
-  return value.trim().toLowerCase();
+function getPublicDisplayName(displayName: string | null, userId: number): string {
+  const value = typeof displayName === "string" ? displayName.trim() : "";
+  if (value.length > 0) {
+    return value.toLowerCase();
+  }
+
+  // Never expose usernames in chat-facing payloads.
+  return `player ${userId}`;
 }
 
 function parseLoginPayload(payload: unknown): LoginPayload | null {
@@ -124,7 +160,7 @@ function parseNamePayload(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const name = (payload as { name?: unknown }).name;
   if (typeof name !== "string") return null;
-  const normalized = normalizeUsername(name);
+  const normalized = name.trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
 }
 
@@ -133,17 +169,18 @@ function parsePrivateMessagePayload(payload: unknown): { to: string; msg: string
   const toRaw = (payload as { to?: unknown }).to;
   const msgRaw = (payload as { msg?: unknown }).msg;
   if (typeof toRaw !== "string" || typeof msgRaw !== "string") return null;
-  const to = normalizeUsername(toRaw);
-  const msg = msgRaw.trim().slice(0, 500);
-  if (!to || !msg) return null;
-  return { to, msg };
+  const to = toRaw.trim().toLowerCase();
+  const messageValidation = validateChatMessageText(msgRaw);
+  if (!to || !messageValidation.ok) return null;
+  return { to, msg: messageValidation.trimmed };
 }
 
-async function findUserByUsernameInsensitive(username: string): Promise<UsernameRow | null> {
-  const rows = await prisma.$queryRaw<UsernameRow[]>`
-    SELECT "id", "username"
+async function findUserByDisplayNameInsensitive(displayName: string): Promise<DisplayNameRow | null> {
+  const rows = await prisma.$queryRaw<DisplayNameRow[]>`
+    SELECT "id", "displayName"
     FROM "users"
-    WHERE LOWER("username") = LOWER(${username})
+    WHERE "displayName" IS NOT NULL
+      AND LOWER("displayName") = LOWER(${displayName})
     LIMIT 1
   `;
   return rows[0] ?? null;
@@ -151,7 +188,7 @@ async function findUserByUsernameInsensitive(username: string): Promise<Username
 
 async function getUserModeration(userId: number): Promise<ModerationRow | null> {
   const rows = await prisma.$queryRaw<ModerationRow[]>`
-    SELECT "id", "username", "playerType", "banReason", "bannedUntil", "muteReason", "mutedUntil"
+    SELECT "id", "displayName", "playerType", "banReason", "bannedUntil", "muteReason", "mutedUntil"
     FROM "users"
     WHERE "id" = ${userId}
     LIMIT 1
@@ -200,26 +237,29 @@ function isActiveMute(row: ModerationRow): boolean {
   return row.mutedUntil > new Date();
 }
 
-async function loadFriendList(userId: number): Promise<string[]> {
-  const rows = await prisma.$queryRaw<Array<{ username: string }>>`
-    SELECT u."username"
+async function loadFriendList(userId: number): Promise<Array<{ userId: number; displayName: string }>> {
+  const rows = await prisma.$queryRaw<Array<{ userId: number; displayName: string | null }>>`
+    SELECT u."id" AS "userId", u."displayName"
     FROM "chat_friends" f
     INNER JOIN "users" u ON u."id" = f."targetUserId"
     WHERE f."ownerUserId" = ${userId}
-    ORDER BY u."username" ASC
+    ORDER BY LOWER(COALESCE(u."displayName", '')) ASC, u."id" ASC
   `;
-  return rows.map((row) => normalizeUsername(row.username));
+  return rows.map((row) => ({
+    userId: row.userId,
+    displayName: getPublicDisplayName(row.displayName, row.userId)
+  }));
 }
 
 async function loadBlockedList(userId: number): Promise<string[]> {
-  const rows = await prisma.$queryRaw<Array<{ username: string }>>`
-    SELECT u."username"
+  const rows = await prisma.$queryRaw<Array<{ userId: number; displayName: string | null }>>`
+    SELECT u."id" AS "userId", u."displayName"
     FROM "chat_blocks" b
     INNER JOIN "users" u ON u."id" = b."blockedUserId"
     WHERE b."ownerUserId" = ${userId}
-    ORDER BY u."username" ASC
+    ORDER BY LOWER(COALESCE(u."displayName", '')) ASC, u."id" ASC
   `;
-  return rows.map((row) => normalizeUsername(row.username));
+  return rows.map((row) => getPublicDisplayName(row.displayName, row.userId));
 }
 
 async function isBlocked(ownerUserId: number, blockedUserId: number): Promise<boolean> {
@@ -268,7 +308,7 @@ async function handleAuthenticatedDisconnect(socketId: string): Promise<void> {
 
   sessionsByUserId.delete(userId);
   await notifyFriendStatus(userId, {
-    name: session.username,
+    name: session.displayName,
     server: session.serverId,
     online: false
   });
@@ -315,7 +355,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const username = normalizeUsername(user.username);
+    const displayName = getPublicDisplayName(user.displayName, tokenUserId);
     const existingSession = sessionsByUserId.get(tokenUserId);
     if (existingSession && existingSession.socket.id !== socket.id) {
       existingSession.socket.disconnect(true);
@@ -323,7 +363,7 @@ io.on("connection", (socket) => {
 
     const session: ChatSession = {
       userId: tokenUserId,
-      username,
+      displayName,
       playerType: normalizePlayerType(user.playerType),
       serverId: login.server,
       socket
@@ -338,22 +378,22 @@ io.on("connection", (socket) => {
 
     socket.emit("friendlistloaded", {
       appearance: 1,
-      friends,
+      friends: friends.map((friend) => friend.displayName),
       blocked
     });
 
-    for (const friendName of friends) {
-      const onlineFriend = [...sessionsByUserId.values()].find((value) => value.username === friendName);
+    for (const friend of friends) {
+      const onlineFriend = sessionsByUserId.get(friend.userId);
       if (!onlineFriend) continue;
       socket.emit("friendisonlinewhenweloggedin", {
-        name: friendName,
+        name: friend.displayName,
         server: onlineFriend.serverId,
         online: true
       });
     }
 
     await notifyFriendStatus(tokenUserId, {
-      name: username,
+      name: displayName,
       server: login.server,
       online: true
     });
@@ -367,13 +407,13 @@ io.on("connection", (socket) => {
     const name = parseNamePayload(payload);
     if (!name) return;
 
-    const target = await findUserByUsernameInsensitive(name);
+    const target = await findUserByDisplayNameInsensitive(name);
     if (!target || target.id === current.userId) {
       socket.emit("addedfriend", { name, success: false });
       return;
     }
 
-    const targetName = normalizeUsername(target.username);
+    const targetName = getPublicDisplayName(target.displayName, target.id);
     if (await isBlocked(current.userId, target.id)) {
       socket.emit("addedfriend", { name: targetName, success: false });
       return;
@@ -395,7 +435,7 @@ io.on("connection", (socket) => {
     const onlineFriend = sessionsByUserId.get(target.id);
     if (onlineFriend) {
       socket.emit("friendisonlinewhenweloggedin", {
-        name: onlineFriend.username,
+        name: onlineFriend.displayName,
         server: onlineFriend.serverId,
         online: true
       });
@@ -410,8 +450,8 @@ io.on("connection", (socket) => {
     const name = parseNamePayload(payload);
     if (!name) return;
 
-    const target = await findUserByUsernameInsensitive(name);
-    const targetName = normalizeUsername(target?.username ?? name);
+    const target = await findUserByDisplayNameInsensitive(name);
+    const targetName = target ? getPublicDisplayName(target.displayName, target.id) : name;
 
     if (target) {
       await prisma.$executeRaw`
@@ -431,13 +471,13 @@ io.on("connection", (socket) => {
     const name = parseNamePayload(payload);
     if (!name) return;
 
-    const target = await findUserByUsernameInsensitive(name);
+    const target = await findUserByDisplayNameInsensitive(name);
     if (!target || target.id === current.userId) {
       socket.emit("blockeduser", { name, success: false });
       return;
     }
 
-    const targetName = normalizeUsername(target.username);
+    const targetName = getPublicDisplayName(target.displayName, target.id);
     if (await isBlocked(current.userId, target.id)) {
       socket.emit("blockeduser", { name: targetName, success: false });
       return;
@@ -464,8 +504,8 @@ io.on("connection", (socket) => {
     const name = parseNamePayload(payload);
     if (!name) return;
 
-    const target = await findUserByUsernameInsensitive(name);
-    const targetName = normalizeUsername(target?.username ?? name);
+    const target = await findUserByDisplayNameInsensitive(name);
+    const targetName = target ? getPublicDisplayName(target.displayName, target.id) : name;
 
     if (target) {
       await prisma.$executeRaw`
@@ -502,10 +542,10 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const target = await findUserByUsernameInsensitive(message.to);
+    const target = await findUserByDisplayNameInsensitive(message.to);
     if (!target || target.id === current.userId) return;
 
-    const targetName = normalizeUsername(target.username);
+    const targetName = getPublicDisplayName(target.displayName, target.id);
     const senderIsFriendWithTarget = await isFriend(current.userId, target.id);
     if (!senderIsFriendWithTarget) return;
 
@@ -522,7 +562,7 @@ io.on("connection", (socket) => {
 
     targetSession.socket.emit("pm", {
       type: current.playerType,
-      from: current.username,
+      from: current.displayName,
       msg: censoredMessage
     });
   });

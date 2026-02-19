@@ -10,12 +10,13 @@ import type { ExperienceService } from "./ExperienceService";
 import type { DelaySystem } from "../systems/DelaySystem";
 import { DelayType } from "../systems/DelaySystem";
 import type { StateMachine } from "../StateMachine";
+import type { EventBus } from "../events/EventBus";
 import type { WorldEntityState } from "../state/EntityState";
 import { buildCookedItemPayload } from "../../protocol/packets/actions/CookedItem";
 import { buildOvercookedItemPayload } from "../../protocol/packets/actions/OvercookedItem";
-import { buildStartedSkillingPayload } from "../../protocol/packets/actions/StartedSkilling";
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import type { PacketAuditService } from "./PacketAuditService";
+import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
 /**
  * Cooking data table with calculated no-burn levels
@@ -114,6 +115,7 @@ export interface CookingServiceConfig {
   experienceService: ExperienceService;
   delaySystem: DelaySystem;
   stateMachine: StateMachine;
+  eventBus: EventBus;
   playerStatesByUserId: Map<number, PlayerState>;
   worldEntityStates: Map<number, WorldEntityState>;
   enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => void;
@@ -179,13 +181,19 @@ export class CookingService {
     };
     this.activeSessions.set(playerState.userId, session);
 
-    const skillingPayload = buildStartedSkillingPayload({
-      PlayerEntityID: playerState.userId,
-      TargetID: entityState.id,
-      Skill: SkillClientReference.Cooking,
-      TargetType: EntityType.Environment
-    });
-    this.config.enqueueUserMessage(playerState.userId, GameAction.StartedSkilling, skillingPayload);
+    this.config.eventBus.emit(
+      createPlayerStartedSkillingEvent(
+        playerState.userId,
+        entityState.id,
+        SkillClientReference.Cooking,
+        EntityType.Environment,
+        {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y
+        }
+      )
+    );
 
     const delayStarted = this.config.delaySystem.startDelay({
       userId: playerState.userId,
@@ -274,10 +282,12 @@ export class CookingService {
         cookedDef?.expFromObtaining?.skill === "cooking" ? cookedDef.expFromObtaining.amount : 0;
 
       if (cookingXp > 0) {
-        this.config.experienceService.addSkillXp(playerState, SKILLS.cooking, cookingXp);
+        this.config.experienceService.addSkillXp(playerState, SKILLS.cooking, cookingXp, {
+          sendGainedExp: false
+        });
       }
 
-      const payload = buildCookedItemPayload({ ItemID: outputItemId });
+      const payload = buildCookedItemPayload({ ItemID: cookableItem.rawItemId });
       this.config.enqueueUserMessage(userId, GameAction.CookedItem, payload);
       this.config.messageService.sendServerInfo(userId, `You cook the ${cookedName}.`);
     }
@@ -378,16 +388,22 @@ function calculateBurnRate(
   requiredLevel: number,
   noBurnLevel: number
 ): number {
+  const MAX_BURN_RATE = 0.3;
+
   if (playerLevel < requiredLevel) {
     return 1.0;
   }
   if (playerLevel >= noBurnLevel) {
     return 0.0;
   }
+
   const levelRange = noBurnLevel - requiredLevel;
-  const progressInRange = (playerLevel - requiredLevel) / levelRange;
-  const maxBurnRate = 0.65;
-  const burnRate = maxBurnRate * Math.pow(1 - progressInRange, 2);
+  if (levelRange <= 0) {
+    return 0.0;
+  }
+
+  const progressInRange = Math.max(0, Math.min(1, (playerLevel - requiredLevel) / levelRange));
+  const burnRate = MAX_BURN_RATE * (1 - progressInRange);
   return Math.max(0, Math.min(1, burnRate));
 }
 

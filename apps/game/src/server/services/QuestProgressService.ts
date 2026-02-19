@@ -71,7 +71,7 @@ export interface QuestProgressServiceDependencies {
     giveItem: (targetUserId: number, itemId: number, amount: number, isIOU?: number) => { added: number };
   };
   experienceService?: {
-    addSkillXp: (player: PlayerState, skillSlug: SkillSlug, xp: number, options?: { forceGainedExp?: boolean }) => void;
+    addSkillXp: (player: PlayerState, skillSlug: SkillSlug, xp: number, options?: { sendGainedExp?: boolean }) => void;
   };
   itemCatalog?: {
     getDefinitionById: (id: number) => { name: string; isNamePlural: boolean } | undefined;
@@ -407,7 +407,7 @@ export class QuestProgressService {
         continue;
       }
 
-      this.deps.experienceService?.addSkillXp(playerState, reward.skill, xpAmount);
+      this.deps.experienceService?.addSkillXp(playerState, reward.skill, xpAmount, { sendGainedExp: true });
       const skillName = reward.skill.charAt(0).toUpperCase() + reward.skill.slice(1);
       this.deps.messageService?.sendServerInfo(
         userId,

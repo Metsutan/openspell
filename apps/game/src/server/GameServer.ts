@@ -85,6 +85,7 @@ import { InstancedNpcService } from "./services/InstancedNpcService";
 import { ShakingService } from "./services/ShakingService";
 import { PacketAuditService } from "./services/PacketAuditService";
 import { ItemAuditService } from "./services/ItemAuditService";
+import { ChatAuditService } from "./services/ChatAuditService";
 import { AntiCheatRealtimeService } from "./services/AntiCheatRealtimeService";
 import { AntiCheatAnalyzerService } from "./services/AntiCheatAnalyzerService";
 import {
@@ -102,6 +103,7 @@ import { dispatchClientAction } from "./actions";
 import type { ActionContext } from "./actions";
 import { StateMachine, type StateMachineContext } from "./StateMachine";
 import type { NPCState, GroundItemState, WorldEntityState, TrackedEntityState } from "./state/EntityState";
+import { MessageStyle } from "../protocol/enums/MessageStyle";
 
 const PATHING_LAYER_BY_MAP_LEVEL: Record<MapLevel, string> = {
   [MAP_LEVELS.Underground]: "earthunderground",
@@ -157,8 +159,8 @@ export class GameServer {
   private static readonly NPC_MAX_MOVE_ATTEMPTS_PER_TICK = 6;
   private static readonly DISCONNECT_SAVE_TIMEOUT_MS = 2_000;
   private static readonly DISCONNECT_BASE_LOGOUT_DELAY_MS = 10_000;
-  private static readonly DISCONNECT_COMBAT_RESET_DELAY_MS = 30_000;
-  private static readonly DISCONNECT_COMBAT_LOGOUT_MAX_MS = 5 * 60_000;
+  private static readonly DISCONNECT_COMBAT_RESET_DELAY_MS = 10_000;
+  private static readonly DISCONNECT_COMBAT_LOGOUT_MAX_MS = 60_000;
   private readonly serverId: number;
   private readonly pendingDisconnectsByUserId = new Map<number, PendingDisconnect>();
 
@@ -191,6 +193,7 @@ export class GameServer {
   private readonly regenerationSystem: RegenerationSystem;
   private readonly packetAudit: PacketAuditService | null;
   private readonly itemAudit: ItemAuditService | null;
+  private readonly chatAudit: ChatAuditService | null;
   private readonly antiCheatRealtime: AntiCheatRealtimeService | null;
   private readonly antiCheatAnalyzer: AntiCheatAnalyzerService | null;
   private delaySystem!: DelaySystem;
@@ -304,6 +307,7 @@ export class GameServer {
         });
       }
     });
+    this.chatAudit = new ChatAuditService(this.serverId, this.dbEnabled);
     // Initialize event-driven systems
     this.eventBus = new EventBus();
     this.spatialIndex = new SpatialIndexManager();
@@ -513,7 +517,8 @@ export class GameServer {
       playerStatesByUserId: this.playerStatesByUserId,
       visibilitySystem: this.visibilitySystem,
       enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
-      enqueueBroadcast: (action, payload) => this.enqueueBroadcast(action, payload)
+      enqueueBroadcast: (action, payload) => this.enqueueBroadcast(action, payload),
+      chatAudit: this.chatAudit
     });
 
     // Initialize delay system for timed player actions (pickpocket, stun, etc.)
@@ -589,6 +594,7 @@ export class GameServer {
       experienceService: this.experienceService,
       delaySystem: this.delaySystem,
       stateMachine: this.stateMachine,
+      eventBus: this.eventBus,
       packetAudit: this.packetAudit
     });
 
@@ -668,6 +674,7 @@ export class GameServer {
       experienceService: this.experienceService,
       delaySystem: this.delaySystem,
       stateMachine: this.stateMachine,
+      eventBus: this.eventBus,
       playerStatesByUserId: this.playerStatesByUserId,
       worldEntityStates: this.worldEntityStates,
       enqueueUserMessage: (userId: number, action: number, payload: unknown[]) =>
@@ -692,6 +699,7 @@ export class GameServer {
       experienceService: this.experienceService,
       worldEntityCatalog: this.worldEntityCatalog,
       playerStatesByUserId: this.playerStatesByUserId,
+      eventBus: this.eventBus,
       delaySystem: this.delaySystem,
       stateMachine: this.stateMachine,
       enqueueUserMessage: (userId, action, payload) => this.enqueueUserMessage(userId, action, payload),
@@ -1430,7 +1438,7 @@ export class GameServer {
         ? "Server shutdown has been initiated."
         : `Server shutdown in ${minutes} minute(s).`;
     for (const userId of this.playerStatesByUserId.keys()) {
-      this.messageService.sendServerInfo(userId, infoMessage);
+      this.messageService.sendServerInfo(userId, infoMessage, MessageStyle.Warning);
     }
 
     console.log(`[shutdown] Scheduled by ${requesterLabel}: ${minutes} minute(s)`);
@@ -1624,6 +1632,10 @@ export class GameServer {
 
       if (this.itemAudit) {
         await this.itemAudit.shutdown();
+      }
+
+      if (this.chatAudit) {
+        await this.chatAudit.shutdown();
       }
 
       if (this.antiCheatRealtime) {
@@ -1926,9 +1938,16 @@ export class GameServer {
   if (idleTicks >= GameServer.IDLE_DISCONNECT_TICKS) {
     const socket = this.socketsByUserId.get(userId);
     if (socket) {
-      //this.messageService.sendServerInfo(userId, "You have been logged out due to inactivity.");
-      this.enqueueUserMessage(userId, GameAction.LoggedOut, [userId]);
-      // Give them a moment to see the message, then disconnect
+      (socket.data as { logoutRequested?: boolean }).logoutRequested = true;
+      try {
+        socket.emit(
+          GameAction.LoggedOut.toString(),
+          buildLoggedOutPayload({ EntityID: userId })
+        );
+      } catch {
+        // best effort
+      }
+      // Give the packet a moment to flush before disconnecting.
       setTimeout(() => {
         socket.disconnect(true);
       }, 1000);

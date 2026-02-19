@@ -188,6 +188,20 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
           CurrentLevel: newBoosted
         });
         ctx.enqueueUserMessage(ctx.userId!, GameAction.SkillCurrentLevelChanged, skillPayload);
+
+        if (skill === SKILLS.hitpoints && newBoosted > currentBoosted) {
+          const increasedMessagePayload = buildShowSkillCurrentLevelIncreasedOrDecreasedMessagePayload({
+            Skill: clientRef,
+            Level: baseLevel,
+            PreviousCurrentLevel: currentBoosted,
+            CurrentLevel: newBoosted
+          });
+          ctx.enqueueUserMessage(
+            ctx.userId!,
+            GameAction.ShowSkillCurrentLevelIncreasedOrDecreasedMessage,
+            increasedMessagePayload
+          );
+        }
       }
 
       if (skill === SKILLS.hitpoints) {
@@ -580,8 +594,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
 
       let amountToDrop = inventoryPayloadItem.amount;
       if (isDropX) {
-        if (!dropItemDef?.isStackable) {
-          logInvalid("dropx_unstackable_item", { itemId: inventoryPayloadItem.itemId });
+        if (!dropItemDef?.isStackable || inventoryPayloadItem.isIOU === 1) {
+          logInvalid("dropx_unstackable_or_iou_item", {
+            itemId: inventoryPayloadItem.itemId,
+            isStackable: dropItemDef?.isStackable ?? false,
+            isIOU: inventoryPayloadItem.isIOU
+          });
           sendActionResponse(false);
           return false;
         }
@@ -934,6 +952,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       } else if (payload.MenuType === MenuType.Inventory) {
         // Player is checking how much the shop will BUY their item for
         const itemId = payload.ItemID as number;
+        const priceCheckAmount = 1;
         
         // Get item definition
         const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
@@ -950,17 +969,15 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
 
         itemName = itemDef.name;
 
-        // Check if the shop has this item in stock (including stock of 0)
-        const shopHasItem = shopState.slots.some(slot => slot && slot.itemId === itemId);
-
-        // Calculate sell price (player selling to shop)
-        if (shopHasItem) {
-          // Shop has the item: pay full itemDef.cost
-          price = Math.floor(itemDef.cost);
-        } else {
-          // Shop doesn't have the item: pay 0.75x itemDef.cost
-          price = Math.floor(itemDef.cost * 0.75);
+        // Shop can always buy definition items; non-definition items depend on shop config.
+        const shopDefinesItem = ctx.shopSystem.isDefinitionItem(currentShopId, itemId);
+        if (!shopDefinesItem && !shopState.canBuyTemporaryItems) {
+          ctx.messageService.sendServerInfo(ctx.userId, "The shop isn't interested in buying that item.");
+          return;
         }
+
+        // Use the same stock-sensitive payout logic used by actual sell transactions.
+        price = ctx.shopSystem.getSellPayoutQuote(currentShopId, itemId, priceCheckAmount);
 
         // Simple capitalization for first letter
         const capitalizedName = itemName.charAt(0).toUpperCase() + itemName.slice(1);
@@ -1598,6 +1615,17 @@ function handleBankWithdraw(
     // No inventory space - return item to bank
     ctx.bankingService.depositItem(userId, result.itemId, result.amountWithdrawn);
     ctx.messageService.sendServerInfo(userId, "Your inventory is full.");
+    const failurePayload = buildInvokedInventoryItemActionPayload({
+      Action: payload.Action,
+      MenuType: payload.MenuType,
+      Slot: payload.Slot,
+      ItemID: payload.ItemID,
+      Amount: payload.Amount,
+      IsIOU: asIOU,
+      Success: false,
+      Data: null
+    });
+    ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, failurePayload);
     return;
   }
   
@@ -1621,6 +1649,17 @@ function handleBankWithdraw(
     // Shouldn't happen after capacity check, but handle gracefully
     ctx.bankingService.depositItem(userId, result.itemId, amountToWithdraw);
     console.error(`[banking] Unexpected: inventory full after capacity check for user ${userId}`);
+    const failurePayload = buildInvokedInventoryItemActionPayload({
+      Action: payload.Action,
+      MenuType: payload.MenuType,
+      Slot: payload.Slot,
+      ItemID: payload.ItemID,
+      Amount: payload.Amount,
+      IsIOU: asIOU,
+      Success: false,
+      Data: null
+    });
+    ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, failurePayload);
     return;
   }
   
