@@ -45,6 +45,13 @@ export interface ConnectionInfo {
   socket: Socket;
 }
 
+export interface DisconnectLogContext {
+  source: "player_logout" | "idle_timeout" | "server_disconnect" | "transport_disconnect" | "unknown";
+  socketReason?: string;
+  socketDescription?: string;
+  note?: string;
+}
+
 /**
  * Service for managing player connections and sessions.
  * Handles login flow, session setup, and disconnect cleanup.
@@ -221,7 +228,12 @@ export class ConnectionService {
    * @param username The username (for logging)
    * @param saveTimeout Maximum time to wait for save (default: 2000ms)
    */
-  async handleDisconnect(userId: number, username: string, saveTimeout: number = 2000): Promise<void> {
+  async handleDisconnect(
+    userId: number,
+    username: string,
+    saveTimeout: number = 2000,
+    disconnectContext?: DisconnectLogContext
+  ): Promise<void> {
     //console.log(`[Connection] Player ${username} (${userId}) disconnecting`);
 
     // Get player's last position before cleanup
@@ -270,7 +282,32 @@ export class ConnectionService {
       }
     }
 
-    console.log(`[Connection] Player ${username} (${userId}) disconnected`);
+    const sourceLabel = (() => {
+      switch (disconnectContext?.source) {
+        case "player_logout":
+          return "player logout";
+        case "idle_timeout":
+          return "idle timeout";
+        case "server_disconnect":
+          return "server initiated";
+        case "transport_disconnect":
+          return "transport/network";
+        default:
+          return "unknown";
+      }
+    })();
+    const details: string[] = [];
+    if (disconnectContext?.socketReason) {
+      details.push(`socket reason: ${disconnectContext.socketReason}`);
+    }
+    if (disconnectContext?.socketDescription) {
+      details.push(`socket detail: ${disconnectContext.socketDescription}`);
+    }
+    if (disconnectContext?.note) {
+      details.push(`note: ${disconnectContext.note}`);
+    }
+    const detailSuffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+    console.log(`[Connection] Player ${username} (${userId}) disconnected [${sourceLabel}]${detailSuffix}`);
   }
 
   /**

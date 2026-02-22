@@ -14,6 +14,7 @@ const { getPrisma } = require('@openspell/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 const { RegExpMatcher, englishDataset, englishRecommendedTransformers } = require('obscenity');
@@ -61,6 +62,12 @@ const NEWS_FILE_SYNC_DEBOUNCE_MS = parseInt(process.env.NEWS_FILE_SYNC_DEBOUNCE_
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';
 const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === 'true';
 const EMAIL_REQUIRED = process.env.EMAIL_REQUIRED === 'true';
+const USERNAME_MIN_LENGTH = parseInt(process.env.USERNAME_MIN_LENGTH || '2', 10);
+const USERNAME_MAX_LENGTH = parseInt(process.env.USERNAME_MAX_LENGTH || '16', 10);
+const USERNAME_ALLOW_SPACES = process.env.USERNAME_ALLOW_SPACES !== 'false';
+const DISPLAYNAME_MIN_LENGTH = parseInt(process.env.DISPLAYNAME_MIN_LENGTH || '2', 10);
+const DISPLAYNAME_MAX_LENGTH = parseInt(process.env.DISPLAYNAME_MAX_LENGTH || '25', 10);
+const DISPLAYNAME_ALLOW_SPACES = process.env.DISPLAYNAME_ALLOW_SPACES !== 'false';
 
 // Anti-cheat notifications
 const ANTI_CHEAT_DISCORD_WEBHOOK_URL = process.env.ANTI_CHEAT_DISCORD_WEBHOOK_URL || '';
@@ -847,7 +854,8 @@ async function ensureInitialPlayerInventory(db, userId, persistenceId) {
     [0, 240, 1, 0],  // Slot 0: Item ID 240, qty 1, regular item
     [1, 52, 1, 0],   // Slot 1: Item ID 52, qty 1, regular item
     [2, 58, 1, 0],   // Slot 2: Item ID 58, qty 1, regular item
-    [3, 7, 1, 0]     // Slot 3: Item ID 7, qty 1, regular item
+    [3, 7, 1, 0],     // Slot 3: Item ID 7, qty 1, regular item
+    [4, 6, 25, 0] // Slot 4: Item ID 6, qty 25, regular item
   ];
 
   for (const [slot, itemId, amount, isIOU] of starterItems) {
@@ -903,17 +911,40 @@ async function recomputeRanksForSkill(skillId, persistenceId, overallSkillId = n
   // Mark "unranked" rows with NULL rank.
   // - For normal skills: unranked if experience == 0
   // - For overall: unranked if total level == 0 (and therefore xp should be 0 as well)
+  // - Always unrank hidden hiscores accounts (currently username "admin")
   if (isOverall) {
     await prisma.$executeRaw`
       UPDATE "player_skills"
       SET "rank" = NULL
-      WHERE "skillId" = ${skillId} AND "persistenceId" = ${persistenceId} AND "level" = 0;
+      WHERE
+        "skillId" = ${skillId}
+        AND "persistenceId" = ${persistenceId}
+        AND (
+          "level" = 0
+          OR EXISTS (
+            SELECT 1
+            FROM "users" u
+            WHERE u."id" = "player_skills"."userId"
+              AND LOWER(u."username") = 'admin'
+          )
+        );
     `;
   } else {
     await prisma.$executeRaw`
       UPDATE "player_skills"
       SET "rank" = NULL
-      WHERE "skillId" = ${skillId} AND "persistenceId" = ${persistenceId} AND "experience" = 0;
+      WHERE
+        "skillId" = ${skillId}
+        AND "persistenceId" = ${persistenceId}
+        AND (
+          "experience" = 0
+          OR EXISTS (
+            SELECT 1
+            FROM "users" u
+            WHERE u."id" = "player_skills"."userId"
+              AND LOWER(u."username") = 'admin'
+          )
+        );
     `;
   }
 
@@ -926,7 +957,16 @@ async function recomputeRanksForSkill(skillId, persistenceId, overallSkillId = n
           "id",
           ROW_NUMBER() OVER (ORDER BY "level" DESC, "experience" DESC, "userId" ASC) AS r
         FROM "player_skills"
-        WHERE "skillId" = ${skillId} AND "persistenceId" = ${persistenceId} AND "level" > 0
+        WHERE
+          "skillId" = ${skillId}
+          AND "persistenceId" = ${persistenceId}
+          AND "level" > 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "users" u
+            WHERE u."id" = "player_skills"."userId"
+              AND LOWER(u."username") = 'admin'
+          )
       )
       UPDATE "player_skills"
       SET "rank" = (SELECT r FROM ranked WHERE ranked."id" = "player_skills"."id")
@@ -939,7 +979,16 @@ async function recomputeRanksForSkill(skillId, persistenceId, overallSkillId = n
           "id",
           ROW_NUMBER() OVER (ORDER BY "experience" DESC, "userId" ASC) AS r
         FROM "player_skills"
-        WHERE "skillId" = ${skillId} AND "persistenceId" = ${persistenceId} AND "experience" > 0
+        WHERE
+          "skillId" = ${skillId}
+          AND "persistenceId" = ${persistenceId}
+          AND "experience" > 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "users" u
+            WHERE u."id" = "player_skills"."userId"
+              AND LOWER(u."username") = 'admin'
+          )
       )
       UPDATE "player_skills"
       SET "rank" = (SELECT r FROM ranked WHERE ranked."id" = "player_skills"."id")
@@ -1018,11 +1067,74 @@ function hasProhibitedDisplayNameContent(displayName) {
   return displayNameProfanityMatcher.getAllMatches(displayName).length > 0;
 }
 
+function isAsciiAlphanumericName(value, allowSpaces) {
+  const pattern = allowSpaces ? /^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/ : /^[A-Za-z0-9]+$/;
+  return pattern.test(value);
+}
+
+function normalizeIp(rawIp) {
+  if (typeof rawIp !== 'string') return '';
+  const trimmed = rawIp.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes(':') && trimmed.includes('.')) {
+    // Normalize IPv4-mapped IPv6 (::ffff:1.2.3.4) to IPv4
+    const ipv4Mapped = trimmed.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+    if (ipv4Mapped) return ipv4Mapped[1];
+  }
+  return trimmed;
+}
+
+function getClientIpFromRequest(req) {
+  // Trusted hop from web server -> API server
+  const originalClientIp = req.headers['x-original-client-ip'];
+  if (typeof originalClientIp === 'string' && net.isIP(normalizeIp(originalClientIp))) {
+    return normalizeIp(originalClientIp);
+  }
+
+  // Direct Cloudflare -> API requests (if any)
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (typeof cfIp === 'string' && net.isIP(normalizeIp(cfIp))) {
+    return normalizeIp(cfIp);
+  }
+
+  // Fallback for local/dev environments
+  const ip = normalizeIp(req.ip ?? req.socket?.remoteAddress ?? '');
+  return net.isIP(ip) ? ip : '';
+}
+
+async function checkActiveIpBan(ip) {
+  const ipBan = await prisma.iPBan.findUnique({
+    where: { ip }
+  });
+
+  if (!ipBan) return null;
+
+  const now = new Date();
+  const isExpired = ipBan.bannedUntil && ipBan.bannedUntil <= now;
+  if (isExpired) {
+    await prisma.iPBan.delete({ where: { ip } }).catch(() => null);
+    return null;
+  }
+
+  return ipBan;
+}
+
 // ==================== AUTHENTICATION ====================
 
 // Register new user
 app.post('/api/auth/register', requireWebServerSecret, async (req, res) => {
   try {
+    const unavailableError = 'Account creation is currently not available right now, please try again later';
+    const clientIp = getClientIpFromRequest(req);
+    if (!clientIp || net.isIP(clientIp) === 0) {
+      return res.status(403).json({ error: unavailableError });
+    }
+
+    const activeIpBan = await checkActiveIpBan(clientIp);
+    if (activeIpBan) {
+      return res.status(403).json({ error: unavailableError });
+    }
+
     const { username, email, password, displayName } = req.body;
     
     // Validate username exists before processing
@@ -1035,6 +1147,22 @@ app.post('/api/auth/register', requireWebServerSecret, async (req, res) => {
     
     if (!lowercaseUsername) {
       return res.status(400).json({ error: 'Username cannot be empty' });
+    }
+
+    if (lowercaseUsername.length < USERNAME_MIN_LENGTH) {
+      return res.status(400).json({ error: `Username must be at least ${USERNAME_MIN_LENGTH} characters` });
+    }
+
+    if (lowercaseUsername.length > USERNAME_MAX_LENGTH) {
+      return res.status(400).json({ error: `Username must be no more than ${USERNAME_MAX_LENGTH} characters` });
+    }
+
+    if (!USERNAME_ALLOW_SPACES && lowercaseUsername.includes(' ')) {
+      return res.status(400).json({ error: 'Username cannot contain spaces' });
+    }
+
+    if (!isAsciiAlphanumericName(lowercaseUsername, USERNAME_ALLOW_SPACES)) {
+      return res.status(400).json({ error: 'Username can only contain ASCII letters and numbers' + (USERNAME_ALLOW_SPACES ? ' and spaces' : '') });
     }
     
     // Check if email is required
@@ -1059,12 +1187,31 @@ app.post('/api/auth/register', requireWebServerSecret, async (req, res) => {
     // Display name CAN be uppercase/mixed case
     const finalDisplayName = displayName && displayName.trim() ? displayName.trim() : lowercaseUsername;
 
+    if (finalDisplayName.length < DISPLAYNAME_MIN_LENGTH) {
+      return res.status(400).json({ error: `Display name must be at least ${DISPLAYNAME_MIN_LENGTH} characters` });
+    }
+
+    if (finalDisplayName.length > DISPLAYNAME_MAX_LENGTH) {
+      return res.status(400).json({ error: `Display name must be no more than ${DISPLAYNAME_MAX_LENGTH} characters` });
+    }
+
+    if (!DISPLAYNAME_ALLOW_SPACES && finalDisplayName.includes(' ')) {
+      return res.status(400).json({ error: 'Display name cannot contain spaces' });
+    }
+
+    if (!isAsciiAlphanumericName(finalDisplayName, DISPLAYNAME_ALLOW_SPACES)) {
+      return res.status(400).json({ error: 'Display name can only contain ASCII letters and numbers' + (DISPLAYNAME_ALLOW_SPACES ? ' and spaces' : '') });
+    }
+
     if (hasProhibitedDisplayNameContent(finalDisplayName)) {
       return res.status(400).json({ error: 'That username/displayname contains prohibited content' });
     }
     
     // Build OR conditions for uniqueness check
-    const orConditions = [{ username: lowercaseUsername }, { displayName: finalDisplayName }];
+    const orConditions = [
+      { username: lowercaseUsername },
+      { displayName: { equals: finalDisplayName, mode: 'insensitive' } }
+    ];
     if (normalizedEmail) {
       // Check against normalizedEmail to prevent email aliasing abuse
       orConditions.push({ normalizedEmail });
@@ -1085,7 +1232,7 @@ app.post('/api/auth/register', requireWebServerSecret, async (req, res) => {
       if (normalizedEmail && existingUser.normalizedEmail === normalizedEmail) {
         return res.status(400).json({ error: 'Email already exists' });
       }
-      if (existingUser.displayName === finalDisplayName) {
+      if (existingUser.displayName && existingUser.displayName.toLowerCase() === finalDisplayName.toLowerCase()) {
         return res.status(400).json({ error: 'Display name already exists' });
       }
       return res.status(400).json({ error: 'Username, email, or display name already exists' });
@@ -1142,6 +1289,25 @@ app.post('/api/auth/register', requireWebServerSecret, async (req, res) => {
         // Initialize player data for ALL existing worlds
         await ensureInitialPlayerDataForAllWorlds(tx, createdUser.id);
       }
+
+      const now = new Date();
+      await tx.userIP.upsert({
+        where: {
+          userId_ip: {
+            userId: createdUser.id,
+            ip: clientIp
+          }
+        },
+        update: {
+          lastSeen: now
+        },
+        create: {
+          userId: createdUser.id,
+          ip: clientIp,
+          firstSeen: now,
+          lastSeen: now
+        }
+      });
 
       return createdUser;
     });
@@ -1856,11 +2022,69 @@ app.get('/api/admin/user-ips/:userId', requireWebServerSecret, verifyToken, veri
         lastSeen: true
       }
     });
+
+    const uniqueIps = [...new Set(userIPs.map((entry) => entry.ip).filter(Boolean))];
+    let alternativeAccounts = [];
+
+    if (uniqueIps.length > 0) {
+      const matchingUserIps = await prisma.userIP.findMany({
+        where: {
+          ip: { in: uniqueIps },
+          NOT: { userId }
+        },
+        orderBy: { lastSeen: 'desc' },
+        select: {
+          userId: true,
+          ip: true,
+          firstSeen: true,
+          lastSeen: true,
+          user: {
+            select: {
+              id: true,
+              username: true
+            }
+          }
+        }
+      });
+
+      const alternativesByUserId = new Map();
+
+      for (const entry of matchingUserIps) {
+        if (!entry.user) continue;
+
+        const existing = alternativesByUserId.get(entry.userId);
+        if (existing) {
+          if (!existing.sharedIps.includes(entry.ip)) {
+            existing.sharedIps.push(entry.ip);
+          }
+          if (entry.firstSeen < existing.firstSeen) {
+            existing.firstSeen = entry.firstSeen;
+          }
+          if (entry.lastSeen > existing.lastSeen) {
+            existing.lastSeen = entry.lastSeen;
+          }
+          continue;
+        }
+
+        alternativesByUserId.set(entry.userId, {
+          userId: entry.user.id,
+          username: entry.user.username,
+          sharedIps: [entry.ip],
+          firstSeen: entry.firstSeen,
+          lastSeen: entry.lastSeen
+        });
+      }
+
+      alternativeAccounts = Array.from(alternativesByUserId.values()).sort((a, b) => {
+        return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      });
+    }
     
     res.json({
       userId: user.id,
       username: user.username,
-      ips: userIPs
+      ips: userIPs,
+      alternativeAccounts
     });
   } catch (error) {
     console.error('Get user IPs error:', error);

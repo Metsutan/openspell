@@ -594,10 +594,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
 
       let amountToDrop = inventoryPayloadItem.amount;
       if (isDropX) {
-        if (!dropItemDef?.isStackable || inventoryPayloadItem.isIOU === 1) {
-          logInvalid("dropx_unstackable_or_iou_item", {
+        const isStackableItem = dropItemDef?.isStackable ?? false;
+        const isIOUItem = inventoryPayloadItem.isIOU === 1;
+        if (!isStackableItem && !isIOUItem) {
+          logInvalid("dropx_unstackable_non_iou_item", {
             itemId: inventoryPayloadItem.itemId,
-            isStackable: dropItemDef?.isStackable ?? false,
+            isStackable: isStackableItem,
             isIOU: inventoryPayloadItem.isIOU
           });
           sendActionResponse(false);
@@ -964,6 +966,17 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const COIN_ITEM_ID = 6;
         if (itemId === COIN_ITEM_ID || !itemDef.isTradeable) {
           ctx.messageService.sendServerInfo(ctx.userId, "You cannot sell this item.");
+          const responsePayload = buildInvokedInventoryItemActionPayload({
+            Action: payload.Action,
+            MenuType: payload.MenuType,
+            Slot: payload.Slot,
+            ItemID: payload.ItemID,
+            Amount: payload.Amount,
+            IsIOU: payload.IsIOU,
+            Success: true,
+            Data: null
+          });
+          ctx.enqueueUserMessage(ctx.userId, GameAction.InvokedInventoryItemAction, responsePayload);
           return;
         }
 
@@ -973,6 +986,17 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const shopDefinesItem = ctx.shopSystem.isDefinitionItem(currentShopId, itemId);
         if (!shopDefinesItem && !shopState.canBuyTemporaryItems) {
           ctx.messageService.sendServerInfo(ctx.userId, "The shop isn't interested in buying that item.");
+          const responsePayload = buildInvokedInventoryItemActionPayload({
+            Action: payload.Action,
+            MenuType: payload.MenuType,
+            Slot: payload.Slot,
+            ItemID: payload.ItemID,
+            Amount: payload.Amount,
+            IsIOU: payload.IsIOU,
+            Success: true,
+            Data: null
+          });
+          ctx.enqueueUserMessage(ctx.userId, GameAction.InvokedInventoryItemAction, responsePayload);
           return;
         }
 
@@ -1600,12 +1624,16 @@ function handleBankWithdraw(
     return;
   }
   
+  // Stackable items always use non-IOU representation in inventory so they condense into one stack.
+  const itemDef = ctx.itemCatalog?.getDefinitionById(result.itemId);
+  const effectiveIsIOU = itemDef?.isStackable ? 0 : (asIOU ? 1 : 0);
+
   // Check available inventory capacity for this specific item
   if (!ctx.itemCatalog) return;
   const availableCapacity = ctx.inventoryService.calculateAvailableCapacity(
     userId,
     result.itemId,
-    asIOU ? 1 : 0
+    effectiveIsIOU
   );
   
   // Calculate how much we can actually withdraw based on inventory space
@@ -1613,7 +1641,7 @@ function handleBankWithdraw(
   
   if (amountToWithdraw === 0) {
     // No inventory space - return item to bank
-    ctx.bankingService.depositItem(userId, result.itemId, result.amountWithdrawn);
+    ctx.bankingService.depositItem(userId, result.itemId, result.amountWithdrawn, slot);
     ctx.messageService.sendServerInfo(userId, "Your inventory is full.");
     const failurePayload = buildInvokedInventoryItemActionPayload({
       Action: payload.Action,
@@ -1632,7 +1660,7 @@ function handleBankWithdraw(
   // If we can't withdraw the full amount, return the excess to bank
   if (amountToWithdraw < result.amountWithdrawn) {
     const excess = result.amountWithdrawn - amountToWithdraw;
-    ctx.bankingService.depositItem(userId, result.itemId, excess);
+    ctx.bankingService.depositItem(userId, result.itemId, excess, slot);
   }
   
   // Create inventory manager and add items
@@ -1642,12 +1670,12 @@ function handleBankWithdraw(
     (changes) => applyWeightChange(playerState, changes, ctx.itemCatalog!)
   );
   
-  // Add to inventory (as IOU or regular item)
-  const addResult = inventoryManager.addItems(result.itemId, amountToWithdraw, asIOU ? 1 : 0);
+  // Add to inventory (stackables always non-IOU for proper stack condensation)
+  const addResult = inventoryManager.addItems(result.itemId, amountToWithdraw, effectiveIsIOU);
   
   if (addResult.added === 0) {
     // Shouldn't happen after capacity check, but handle gracefully
-    ctx.bankingService.depositItem(userId, result.itemId, amountToWithdraw);
+    ctx.bankingService.depositItem(userId, result.itemId, amountToWithdraw, slot);
     console.error(`[banking] Unexpected: inventory full after capacity check for user ${userId}`);
     const failurePayload = buildInvokedInventoryItemActionPayload({
       Action: payload.Action,

@@ -32,6 +32,11 @@ const DISPLAYNAME_MIN_LENGTH = parseInt(process.env.DISPLAYNAME_MIN_LENGTH || '2
 const DISPLAYNAME_MAX_LENGTH = parseInt(process.env.DISPLAYNAME_MAX_LENGTH || '25', 10);
 const DISPLAYNAME_ALLOW_SPACES = process.env.DISPLAYNAME_ALLOW_SPACES !== 'false';
 
+function isAsciiAlphanumericName(value, allowSpaces) {
+    const pattern = allowSpaces ? /^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/ : /^[A-Za-z0-9]+$/;
+    return pattern.test(value);
+}
+
 /**
  * Verify reCAPTCHA v2 token with Google
  * @param {string} token - The g-recaptcha-response token from the form
@@ -205,6 +210,11 @@ router.get('/js/registration-validator.js', (req, res) => {
         
         if (!VALIDATION_RULES.displayName.allowSpaces && trimmed.includes(' ')) {
             return { valid: false, message: 'Display name cannot contain spaces' };
+        }
+
+        const pattern = VALIDATION_RULES.displayName.allowSpaces ? /^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/ : /^[A-Za-z0-9]+$/;
+        if (!pattern.test(trimmed)) {
+            return { valid: false, message: 'Display name can only contain ASCII letters and numbers' + (VALIDATION_RULES.displayName.allowSpaces ? ' and spaces' : '') };
         }
         
         return { valid: true, message: '' };
@@ -820,6 +830,11 @@ router.post('/register', registerLimiter, csrfProtection, async (req, res) => {
             logSuspiciousActivity('username', 'Invalid format');
             return res.redirect(`/register?error=${encodeURIComponent('Invalid username format. Username must contain only letters and numbers' + (USERNAME_ALLOW_SPACES ? ' and spaces' : ''))}`);
         }
+
+        if (!isAsciiAlphanumericName(username, USERNAME_ALLOW_SPACES)) {
+            logSuspiciousActivity('username', 'Contains non-ASCII characters');
+            return res.redirect(`/register?error=${encodeURIComponent('Username can only contain ASCII letters and numbers' + (USERNAME_ALLOW_SPACES ? ' and spaces' : ''))}`);
+        }
         
         // Email validation
         if (EMAIL_REQUIRED && !email) {
@@ -847,6 +862,11 @@ router.post('/register', registerLimiter, csrfProtection, async (req, res) => {
         if (!DISPLAYNAME_ALLOW_SPACES && trimmedDisplayName.includes(' ')) {
             logSuspiciousActivity('displayName', 'Contains spaces when not allowed');
             return res.redirect(`/register?error=${encodeURIComponent('Display name cannot contain spaces')}`);
+        }
+
+        if (trimmedDisplayName && !isAsciiAlphanumericName(trimmedDisplayName, DISPLAYNAME_ALLOW_SPACES)) {
+            logSuspiciousActivity('displayName', 'Contains non-ASCII characters');
+            return res.redirect(`/register?error=${encodeURIComponent('Display name can only contain ASCII letters and numbers' + (DISPLAYNAME_ALLOW_SPACES ? ' and spaces' : ''))}`);
         }
         
         // Password validation
@@ -904,8 +924,15 @@ router.post('/register', registerLimiter, csrfProtection, async (req, res) => {
         // Call API server
         let apiResponse;
         try {
+            const originalClientIp = typeof req.headers['cf-connecting-ip'] === 'string'
+                ? req.headers['cf-connecting-ip']
+                : '';
+
             apiResponse = await makeApiRequest('/api/auth/register', {
                 method: 'POST',
+                headers: {
+                    'x-original-client-ip': originalClientIp
+                },
                 body: {
                     username,
                     email,

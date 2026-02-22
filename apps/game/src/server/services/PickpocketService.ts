@@ -28,6 +28,7 @@ import type { InventoryService } from "./InventoryService";
 import type { EntityCatalog } from "../../world/entities/EntityCatalog";
 import type { MessageService } from "./MessageService";
 import type { DamageService } from "./DamageService";
+import type { ExperienceService } from "./ExperienceService";
 import type { TargetingService } from "./TargetingService";
 import type { DelaySystem } from "../systems/DelaySystem";
 import { DelayType } from "../systems/DelaySystem";
@@ -36,7 +37,6 @@ import type { EventBus } from "../events/EventBus";
 import type { CombatSystem } from "../systems/CombatSystem";
 import type { NPCState } from "../state/EntityState";
 import type { PacketAuditService } from "./PacketAuditService";
-import { buildGainedExpPayload } from "../../protocol/packets/actions/GainedExp";
 import { buildEntityStunnedPayload } from "../../protocol/packets/actions/EntityStunned";
 import { buildStartedTargetingPayload } from "../../protocol/packets/actions/StartedTargeting";
 import { buildStoppedTargetingPayload } from "../../protocol/packets/actions/StoppedTargeting";
@@ -125,6 +125,7 @@ export interface PickpocketServiceConfig {
   entityCatalog: EntityCatalog;
   messageService: MessageService;
   damageService: DamageService;
+  experienceService: ExperienceService;
   targetingService: TargetingService;
   delaySystem: DelaySystem;
   combatSystem: CombatSystem;
@@ -412,16 +413,11 @@ export class PickpocketService {
       this.config.messageService.sendServerInfo(player.userId, "Some items were placed on the ground.");
     }
 
-    // Award XP and send GainedExp packet
+    // Award XP through ExperienceService so level-up events/messages are emitted consistently
     const xpAwarded = pickpocketDef.xp;
-    player.addSkillXp(SKILLS.crime, xpAwarded);
-    
-    // Note: Client expects skill reference 10 (Smithing slot) for pickpocket XP notifications
-    const expPayload = buildGainedExpPayload({
-      Skill: SkillClientReference.Crime, // = 10, client-side quirk
-      Amount: xpAwarded
+    this.config.experienceService.addSkillXp(player, SKILLS.crime, xpAwarded, {
+      sendGainedExp: true
     });
-    this.config.enqueueUserMessage(player.userId, GameAction.GainedExp, expPayload);
 
     // Send EnteredIdleState (completes the pickpocket sequence)
     const idlePayload = this.buildEnteredIdleStatePayload(player.userId, EntityType.Player);
@@ -441,6 +437,9 @@ export class PickpocketService {
   ): void {
     //console.log(`[PickpocketService] Player ${player.userId} failed to pickpocket NPC ${npc.id}`);
 
+    const currentHp = player.getSkillBoostedLevel(SKILLS.hitpoints);
+    const scaledStunDamage = this.getScaledPickpocketDamage(currentHp, pickpocketDef.stunDamage);
+
     // Apply damage (NPC attacks player)
     const npcRef = { type: EntityType.NPC, id: npc.id };
     const playerPosition = {
@@ -452,13 +451,13 @@ export class PickpocketService {
     this.config.damageService.applyDamage(
       npcRef,
       player,
-      pickpocketDef.stunDamage,
+      scaledStunDamage,
       playerPosition
     );
 
     // Check if player died from the damage
-    const currentHp = player.getSkillBoostedLevel(SKILLS.hitpoints);
-    if (currentHp <= 0) {
+    const hpAfterDamage = player.getSkillBoostedLevel(SKILLS.hitpoints);
+    if (hpAfterDamage <= 0) {
       // Player died from pickpocket stun damage - mark as dying
       this.config.combatSystem.markPlayerDying(player.userId, npcRef);
       // Skip stun mechanics - player is dead
@@ -517,5 +516,21 @@ export class PickpocketService {
    */
   private buildEnteredIdleStatePayload(entityId: number, entityType: EntityType): unknown[] {
     return [entityId, entityType];
+  }
+
+  /**
+   * Scales pickpocket stun damage based on current hitpoints.
+   * - Below 13 HP: always 1 damage
+   * - Below 26 HP: capped at 2 damage
+   * - Otherwise: use configured base damage
+   */
+  private getScaledPickpocketDamage(currentHp: number, baseDamage: number): number {
+    if (currentHp < 13) {
+      return 1;
+    }
+    if (currentHp < 26) {
+      return Math.min(baseDamage, 2);
+    }
+    return baseDamage;
   }
 }

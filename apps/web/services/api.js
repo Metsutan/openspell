@@ -7,6 +7,9 @@ const http = require('http');
 const https = require('https');
 
 const API_URL = process.env.API_URL || 'http://localhost:3002';
+const API_USE_LOCALHOST = process.env.API_USE_LOCALHOST === 'true';
+const API_LOCAL_URL = process.env.API_LOCAL_URL || `http://localhost:${process.env.API_PORT || '3002'}`;
+const RESOLVED_API_URL = API_USE_LOCALHOST ? API_LOCAL_URL : API_URL;
 const ALLOW_INSECURE_HTTPS = process.env.ALLOW_INSECURE_HTTPS === 'true';
 const API_WEB_SECRET = process.env.API_WEB_SECRET || null;
 const WEB_SECRET_HEADER = 'X-OpenSpell-Web-Secret';
@@ -21,7 +24,7 @@ const API_REQUEST_TIMEOUT_MS = parseInt(process.env.API_REQUEST_TIMEOUT_MS || '3
  */
 function makeApiRequest(path, options = {}) {
     return new Promise((resolve, reject) => {
-        const url = new URL(path, API_URL);
+        const url = new URL(path, RESOLVED_API_URL);
         const requestHeaders = {
             'Content-Type': 'application/json',
             ...(API_WEB_SECRET ? { [WEB_SECRET_HEADER]: API_WEB_SECRET } : {}),
@@ -112,6 +115,6 @@ function extractApiErrorMessage(error) {
 module.exports = {
     makeApiRequest,
     extractApiErrorMessage,
-    API_URL
+    API_URL: RESOLVED_API_URL
 };
 

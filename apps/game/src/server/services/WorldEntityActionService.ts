@@ -27,9 +27,9 @@ export interface PlayerEventAction {
   insideLocation?: WorldEntityActionLocation;
   /** Used by GoThroughDoor - position on other side of the door */
   outsideLocation?: WorldEntityActionLocation;
-  /** Used by GoThroughDoor - whether requirements apply in both directions */
+  /** Used by GoThroughDoor - when true, requirements apply in both directions (default is outside -> inside only) */
   checkRequirementsFromBothSides?: boolean;
-  /** Used by GoThroughDoor - if true, allows only outside -> inside traversal */
+  /** Used by GoThroughDoor - if true, may lock inside -> outside traversal (unless requirements are explicitly one-way) */
   doesLockAfterEntering?: boolean;
   /** Used by MineThroughRocks - position on one side of the rocks */
   sideOne?: WorldEntityActionLocation;

@@ -239,6 +239,22 @@ export class PathfindingSystem {
   }
 
   /**
+   * Checks whether melee can reach an adjacent target without crossing movement blockers.
+   */
+  private canMeleeReachTarget(
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    mapLevel: MapLevel
+  ): boolean {
+    if (!this.config.losSystem) {
+      return true;
+    }
+    return !this.config.losSystem.isMeleeBlocked(fromX, fromY, toX, toY, mapLevel);
+  }
+
+  /**
    * Handles NPC behavior when aggro'd on a target.
    * 
    * This is called during the normal NPC movement update cycle, which runs
@@ -281,11 +297,12 @@ export class PathfindingSystem {
       : isCardinallyAdjacent(npc.x, npc.y, targetPos.x, targetPos.y);
 
     if (withinRange) {
-      // Within attack range - check line of sight
-      const hasLOS = this.checkLineOfSight(npc.x, npc.y, targetPos.x, targetPos.y, npc.mapLevel);
-      
-      if (hasLOS) {
-        // Within range AND has LOS - stop moving and enter/stay in combat state.
+      const canEngageFromHere = (isMagic || isRanged)
+        ? this.checkLineOfSight(npc.x, npc.y, targetPos.x, targetPos.y, npc.mapLevel)
+        : this.canMeleeReachTarget(npc.x, npc.y, targetPos.x, targetPos.y, npc.mapLevel);
+
+      if (canEngageFromHere) {
+        // Within range and can engage from current tile - stop moving and enter/stay in combat state.
         // Important: always clear plan so caster NPCs don't keep stepping to melee.
         if (this.config.movementPlans.has(entityKey)) {
           this.config.movementPlans.delete(entityKey);
@@ -297,7 +314,7 @@ export class PathfindingSystem {
         return;
       }
       
-      // Within range but NO LOS - continue pursuing to get LOS
+      // In range but cannot engage yet - continue pursuing.
       // Fall through to pathfinding below
     }
 
@@ -343,13 +360,16 @@ export class PathfindingSystem {
     const grid = this.getPathingGridForLevel(npc.mapLevel);
     if (!grid) return null;
 
+    const areaBounds = this.getExclusiveMovementAreaBounds(npc.movementArea);
+    if (!areaBounds) return null;
+
     // Convert world -> grid
     const npcGrid = worldToGrid(npc.x, npc.y, grid);
     const targetGrid = worldToGrid(targetX, targetY, grid);
 
     // Get area bounds in grid space
-    const areaMin = worldToGrid(npc.movementArea.minX, npc.movementArea.minY, grid);
-    const areaMax = worldToGrid(npc.movementArea.maxX, npc.movementArea.maxY, grid);
+    const areaMin = worldToGrid(areaBounds.minX, areaBounds.minY, grid);
+    const areaMax = worldToGrid(areaBounds.maxX, areaBounds.maxY, grid);
     const minGX = Math.min(areaMin.x, areaMax.x);
     const maxGX = Math.max(areaMin.x, areaMax.x);
     const minGY = Math.min(areaMin.y, areaMax.y);
@@ -411,12 +431,15 @@ export class PathfindingSystem {
     const grid = this.getPathingGridForLevel(mapLevel);
     if (!grid) return null;
 
+    const areaBounds = this.getExclusiveMovementAreaBounds(area);
+    if (!areaBounds) return null;
+
     // Convert world->grid
     let p = worldToGrid(npcX, npcY, grid);
     const t = worldToGrid(targetX, targetY, grid);
 
-    const areaMin = worldToGrid(area.minX, area.minY, grid);
-    const areaMax = worldToGrid(area.maxX, area.maxY, grid);
+    const areaMin = worldToGrid(areaBounds.minX, areaBounds.minY, grid);
+    const areaMax = worldToGrid(areaBounds.maxX, areaBounds.maxY, grid);
     const minGX = Math.min(areaMin.x, areaMax.x);
     const maxGX = Math.max(areaMin.x, areaMax.x);
     const minGY = Math.min(areaMin.y, areaMax.y);
@@ -447,15 +470,51 @@ export class PathfindingSystem {
    * Picks a random point within a movement area.
    */
   private pickRandomPointWithinArea(area: EntityMovementArea): { x: number; y: number } {
-    const minX = Math.min(area.minX, area.maxX);
-    const maxX = Math.max(area.minX, area.maxX);
-    const minY = Math.min(area.minY, area.maxY);
-    const maxY = Math.max(area.minY, area.maxY);
+    const areaBounds = this.getExclusiveMovementAreaBounds(area);
+    if (!areaBounds) {
+      return {
+        x: Math.round((area.minX + area.maxX) / 2),
+        y: Math.round((area.minY + area.maxY) / 2)
+      };
+    }
+
+    const { minX, maxX, minY, maxY } = areaBounds;
     const width = Math.max(0, maxX - minX);
     const height = Math.max(0, maxY - minY);
     const x = minX + Math.floor(Math.random() * (width + 1));
     const y = minY + Math.floor(Math.random() * (height + 1));
     return { x, y };
+  }
+
+  /**
+   * Converts a configured movement box to an exclusive interior box.
+   * Example: [min..max] becomes [min+1..max-1].
+   */
+  private getExclusiveMovementAreaBounds(area: EntityMovementArea): {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } | null {
+    const minX = Math.min(area.minX, area.maxX);
+    const maxX = Math.max(area.minX, area.maxX);
+    const minY = Math.min(area.minY, area.maxY);
+    const maxY = Math.max(area.minY, area.maxY);
+
+    const innerMinX = minX + 1;
+    const innerMaxX = maxX - 1;
+    const innerMinY = minY + 1;
+    const innerMaxY = maxY - 1;
+    if (innerMinX > innerMaxX || innerMinY > innerMaxY) {
+      return null;
+    }
+
+    return {
+      minX: innerMinX,
+      maxX: innerMaxX,
+      minY: innerMinY,
+      maxY: innerMaxY
+    };
   }
 
   /**

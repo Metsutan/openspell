@@ -1,7 +1,6 @@
 import type { MapLevel } from "./Location";
 import type { WorldModel, PathingGrid } from "./WorldModel";
 import { worldToGrid } from "./gridTransforms";
-import { PathingDirection } from "./pathfinding";
 
 /**
  * Point on a 2D grid
@@ -151,27 +150,33 @@ export class LineOfSightSystem {
       return false;
     }
 
-    // For diagonal adjacency, allow interaction if at least one of the two
-    // cardinal approach edges is clear. This preserves wall/fence blocking
-    // while avoiding over-strict diagonal rejection.
+    // For diagonal adjacency, require both cardinal 2-step approaches to be clear:
+    // - route A: step X first, then Y into target
+    // - route B: step Y first, then X into target
+    //
+    // This is intentionally strict to prevent diagonal melee "corner hits"
+    // through walls/fences while approaching.
     if (absDx === 1 && absDy === 1) {
-      const fromFlags = grid.getOrAllBlockedValue(from.x, from.y);
       const stepX = dx > 0 ? 1 : -1;
       const stepY = dy > 0 ? 1 : -1;
 
-      const xDir = stepX > 0 ? PathingDirection.East : PathingDirection.West;
-      const yDir = stepY > 0 ? PathingDirection.North : PathingDirection.South;
+      const midXFirstX = from.x + stepX;
+      const midXFirstY = from.y;
+      const midYFirstX = from.x;
+      const midYFirstY = from.y + stepY;
 
-      const xEdgeBlocked = (fromFlags & (1 << xDir)) !== 0;
-      const yEdgeBlocked = (fromFlags & (1 << yDir)) !== 0;
+      // Route A: from -> (x step) -> to
+      const routeXFirstBlocked =
+        grid.isMovementBlocked(from.x, from.y, midXFirstX, midXFirstY) ||
+        grid.isMovementBlocked(midXFirstX, midXFirstY, to.x, to.y);
 
-      const xTileBlocked = grid.getOrAllBlockedValue(from.x + stepX, from.y) === 0xff;
-      const yTileBlocked = grid.getOrAllBlockedValue(from.x, from.y + stepY) === 0xff;
+      // Route B: from -> (y step) -> to
+      const routeYFirstBlocked =
+        grid.isMovementBlocked(from.x, from.y, midYFirstX, midYFirstY) ||
+        grid.isMovementBlocked(midYFirstX, midYFirstY, to.x, to.y);
 
-      const xPathBlocked = xEdgeBlocked || xTileBlocked;
-      const yPathBlocked = yEdgeBlocked || yTileBlocked;
-
-      return xPathBlocked && yPathBlocked;
+      // Diagonal melee is blocked if either orthogonal approach is blocked.
+      return routeXFirstBlocked || routeYFirstBlocked;
     }
 
     // Cardinal adjacency uses directional movement blockers directly.

@@ -178,9 +178,15 @@ function buildCommandContext(ctx: ActionContext, playerState: PlayerState): Comm
       return ctx.scheduleServerShutdown(minutes, ctx.userId!);
     },
     getPlayerIdByUsername: (username: string) => {
-      // Search through all player states for matching username
+      const normalizedSearch = username.trim().toLowerCase();
+      if (!normalizedSearch) {
+        return null;
+      }
+
+      // Commands resolve player names by display name, case-insensitively.
       for (const state of ctx.playerStatesByUserId.values()) {
-        if (state.username === username) {
+        const candidate = (state.displayName ?? state.username).trim().toLowerCase();
+        if (candidate === normalizedSearch) {
           return state.userId;
         }
       }

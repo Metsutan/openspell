@@ -1591,6 +1591,7 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
         const mutedUntil = muteStatus?.mutedUntil || null;
         const muteReason = muteStatus?.muteReason || null;
         const ips = userIPs?.ips || [];
+        const alternativeAccounts = userIPs?.alternativeAccounts || [];
 
         let banStatusHtml = '';
         if (isBanned) {
@@ -1652,6 +1653,49 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
             `;
         } else {
             ipsHtml = '<p>No IP addresses found for this user.</p>';
+        }
+
+        let alternativeAccountsHtml = '';
+        if (alternativeAccounts.length > 0) {
+            const alternativeAccountsItems = alternativeAccounts.map(account => {
+                const username = escapeHtml(account.username || `User ${account.userId}`);
+                const sharedIps = Array.isArray(account.sharedIps) ? account.sharedIps : [];
+                const sharedIpCount = sharedIps.length;
+                const sharedIpsDisplay = sharedIps.length > 0
+                    ? escapeHtml(sharedIps.join(', '))
+                    : 'Unknown';
+                const altUserId = Number.isInteger(account.userId) ? account.userId : parseInt(account.userId, 10);
+
+                return `
+                    <li style="margin: 8px 0; padding: 8px 10px; background: var(--menu-selected-item-bg-color); border-radius: 6px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                            <span>
+                                <strong>${username}</strong> (ID: ${altUserId}) - Shared IPs: ${sharedIpCount}
+                            </span>
+                            <form method="POST" action="/account/admin/get-user" style="display: inline;">
+                                <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
+                                <input type="hidden" name="userId" value="${altUserId}" />
+                                <button type="submit" class="anchor-submit-button" style="padding: 4px 8px;">View</button>
+                            </form>
+                        </div>
+                        <div style="margin-top: 4px; color: var(--body-text-color-secondary);">
+                            ${sharedIpsDisplay}
+                        </div>
+                    </li>
+                `;
+            }).join('');
+
+            alternativeAccountsHtml = `
+                <h4><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background: var(--warning-color); color: #000;">Alternative accounts</span></h4>
+                <ul style="list-style: none; padding: 0; margin: 8px 0;">
+                    ${alternativeAccountsItems}
+                </ul>
+            `;
+        } else {
+            alternativeAccountsHtml = `
+                <h4><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background: var(--warning-color); color: #000;">Alternative accounts</span></h4>
+                <p>No other accounts found on this user's known IPs.</p>
+            `;
         }
 
         const usernameHtml = userIPs?.username ? `<p><strong>Username:</strong> ${escapeHtml(userIPs.username)}</p>` : '';
@@ -1771,6 +1815,10 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                     </div>
                 </div>
                 
+                <div style="margin-top: 24px;">
+                    ${alternativeAccountsHtml}
+                </div>
+
                 <div style="margin-top: 24px;">
                     ${ipsHtml}
                 </div>

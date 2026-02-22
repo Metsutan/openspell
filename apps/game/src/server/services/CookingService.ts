@@ -104,6 +104,7 @@ const COOKABLE_ITEMS: CookableItemConfig[] = [
 ];
 
 const COOK_INTERVAL_TICKS = 4;
+const DEFAULT_INTERACTION_MESSAGE = "Nothing interesting happens.";
 
 const STOVE_ENTITY_TYPES = new Set(["heatsource"]);
 const FIRE_ENTITY_TYPES = new Set(["fire", "searchablefire"]);
@@ -152,7 +153,7 @@ export class CookingService {
       return false;
     }
 
-    // Use effective level (includes potions - equipment bonuses)
+    // Requirement checks use boosted level (potions/prayers), not equipment bonuses.
     const playerLevel = playerState.getSkillBoostedLevel(SKILLS.cooking);
     if (playerLevel < cookableItem.requiredLevel) {
       this.config.messageService.sendServerInfo(
@@ -162,7 +163,14 @@ export class CookingService {
       return false;
     }
 
-    if (!playerState.hasItem(rawItemId)) {
+    const hasRegularRawItem = playerState.hasItem(rawItemId, 1, 0);
+    if (!hasRegularRawItem) {
+      // Item-on-entity packets only include ItemID (not IOU state), so detect
+      // note-only attempts and respond with the generic interaction message.
+      if (playerState.hasItem(rawItemId, 1, 1)) {
+        this.config.messageService.sendServerInfo(playerState.userId, DEFAULT_INTERACTION_MESSAGE);
+        return false;
+      }
       this.config.packetAudit?.logInvalidPacket({
         userId: playerState.userId,
         packetName: "Cooking",
@@ -232,14 +240,14 @@ export class CookingService {
       return;
     }
 
-    if (!playerState.hasItem(session.item.rawItemId)) {
+    if (!playerState.hasItem(session.item.rawItemId, 1, 0)) {
       this.config.messageService.sendServerInfo(userId, "You have nothing left to cook.");
       this.endSession(userId);
       return;
     }
 
     const cookableItem = session.item;
-    // Use effective level (includes potions - equipment bonuses)
+    // Requirement checks use boosted level first.
     let playerLevel = playerState.getSkillBoostedLevel(SKILLS.cooking);
     if (playerLevel < cookableItem.requiredLevel) {
       this.config.messageService.sendServerInfo(
@@ -249,12 +257,14 @@ export class CookingService {
       this.endSession(userId);
       return;
     }
+    // Burn calculations use effective level, so equipment bonuses (e.g. chef's hat) apply.
     playerLevel += playerState.getSkillBonus(SKILLS.cooking);
 
     const didBurn = willBurnItem(playerLevel, cookableItem, session.method);
-    const outputItemId = didBurn ? cookableItem.burntItemId : cookableItem.cookedItemId;
+    const cookedItemId = cookableItem.cookedItemId;
+    const outputItemId = didBurn ? cookableItem.burntItemId : cookedItemId;
 
-    const removeResult = this.config.inventoryService.removeItem(userId, cookableItem.rawItemId, 1);
+    const removeResult = this.config.inventoryService.removeItem(userId, cookableItem.rawItemId, 1, 0);
     if (removeResult.removed < 1) {
       this.config.messageService.sendServerInfo(userId, "You don't have that item.");
       this.endSession(userId);
@@ -262,7 +272,9 @@ export class CookingService {
     }
 
     const giveResult = this.config.inventoryService.giveItem(userId, outputItemId, 1, 0);
-    if (giveResult.added < 1) {
+    if (giveResult.added < 1 && giveResult.overflow < 1) {
+      // Only restore the raw input when the output item was not granted at all.
+      // Overflow means InventoryService has already spawned/transferred the output.
       this.config.inventoryService.giveItem(userId, cookableItem.rawItemId, 1, 0);
       this.config.messageService.sendServerInfo(userId, "Your inventory is full.");
       this.endSession(userId);
@@ -270,11 +282,9 @@ export class CookingService {
     }
 
     if (didBurn) {
-      const burntDef = this.config.itemCatalog.getDefinitionById(outputItemId);
-      const burntName = burntDef?.name ?? "food";
-      const payload = buildOvercookedItemPayload({ ItemID: outputItemId });
+      const payload = buildOvercookedItemPayload({ ItemID: cookableItem.rawItemId });
       this.config.enqueueUserMessage(userId, GameAction.OvercookedItem, payload);
-      this.config.messageService.sendServerInfo(userId, `You accidentally burn the ${burntName}.`);
+      // this.config.messageService.sendServerInfo(userId, "You accidentally burn the food.");
     } else {
       const cookedDef = this.config.itemCatalog.getDefinitionById(outputItemId);
       const cookedName = cookedDef?.name ?? "food";
@@ -289,10 +299,10 @@ export class CookingService {
 
       const payload = buildCookedItemPayload({ ItemID: cookableItem.rawItemId });
       this.config.enqueueUserMessage(userId, GameAction.CookedItem, payload);
-      this.config.messageService.sendServerInfo(userId, `You cook the ${cookedName}.`);
+      //this.config.messageService.sendServerInfo(userId, `You cook the ${cookedName}.`);
     }
 
-    if (!playerState.hasItem(cookableItem.rawItemId)) {
+    if (!playerState.hasItem(cookableItem.rawItemId, 1, 0)) {
       this.config.messageService.sendServerInfo(userId, "You have nothing left to cook.");
       this.endSession(userId);
       return;

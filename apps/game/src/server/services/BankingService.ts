@@ -310,9 +310,10 @@ export class BankingService {
    * @param userId - The user depositing to bank
    * @param itemId - The item ID to deposit
    * @param amount - Amount to deposit
+   * @param preferredSlot - Optional preferred slot for redeposit scenarios
    * @returns Object with success status, slot where deposited, and previous/new amounts
    */
-  depositItem(userId: number, itemId: number, amount: number): {
+  depositItem(userId: number, itemId: number, amount: number, preferredSlot?: number): {
     success: boolean;
     slot: number;
     previousAmount: number;
@@ -332,23 +333,42 @@ export class BankingService {
       return { success: false, slot: -1, previousAmount: 0, newAmount: 0 };
     }
     
-    // First, try to find existing slot with same itemId
     let targetSlot = -1;
-    for (let i = 0; i < BANK_SLOT_COUNT; i++) {
-      const bankItem = playerState.bank[i];
-      if (bankItem && bankItem[0] === itemId) {
-        targetSlot = i;
-        break;
+    let shouldCreateAtTargetSlot = false;
+    
+    // Prefer restoring to a specific slot when possible (e.g., withdraw overflow rollback)
+    if (preferredSlot !== undefined && this.isValidSlotIndex(preferredSlot)) {
+      const preferredItem = playerState.bank[preferredSlot];
+      if (preferredItem === null) {
+        targetSlot = preferredSlot;
+        shouldCreateAtTargetSlot = true;
+      } else if (preferredItem[0] === itemId) {
+        targetSlot = preferredSlot;
       }
     }
     
+    // If preferred slot wasn't usable, find existing slot with same itemId
+    if (targetSlot === -1) {
+      for (let i = 0; i < BANK_SLOT_COUNT; i++) {
+        const bankItem = playerState.bank[i];
+        if (bankItem && bankItem[0] === itemId) {
+          targetSlot = i;
+          break;
+        }
+      }
+  }
+    
     let previousAmount = 0;
     
-    if (targetSlot !== -1) {
+    if (targetSlot !== -1 && !shouldCreateAtTargetSlot) {
       // Found existing slot, add to it
       const bankItem = playerState.bank[targetSlot]!;
       previousAmount = bankItem[1];
       bankItem[1] += amount;
+    } else if (targetSlot !== -1 && shouldCreateAtTargetSlot) {
+      // Preferred slot is empty: restore stack directly into that slot
+      playerState.bank[targetSlot] = [itemId, amount];
+      previousAmount = 0;
     } else {
       // No existing slot, find first empty slot
       targetSlot = this.findFirstEmptySlot(playerState.bank);

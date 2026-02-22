@@ -9,6 +9,7 @@ import { muteCommand } from "./mute";
 import { unmuteCommand } from "./unmute";
 import { banCommand } from "./ban";
 import { unbanCommand } from "./unban";
+import { moveCommand } from "./move";
 
 // Re-export types for convenience
 export type { CommandContext, CommandDefinition, CommandHandler } from "./types";
@@ -29,8 +30,15 @@ const COMMANDS: Record<string, CommandDefinition> = {
   teleport: {
     handler: teleportCommand,
     requiredPrivilege: [PlayerType.Admin],
-    usage: "/teleport <location> [username]",
+    usage: "/teleport <location> [player name]",
     description: "Teleport to a location or teleport another player"
+  },
+
+  move: {
+    handler: moveCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/move <north|south|east|west> [distance]",
+    description: "Move by cardinal tiles using teleport"
   },
 
   // Placeholder for future commands - implement handlers as needed

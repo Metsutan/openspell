@@ -171,7 +171,7 @@ function handleAttackNPC(
     : true;
 
   const inRange = combatMode === "melee"
-    ? checkAdjacentToNPC(ctx, playerState, npcState)
+    ? canStartMeleeAttackOnNpc(ctx, playerState, npcState)
     : isWithinRange(playerState.x, playerState.y, npcState.x, npcState.y, attackRange) && hasLOS;
 
   if (inRange) {
@@ -296,9 +296,15 @@ function executeAttackNPC(ctx: ActionContext, playerState: PlayerState, npcState
     return;
   }
   
+  const combatMode = getPlayerCombatMode(playerState);
+  if (combatMode === "melee" && !canStartMeleeAttackOnNpc(ctx, playerState, npcState)) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
+    playerState.pendingAction = null;
+    return;
+  }
+  
   // TODO: Implement attack logic
   ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.NPC, id: npcState.id });
-  const combatMode = getPlayerCombatMode(playerState);
   const nextState = combatMode === "magic"
     ? States.MagicCombatState
     : combatMode === "range"
@@ -465,7 +471,7 @@ export function handleNPCMovementComplete(
     ? ctx.losSystem.checkLOS(playerState.x, playerState.y, npcState.x, npcState.y, playerState.mapLevel).hasLOS
     : true;
   const inRange = combatMode === "melee"
-    ? checkAdjacentToNPC(ctx, playerState, npcState)
+    ? canStartMeleeAttackOnNpc(ctx, playerState, npcState)
     : isWithinRange(playerState.x, playerState.y, npcState.x, npcState.y, attackRange) && hasLOS;
 
   if (!inRange) {
@@ -498,4 +504,34 @@ export function handleNPCMovementComplete(
       console.warn(`[handleNPCMovementComplete] Unhandled NPC action: ${action}`);
       playerState.pendingAction = null;
   }
+}
+
+function canStartMeleeAttackOnNpc(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  npcState: NPCState
+): boolean {
+  if (!ctx.losSystem) {
+    const dx = Math.abs(playerState.x - npcState.x);
+    const dy = Math.abs(playerState.y - npcState.y);
+    return dx <= 1 && dy <= 1 && (dx + dy > 0);
+  }
+
+  const isAdjacent = ctx.losSystem.isAdjacentTo(
+    playerState.x,
+    playerState.y,
+    npcState.x,
+    npcState.y
+  );
+  if (!isAdjacent) {
+    return false;
+  }
+
+  return !ctx.losSystem.isMeleeBlocked(
+    playerState.x,
+    playerState.y,
+    npcState.x,
+    npcState.y,
+    playerState.mapLevel
+  );
 }

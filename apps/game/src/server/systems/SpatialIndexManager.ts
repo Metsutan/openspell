@@ -322,8 +322,14 @@ export class SpatialIndexManager {
     const existing = this.itemEntries.get(entry.id);
     if (existing) {
       const wasPresent = existing.isPresent;
+      existing.itemId = entry.itemId;
+      existing.isIOU = entry.isIOU;
       existing.isPresent = entry.isPresent;
       existing.amount = entry.amount;
+      existing.mapLevel = entry.mapLevel;
+      existing.x = entry.x;
+      existing.y = entry.y;
+      existing.visibleToUserId = entry.visibleToUserId;
       
       if (wasPresent !== entry.isPresent) {
         if (entry.isPresent) {

@@ -67,6 +67,7 @@ type PacketAuditConfig = {
 const DEFAULT_TRACE_DIR = path.resolve(process.cwd(), "logs", "packets");
 const TRACE_PATH_SERVER_TOKEN = "{serverId}";
 const TRACE_PATH_WORLD_TOKEN = "{worldId}";
+const UNKNOWN_ACTION_TYPE = -1;
 
 function parseNumber(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -125,6 +126,13 @@ function getBucketStart(date: Date): Date {
   const bucket = new Date(date);
   bucket.setMinutes(0, 0, 0);
   return bucket;
+}
+
+function normalizeActionType(actionType: number | null | undefined): number {
+  if (typeof actionType !== "number" || !Number.isFinite(actionType)) {
+    return UNKNOWN_ACTION_TYPE;
+  }
+  return Math.trunc(actionType);
 }
 
 export class PacketAuditService {
@@ -396,11 +404,12 @@ export class PacketAuditService {
 
     const rollups = new Map<string, { data: any; count: number }>();
     for (const bucket of buckets) {
+      const normalizedActionType = normalizeActionType(bucket.actionType);
       const bucketStart = getBucketStart(bucket.occurredAt);
       const key = [
         bucket.userId ?? "null",
         bucket.serverId ?? "null",
-        bucket.actionType ?? "null",
+        normalizedActionType,
         bucket.packetName,
         bucket.reason,
         bucketStart.toISOString(),
@@ -414,7 +423,7 @@ export class PacketAuditService {
           data: {
             userId: bucket.userId,
             serverId: bucket.serverId,
-            actionType: bucket.actionType,
+            actionType: normalizedActionType,
             packetName: bucket.packetName,
             reason: bucket.reason,
             bucketStart,
@@ -428,7 +437,7 @@ export class PacketAuditService {
       data: buckets.map((bucket) => ({
         userId: bucket.userId,
         serverId: bucket.serverId,
-        actionType: bucket.actionType,
+        actionType: normalizeActionType(bucket.actionType),
         packetName: bucket.packetName,
         reason: bucket.reason,
         payloadHash: bucket.payloadHash,
@@ -456,7 +465,11 @@ export class PacketAuditService {
       })
     );
 
-    await prisma.$transaction([createEvents, ...rollupQueries]);
+    try {
+      await prisma.$transaction([createEvents, ...rollupQueries]);
+    } catch (err) {
+      console.warn("[PacketAuditService] Failed to persist invalid packet events:", err);
+    }
   }
 
   private async flushTraceMetadata(): Promise<void> {

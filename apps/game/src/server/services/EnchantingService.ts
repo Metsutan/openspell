@@ -178,12 +178,14 @@ export class EnchantingService {
       expFromObtaining.skill === SKILLS.enchanting &&
       expFromObtaining.amount > 0
     ) {
-      this.deps.experienceService.addSkillXp(playerState, SKILLS.enchanting, expFromObtaining.amount * totalOutputToCreate);
+      // Enchanting XP should scale with recipe executions, not bonus output multipliers.
+      this.deps.experienceService.addSkillXp(playerState, SKILLS.enchanting, expFromObtaining.amount * craftCount);
     }
 
     const createdPayload = buildCreatedItemPayload({
       ItemID: config.outputItemId,
-      Amount: totalOutputToCreate,
+      // Client-side XP derives from CreatedItem amount, so report recipe executions.
+      Amount: craftCount,
       RecipeInstancesToRemove: craftCount
     });
     this.deps.enqueueUserMessage(playerState.userId, GameAction.CreatedItem, createdPayload);

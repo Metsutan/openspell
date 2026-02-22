@@ -64,3 +64,6 @@ temp/
 # Custom shared assets
 apps/shared-assets/custom/
 
+# Local packet analysis tooling (not for OSS)
+apps/game/src/tools/packet-analyzer/
+

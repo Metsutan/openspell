@@ -155,7 +155,7 @@ function handleAttackPlayer(
     ? ctx.losSystem.checkLOS(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, playerState.mapLevel).hasLOS
     : true;
   const inRange = combatMode === "melee"
-    ? checkAdjacentToPlayer(ctx, playerState, targetPlayer)
+    ? canStartMeleeAttackOnPlayer(ctx, playerState, targetPlayer)
     : isWithinRange(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, attackRange) && hasLOS;
 
   if (inRange) {
@@ -311,8 +311,14 @@ function executeAttackPlayer(
     return;
   }
 
-  ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Player, id: targetPlayer.userId });
   const combatMode = getPlayerCombatMode(playerState);
+  if (combatMode === "melee" && !canStartMeleeAttackOnPlayer(ctx, playerState, targetPlayer)) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Can't reach them");
+    playerState.pendingAction = null;
+    return;
+  }
+
+  ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Player, id: targetPlayer.userId });
   const nextState = combatMode === "magic"
     ? States.MagicCombatState
     : combatMode === "range"
@@ -391,7 +397,7 @@ export function handlePlayerMovementComplete(
       ? ctx.losSystem.checkLOS(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, playerState.mapLevel).hasLOS
       : true;
     return combatMode === "melee"
-      ? checkAdjacentToPlayer(ctx, playerState, targetPlayer)
+      ? canStartMeleeAttackOnPlayer(ctx, playerState, targetPlayer)
       : isWithinRange(playerState.x, playerState.y, targetPlayer.x, targetPlayer.y, attackRange) && hasLOS;
   })();
   const isAdjacentForInteraction = checkAdjacentToPlayer(ctx, playerState, targetPlayer);
@@ -450,6 +456,36 @@ export function handlePlayerMovementComplete(
       console.warn(`[handlePlayerMovementComplete] Unhandled player action: ${action}`);
       playerState.pendingAction = null;
   }
+}
+
+function canStartMeleeAttackOnPlayer(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  targetPlayer: PlayerState
+): boolean {
+  if (!ctx.losSystem) {
+    const dx = Math.abs(playerState.x - targetPlayer.x);
+    const dy = Math.abs(playerState.y - targetPlayer.y);
+    return dx <= 1 && dy <= 1 && (dx + dy > 0);
+  }
+
+  const isAdjacent = ctx.losSystem.isAdjacentTo(
+    playerState.x,
+    playerState.y,
+    targetPlayer.x,
+    targetPlayer.y
+  );
+  if (!isAdjacent) {
+    return false;
+  }
+
+  return !ctx.losSystem.isMeleeBlocked(
+    playerState.x,
+    playerState.y,
+    targetPlayer.x,
+    targetPlayer.y,
+    playerState.mapLevel
+  );
 }
 
 // =============================================================================

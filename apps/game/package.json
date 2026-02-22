@@ -6,7 +6,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
-    "client:demo": "ts-node src/client-demo.ts"
+    "client:demo": "ts-node src/client-demo.ts",
+    "analyze:packets": "ts-node src/tools/packet-analyzer/index.ts",
+    "analyze:packets:test": "ts-node src/tools/packet-analyzer/tests/run.ts"
   },
   "keywords": [],
   "author": "",

@@ -1,8 +1,6 @@
 import { GameAction } from "../../protocol/enums/GameAction";
-import { EntityType } from "../../protocol/enums/EntityType";
 import { EquipmentSlots } from "../../protocol/enums/EquipmentSlots";
 import { MenuType } from "../../protocol/enums/MenuType";
-import { States } from "../../protocol/enums/States";
 import { buildAddedItemAtInventorySlotPayload } from "../../protocol/packets/actions/AddedItemAtInventorySlot";
 import { buildRemovedItemFromInventoryAtSlotPayload } from "../../protocol/packets/actions/RemovedItemFromInventoryAtSlot";
 import type { ItemCatalog, ItemDefinition } from "../../world/items/ItemCatalog";
@@ -133,23 +131,43 @@ export class EquipmentService {
     // Calculate how many items will need to be returned to inventory
     let itemsToReturn = 0;
 
-    // Count items from removeEquipmentOnEquip
+    // Build all conflict slots that must be unequipped:
+    // 1) direct conflicts declared on the item being equipped
+    // 2) reverse conflicts declared on currently equipped items against the target slot
+    const conflictSlotsToRemove = new Set<EquipmentSlot>();
     if (definition.removeEquipmentOnEquip && definition.removeEquipmentOnEquip.length > 0) {
       for (const slotName of definition.removeEquipmentOnEquip) {
         const slotToRemove = slotName as EquipmentSlot;
         if (EQUIPMENT_SLOTS.includes(slotToRemove)) {
-          const currentlyEquipped = playerState.equipment[slotToRemove];
-          if (currentlyEquipped) {
-            itemsToReturn++;
-          }
+          conflictSlotsToRemove.add(slotToRemove);
         }
+      }
+    }
+    for (const equippedSlot of EQUIPMENT_SLOTS) {
+      const currentlyEquipped = playerState.equipment[equippedSlot];
+      if (!currentlyEquipped) continue;
+      const [equippedItemId] = currentlyEquipped;
+      const equippedDefinition = this.deps.itemCatalog.getDefinitionById(equippedItemId);
+      if (!equippedDefinition?.removeEquipmentOnEquip || equippedDefinition.removeEquipmentOnEquip.length === 0) {
+        continue;
+      }
+      if (equippedDefinition.removeEquipmentOnEquip.includes(equipmentSlot)) {
+        conflictSlotsToRemove.add(equippedSlot);
+      }
+    }
+
+    // Count items from all conflict slots
+    for (const slotToRemove of conflictSlotsToRemove) {
+      const currentlyEquipped = playerState.equipment[slotToRemove];
+      if (currentlyEquipped) {
+        itemsToReturn++;
       }
     }
 
     // Count item from target slot (if different from removeEquipmentOnEquip)
     if (currentlyEquippedInTargetSlot && !canStackIntoEquippedSlot) {
-      // Only count if this slot wasn't already counted in removeEquipmentOnEquip
-      const alreadyCounted = definition.removeEquipmentOnEquip?.includes(equipmentSlot) ?? false;
+      // Only count if this slot wasn't already counted in conflict slots
+      const alreadyCounted = conflictSlotsToRemove.has(equipmentSlot);
       if (!alreadyCounted) {
         itemsToReturn++;
       }
@@ -192,52 +210,47 @@ export class EquipmentService {
     // Collect items to return to inventory (from unequipped slots)
     const itemsToReturnToInventory: Array<{ itemId: number; amount: number }> = [];
 
-    // Handle removeEquipmentOnEquip (e.g., bow removes weapon + shield)
-    if (definition.removeEquipmentOnEquip && definition.removeEquipmentOnEquip.length > 0) {
-      for (const slotName of definition.removeEquipmentOnEquip) {
-        const slotToRemove = slotName as EquipmentSlot;
-        if (EQUIPMENT_SLOTS.includes(slotToRemove)) {
-          const currentlyEquipped = playerState.equipment[slotToRemove];
-          if (currentlyEquipped) {
-            const [unequippedItemId, unequippedAmount] = currentlyEquipped;
-            
-            // Remove equipment bonuses
-            const unequippedDef = this.deps.itemCatalog.getDefinitionById(unequippedItemId);
-            if (unequippedDef && unequippedDef.equippableEffects) {
-              this.removeEquipmentBonuses(playerState, unequippedDef, unequippedAmount);
-            }
-            
-            // Unequip the item
-            playerState.unequipSlot(slotToRemove);
-            
-            // Send RemovedItemFromInventoryAtSlot for equipment (MenuType 6)
-            const slotEnum = SLOT_NAME_TO_ENUM[slotToRemove];
-            this.deps.enqueueUserMessage(userId, GameAction.RemovedItemFromInventoryAtSlot,
-              buildRemovedItemFromInventoryAtSlotPayload({
-                MenuType: MenuType.Loadout,
-                Slot: slotEnum,
-                ItemID: unequippedItemId,
-                Amount: unequippedAmount,
-                IsIOU: false,
-                RemainingAmountAtSlot: 0
-              })
-            );
-            
-            // Emit equipment changed event for visibility system
-            this.deps.eventBus.emit({
-              type: "PlayerEquipmentChanged",
-              userId,
-              slot: slotToRemove,
-              itemId: 0,
-              unequippedItemId: unequippedItemId,
-              timestamp: Date.now()
-            });
-            
-            // Queue for return to inventory
-            itemsToReturnToInventory.push({ itemId: unequippedItemId, amount: unequippedAmount });
-            
-          }
+    // Handle all conflict removals (direct + reverse conflict rules)
+    for (const slotToRemove of conflictSlotsToRemove) {
+      const currentlyEquipped = playerState.equipment[slotToRemove];
+      if (currentlyEquipped) {
+        const [unequippedItemId, unequippedAmount] = currentlyEquipped;
+        
+        // Remove equipment bonuses
+        const unequippedDef = this.deps.itemCatalog.getDefinitionById(unequippedItemId);
+        if (unequippedDef && unequippedDef.equippableEffects) {
+          this.removeEquipmentBonuses(playerState, unequippedDef, unequippedAmount);
         }
+        
+        // Unequip the item
+        playerState.unequipSlot(slotToRemove);
+        
+        // Send RemovedItemFromInventoryAtSlot for equipment (MenuType 6)
+        const slotEnum = SLOT_NAME_TO_ENUM[slotToRemove];
+        this.deps.enqueueUserMessage(userId, GameAction.RemovedItemFromInventoryAtSlot,
+          buildRemovedItemFromInventoryAtSlotPayload({
+            MenuType: MenuType.Loadout,
+            Slot: slotEnum,
+            ItemID: unequippedItemId,
+            Amount: unequippedAmount,
+            IsIOU: false,
+            RemainingAmountAtSlot: 0
+          })
+        );
+        
+        // Emit equipment changed event for visibility system
+        this.deps.eventBus.emit({
+          type: "PlayerEquipmentChanged",
+          userId,
+          slot: slotToRemove,
+          itemId: 0,
+          unequippedItemId: unequippedItemId,
+          timestamp: Date.now()
+        });
+        
+        // Queue for return to inventory
+        itemsToReturnToInventory.push({ itemId: unequippedItemId, amount: unequippedAmount });
+        
       }
     }
 
@@ -347,8 +360,6 @@ export class EquipmentService {
     });
     
 
-    this.setPlayerToIdle(userId);
-    
     return { success: true };
   }
 
@@ -468,8 +479,6 @@ export class EquipmentService {
     });
     
 
-    this.setPlayerToIdle(userId);
-    
     return { success: true, itemId, amount };
   }
 
@@ -636,10 +645,6 @@ export class EquipmentService {
     }
 
     playerState.updateEquippedWeight(totalWeight);
-  }
-
-  private setPlayerToIdle(userId: number): void {
-    this.deps.stateMachine.setState({ type: EntityType.Player, id: userId }, States.IdleState);
   }
 
   /**

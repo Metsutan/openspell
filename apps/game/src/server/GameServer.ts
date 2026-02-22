@@ -125,6 +125,21 @@ type PendingDisconnect = {
   username: string;
   disconnectedAtMs: number;
   forceLogoutAtMs: number;
+  disconnectContext?: DisconnectContext;
+};
+
+type DisconnectSource =
+  | "player_logout"
+  | "idle_timeout"
+  | "server_disconnect"
+  | "transport_disconnect"
+  | "unknown";
+
+type DisconnectContext = {
+  source: DisconnectSource;
+  socketReason?: string;
+  socketDescription?: string;
+  note?: string;
 };
 
 export class GameServer {
@@ -396,6 +411,10 @@ export class GameServer {
       hasLineOfSight: (fromX, fromY, toX, toY, mapLevel) => {
         if (!this.losSystem) return true;
         return this.losSystem.checkLOS(fromX, fromY, toX, toY, mapLevel as MapLevel).hasLOS;
+      },
+      canMeleeReach: (fromX, fromY, toX, toY, mapLevel) => {
+        if (!this.losSystem) return true;
+        return !this.losSystem.isMeleeBlocked(fromX, fromY, toX, toY, mapLevel as MapLevel);
       }
     });
 
@@ -421,7 +440,7 @@ export class GameServer {
       allowUpgrades: true,
       transports: ["polling", "websocket"],
       pingInterval: 25_000,
-      pingTimeout: 20_000,
+      pingTimeout: 30_000,
       maxHttpBufferSize: 1_000_000
     });
 
@@ -737,6 +756,7 @@ export class GameServer {
         entityCatalog: this.entityCatalog,
         messageService: this.messageService,
         damageService: this.damageService,
+        experienceService: this.experienceService,
         targetingService: this.targetingService,
         delaySystem: this.delaySystem,
         combatSystem: this.combatSystem,
@@ -1115,15 +1135,26 @@ export class GameServer {
       }
     }
 
-    if (broadcastActions.length > 0) {
-      const payload = this.composeGameStateUpdatePayload(broadcastActions);
-      this.io.emit(GameAction.GameStateUpdate.toString(), payload);
-    }
+    // Always emit per socket so each player receives exactly one packet stream path.
+    // "Broadcast" actions are still applied to every connected user, but we avoid
+    // mixing io.emit with per-socket emits in the same flush.
+    for (const [userId, socket] of this.socketsByUserId.entries()) {
+      const targeted = userActions.get(userId);
+      if (broadcastActions.length === 0 && (!targeted || targeted.length === 0)) {
+        continue;
+      }
 
-    for (const [userId, actions] of userActions.entries()) {
-      const socket = this.socketsByUserId.get(userId);
-      if (!socket) continue;
-      const payload = this.composeGameStateUpdatePayload(actions);
+      const combined = targeted && targeted.length > 0
+        ? broadcastActions.length > 0
+          ? [...broadcastActions, ...targeted]
+          : targeted
+        : broadcastActions;
+
+      if (combined.length === 0) {
+        continue;
+      }
+
+      const payload = this.composeGameStateUpdatePayload(combined);
       socket.emit(GameAction.GameStateUpdate.toString(), payload);
     }
   }
@@ -1157,22 +1188,38 @@ export class GameServer {
     let connectedUserId: number | null = null;
     let connectedUsername: string | null = null;
 
-    const cleanupConnectedUser = async () => {
+    const cleanupConnectedUser = async (socketReason?: string, socketDescription?: string) => {
       if (connectedUserId === null) return;
       const userId = connectedUserId;
       const username = connectedUsername ?? "";
-      const logoutRequested = (socket.data as { logoutRequested?: boolean }).logoutRequested === true;
-      (socket.data as { logoutRequested?: boolean }).logoutRequested = false;
+      const socketData = socket.data as {
+        logoutRequested?: boolean;
+        disconnectSource?: DisconnectSource;
+        disconnectNote?: string;
+      };
+      const logoutRequested = socketData.logoutRequested === true;
+      const disconnectSource = socketData.disconnectSource;
+      const disconnectNote = socketData.disconnectNote;
+      socketData.logoutRequested = false;
+      socketData.disconnectSource = undefined;
+      socketData.disconnectNote = undefined;
 
       // Always detach socket and idle tracking immediately.
       this.socketsByUserId.delete(userId);
       this.lastActivityTickByUserId.delete(userId);
       this.idleWarningsSentToUserId.delete(userId);
 
+      const disconnectContext: DisconnectContext = {
+        source: logoutRequested ? (disconnectSource ?? "server_disconnect") : "transport_disconnect",
+        socketReason,
+        socketDescription,
+        note: disconnectNote
+      };
+
       if (logoutRequested) {
-        await this.performFullDisconnectCleanup(userId, username);
+        await this.performFullDisconnectCleanup(userId, username, disconnectContext);
       } else {
-        this.schedulePendingDisconnect(userId, username);
+        this.schedulePendingDisconnect(userId, username, disconnectContext);
       }
 
       // Reset local state
@@ -1259,12 +1306,16 @@ export class GameServer {
       }
     });
 
-    socket.on("disconnect", async () => {
-      await cleanupConnectedUser();
+    socket.on("disconnect", async (reason: string, description?: unknown) => {
+      await cleanupConnectedUser(reason, this.stringifyDisconnectDescription(description));
     });
   }
 
-  private async performFullDisconnectCleanup(userId: number, username: string): Promise<void> {
+  private async performFullDisconnectCleanup(
+    userId: number,
+    username: string,
+    disconnectContext?: DisconnectContext
+  ): Promise<void> {
     this.pendingDisconnectsByUserId.delete(userId);
 
     // Cancel any active movement
@@ -1299,17 +1350,27 @@ export class GameServer {
     }
 
     // Delegate to ConnectionService for full disconnect handling
-    await this.connectionService.handleDisconnect(userId, username, GameServer.DISCONNECT_SAVE_TIMEOUT_MS);
+    await this.connectionService.handleDisconnect(
+      userId,
+      username,
+      GameServer.DISCONNECT_SAVE_TIMEOUT_MS,
+      disconnectContext
+    );
     this.antiCheatRealtime?.recordSessionEnd(userId);
   }
 
-  private schedulePendingDisconnect(userId: number, username: string): void {
+  private schedulePendingDisconnect(
+    userId: number,
+    username: string,
+    disconnectContext?: DisconnectContext
+  ): void {
     const nowMs = Date.now();
     this.pendingDisconnectsByUserId.set(userId, {
       userId,
       username,
       disconnectedAtMs: nowMs,
-      forceLogoutAtMs: nowMs + GameServer.DISCONNECT_COMBAT_LOGOUT_MAX_MS
+      forceLogoutAtMs: nowMs + GameServer.DISCONNECT_COMBAT_LOGOUT_MAX_MS,
+      disconnectContext
     });
   }
 
@@ -1329,7 +1390,7 @@ export class GameServer {
       // Always enforce a hard cap for safety.
       if (nowMs >= pending.forceLogoutAtMs) {
         this.pendingDisconnectsByUserId.delete(pending.userId);
-        void this.performFullDisconnectCleanup(pending.userId, pending.username);
+        void this.performFullDisconnectCleanup(pending.userId, pending.username, pending.disconnectContext);
         continue;
       }
 
@@ -1341,9 +1402,38 @@ export class GameServer {
 
       if (nowMs >= readyAt) {
         this.pendingDisconnectsByUserId.delete(pending.userId);
-        void this.performFullDisconnectCleanup(pending.userId, pending.username);
+        void this.performFullDisconnectCleanup(pending.userId, pending.username, pending.disconnectContext);
       }
     }
+  }
+
+  private stringifyDisconnectDescription(description: unknown): string | undefined {
+    if (description === null || description === undefined) {
+      return undefined;
+    }
+    if (typeof description === "string") {
+      return description;
+    }
+    try {
+      return JSON.stringify(description);
+    } catch {
+      return String(description);
+    }
+  }
+
+  private markIntentionalDisconnect(
+    socket: Socket,
+    source: Extract<DisconnectSource, "player_logout" | "idle_timeout" | "server_disconnect">,
+    note?: string
+  ): void {
+    const data = socket.data as {
+      logoutRequested?: boolean;
+      disconnectSource?: DisconnectSource;
+      disconnectNote?: string;
+    };
+    data.logoutRequested = true;
+    data.disconnectSource = source;
+    data.disconnectNote = note;
   }
 
   // Action Context Builder
@@ -1664,6 +1754,7 @@ export class GameServer {
       // Disconnect all client sockets
       for (const [userId, socket] of this.socketsByUserId.entries()) {
         try {
+          this.markIntentionalDisconnect(socket, "server_disconnect", "Server shutdown");
           socket.disconnect(true);
           console.log(`[shutdown] ✓ Disconnected player ${userId}`);
         } catch (err) {
@@ -1827,6 +1918,7 @@ export class GameServer {
 
     setTimeout(() => {
       try {
+        this.markIntentionalDisconnect(socket, "server_disconnect", reason);
         socket.disconnect(true);
       } catch {
         // best effort
@@ -1938,7 +2030,7 @@ export class GameServer {
   if (idleTicks >= GameServer.IDLE_DISCONNECT_TICKS) {
     const socket = this.socketsByUserId.get(userId);
     if (socket) {
-      (socket.data as { logoutRequested?: boolean }).logoutRequested = true;
+      this.markIntentionalDisconnect(socket, "idle_timeout", "Idle timeout");
       try {
         socket.emit(
           GameAction.LoggedOut.toString(),

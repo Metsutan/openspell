@@ -24,7 +24,7 @@ import type { PlayerState } from "../../../world/PlayerState";
 import type { WorldEntityState } from "../../state/EntityState";
 import type { EntityRef } from "../../events/GameEvents";
 import { createPlayerWentThroughDoorEvent } from "../../events/GameEvents";
-import { buildMovementPathAdjacent } from "../utils/pathfinding";
+import { buildMovementPath, buildMovementPathAdjacent } from "../utils/pathfinding";
 import { checkAdjacentToEnvironment, checkAdjacentToDirectionalBlockingEntity } from "./shared";
 import type { WorldEntityActionLocation } from "../../services/WorldEntityActionService";
 import type { MapLevel } from "../../../world/Location";
@@ -190,7 +190,7 @@ export function handleEnvironmentAction(
 
   // Check if already in valid position
   const isDoor = isDoorLikeEntity(entityState);
-  const isInPosition = checkPosition(ctx, playerState, entityState, isDoor);
+  const isInPosition = checkPosition(ctx, playerState, entityState, isDoor, actionName);
 
   ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Environment, id: entityState.id });
   if (isInPosition) {
@@ -200,7 +200,7 @@ export function handleEnvironmentAction(
     playerState.pendingAction.waitTicks = needsWait ? 1 : 0;
   } else {
     // Need to pathfind - start it
-    startPathfinding(ctx, playerState, entityState, isDoor);
+    startPathfinding(ctx, playerState, entityState, isDoor, actionName);
   }
 }
 
@@ -251,7 +251,8 @@ export function processPendingEnvironmentActions(ctx: ActionContext): void {
       }
 
       // Movement finished - check if in valid position
-      const isInPosition = checkPosition(ctx, playerState, entityState, isDoor);
+      const actionName = ACTION_TO_STRING[pending.action];
+      const isInPosition = checkPosition(ctx, playerState, entityState, isDoor, actionName);
       
       if (!isInPosition) {
         // Not in position and not moving - failed to reach
@@ -262,7 +263,6 @@ export function processPendingEnvironmentActions(ctx: ActionContext): void {
 
       // Just arrived at position - set wait ticks
       // Teleports and doors wait 1 tick for clean stop, others execute immediately
-      const actionName = ACTION_TO_STRING[pending.action];
       const needsWait = actionName ? requiresWaitTick(ctx, entityState, actionName) : false;
       pending.waitTicks = needsWait ? 1 : 0;
       continue; // Process on next tick
@@ -282,7 +282,7 @@ export function processPendingEnvironmentActions(ctx: ActionContext): void {
     }
 
     // Final position check before execution
-    const isInPosition = checkPosition(ctx, playerState, entityState, isDoor);
+    const isInPosition = checkPosition(ctx, playerState, entityState, isDoor, actionName);
     if (!isInPosition) {
       ctx.messageService.sendServerInfo(playerState.userId, "You moved away");
       playerState.pendingAction = null;
@@ -313,7 +313,8 @@ function checkPosition(
   ctx: ActionContext,
   playerState: PlayerState,
   entityState: WorldEntityState,
-  isDoor: boolean
+  isDoor: boolean,
+  actionName?: string
 ): boolean {
   // Doors use special directional blocking logic
   if (isDoor) {
@@ -325,7 +326,19 @@ function checkPosition(
   const isSmallEntity = entityState.width <= 1 && entityState.length <= 1;
   const allowDiagonal = !isSmallEntity;
   
-  return checkAdjacentToEnvironment(ctx, playerState, entityState, false, allowDiagonal);
+  const isAdjacentToEntity = checkAdjacentToEnvironment(ctx, playerState, entityState, false, allowDiagonal);
+  if (isAdjacentToEntity) {
+    return true;
+  }
+
+  // ClimbSameMapLevel is modeled with sideOne/sideTwo tiles in content.
+  // If the entity tile itself is blocked, being at either side tile is sufficient.
+  if (!actionName) {
+    return false;
+  }
+
+  const sideLocations = getClimbSameMapLevelSideLocations(ctx, entityState.id, actionName);
+  return sideLocations.some((location) => isPlayerAtLocation(playerState, location));
 }
 
 /**
@@ -339,7 +352,8 @@ function startPathfinding(
   ctx: ActionContext,
   playerState: PlayerState,
   entityState: WorldEntityState,
-  isDoor: boolean
+  isDoor: boolean,
+  actionName?: string
 ): void {
   // Determine adjacency rules based on entity size
   const isSmallEntity = entityState.width <= 1 && entityState.length <= 1;
@@ -358,6 +372,24 @@ function startPathfinding(
   );
 
   if (!path || path.length <= 1) {
+    const climbSidePath = getBestPathToClimbSameMapLevelSide(
+      ctx,
+      playerState,
+      entityState,
+      actionName
+    );
+    if (climbSidePath && climbSidePath.length > 1) {
+      const speed = playerState.settings[PlayerSetting.IsSprinting] === 1 ? 2 : 1;
+      const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
+      ctx.pathfindingSystem.scheduleMovementPlan(
+        entityRef,
+        playerState.mapLevel,
+        climbSidePath,
+        speed
+      );
+      return;
+    }
+
     ctx.messageService.sendServerInfo(playerState.userId, "Can't reach that");
     playerState.pendingAction = null;
     return;
@@ -373,6 +405,83 @@ function startPathfinding(
     path,
     speed
   );
+}
+
+function getClimbSameMapLevelSideLocations(
+  ctx: ActionContext,
+  entityId: number,
+  actionName: string
+): WorldEntityActionLocation[] {
+  const actionConfig = ctx.worldEntityActionService.getActionConfig(entityId, actionName);
+  if (!actionConfig) {
+    return [];
+  }
+
+  const locations: WorldEntityActionLocation[] = [];
+  for (const eventAction of actionConfig.playerEventActions) {
+    if (eventAction.type !== "ClimbSameMapLevel") {
+      continue;
+    }
+    if (eventAction.sideOne) {
+      locations.push(eventAction.sideOne);
+    }
+    if (eventAction.sideTwo) {
+      locations.push(eventAction.sideTwo);
+    }
+  }
+  return locations;
+}
+
+function isPlayerAtLocation(
+  playerState: PlayerState,
+  location: WorldEntityActionLocation
+): boolean {
+  return (
+    playerState.mapLevel === location.lvl &&
+    playerState.x === location.x &&
+    playerState.y === location.y
+  );
+}
+
+function getBestPathToClimbSameMapLevelSide(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState,
+  actionName?: string
+) {
+  if (!actionName) {
+    return null;
+  }
+
+  const sideLocations = getClimbSameMapLevelSideLocations(ctx, entityState.id, actionName);
+  if (sideLocations.length === 0) {
+    return null;
+  }
+
+  let bestPath: ReturnType<typeof buildMovementPath> = null;
+  for (const location of sideLocations) {
+    if (location.lvl !== playerState.mapLevel) {
+      continue;
+    }
+
+    const candidatePath = buildMovementPath(
+      ctx,
+      playerState.x,
+      playerState.y,
+      location.x,
+      location.y,
+      playerState.mapLevel
+    );
+    if (!candidatePath || candidatePath.length <= 1) {
+      continue;
+    }
+
+    if (!bestPath || candidatePath.length < bestPath.length) {
+      bestPath = candidatePath;
+    }
+  }
+
+  return bestPath;
 }
 
 // =============================================================================
@@ -434,11 +543,14 @@ function shouldCheckRequirementsForOverrideAction(
       continue;
     }
 
-    // checkRequirementsFromBothSides=false means only check when entering (outside -> inside).
-    if (eventAction.checkRequirementsFromBothSides === false && isAtInside) {
-      return false;
+    // Default behavior for GoThroughDoor requirements is one-way:
+    // only enforce when entering (outside -> inside).
+    // checkRequirementsFromBothSides=true opts into bidirectional checks.
+    if (isAtInside) {
+      return eventAction.checkRequirementsFromBothSides === true;
     }
 
+    // Standing at outsideLocation always means "entering", so enforce requirements.
     return true;
   }
 
@@ -556,7 +668,8 @@ function executeOverrideAction(
           entityState,
           eventAction.insideLocation,
           eventAction.outsideLocation,
-          eventAction.doesLockAfterEntering
+          eventAction.doesLockAfterEntering,
+          eventAction.checkRequirementsFromBothSides
         );
         break;
 
@@ -1367,7 +1480,8 @@ function executeGoThroughDoor(
   entityState: WorldEntityState,
   insideLocation: WorldEntityActionLocation | undefined,
   outsideLocation: WorldEntityActionLocation | undefined,
-  doesLockAfterEntering?: boolean
+  doesLockAfterEntering?: boolean,
+  checkRequirementsFromBothSides?: boolean
 ): void {
   if (!insideLocation || !outsideLocation) {
     ctx.messageService.sendServerInfo(playerState.userId, "The door seems stuck");
@@ -1384,7 +1498,10 @@ function executeGoThroughDoor(
     return;
   }
 
-  if (doesLockAfterEntering === true && isAtInside) {
+  // Content with checkRequirementsFromBothSides=false explicitly models "entry gated, exit free".
+  // Preserve that behavior even when doesLockAfterEntering is present.
+  const lockInsideExit = doesLockAfterEntering === true && checkRequirementsFromBothSides !== false;
+  if (lockInsideExit && isAtInside) {
     ctx.messageService.sendServerInfo(playerState.userId, "It's locked from this side.");
     return;
   }

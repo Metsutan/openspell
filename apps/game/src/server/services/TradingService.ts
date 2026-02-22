@@ -464,6 +464,8 @@ export class TradingService {
       this.config.enqueueUserMessage(partnerId, GameAction.AddedItemAtInventorySlot, payloadForOtherPlayer);
     }
 
+    this.resetOfferAcceptanceOnOfferChange(userId, partnerId);
+
     return true;
   }
 
@@ -605,6 +607,7 @@ export class TradingService {
     }
 
     const addResult = inventoryManager.addItems(expectedItemId, removeResult.removed, expectedIsIOU);
+    this.resetOfferAcceptanceOnOfferChange(userId, partnerId);
     if (addResult.added <= 0) {
       return true;
     }
@@ -629,6 +632,18 @@ export class TradingService {
     playerState.markInventoryDirty();
     this.config.inventoryService.sendWeightUpdate(userId, playerState);
     return true;
+  }
+
+  private resetOfferAcceptanceOnOfferChange(userId: number, partnerId: number): void {
+    const session = this.getActiveTradeSession(userId);
+    if (!session || session.phase !== "offer" || session.offerAcceptedBy.size === 0) {
+      return;
+    }
+
+    session.offerAcceptedBy.clear();
+    const resetPayload = buildTradeStatusResetPayload();
+    this.config.enqueueUserMessage(userId, GameAction.TradeStatusReset, resetPayload as unknown as unknown[]);
+    this.config.enqueueUserMessage(partnerId, GameAction.TradeStatusReset, resetPayload as unknown as unknown[]);
   }
 
   private completeTradeRequest(requestingUserId: number, otherUserId: number): void {

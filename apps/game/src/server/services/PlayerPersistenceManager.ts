@@ -497,7 +497,11 @@ export class PlayerPersistenceManager {
       return;
     }
 
-    const rows = this.treasureMapService.getPersistedTreasureMapsForPlayer(playerState.userId, persistenceId);
+    const rows = this.treasureMapService.getPersistedTreasureMapsForPlayer(
+      playerState.userId,
+      persistenceId,
+      playerState
+    );
 
     await tx.playerTreasureMap.deleteMany({
       where: {

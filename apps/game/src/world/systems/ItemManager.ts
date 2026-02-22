@@ -17,6 +17,11 @@ export class ItemManager {
   public static readonly MONSTER_DROP_DESPAWN_TICKS = 500;
   /** Time until item becomes visible to all players (3 minutes = 300 ticks at 600ms per tick) */
   public static readonly VISIBLE_TO_ALL_DELAY_TICKS = 300;
+  /** Extend private visibility by 10s when merging into an existing private stack. */
+  public static readonly PRIVATE_STACK_VISIBILITY_EXTENSION_TICKS = Math.max(
+    1,
+    Math.ceil(10000 / Number(process.env.TICK_MS ?? 600))
+  );
   
   private nextGroundItemId: number = 100000; // Start from a high number to avoid conflicts with static spawns
   private currentTick: number = 0;
@@ -78,6 +83,37 @@ export class ItemManager {
       return null;
     }
 
+    // Stackable items (or IOUs) merge into an existing dynamic pile on the same tile.
+    const canMergeWithExistingPile = isIOU || itemDef.isStackable;
+    if (canMergeWithExistingPile) {
+      const existingPile = this.findMergeTargetGroundItem(
+        itemId,
+        isIOU,
+        mapLevel,
+        x,
+        y,
+        visibleToUserId
+      );
+      if (existingPile) {
+        existingPile.amount += amount;
+
+        // Keep merged piles alive based on the latest drop timing.
+        if (existingPile.despawnTicks > 0) {
+          existingPile.despawnAtTick = this.currentTick + existingPile.despawnTicks;
+        } else if (despawnTicks > 0) {
+          existingPile.despawnTicks = despawnTicks;
+          existingPile.despawnAtTick = this.currentTick + despawnTicks;
+        }
+
+        if (existingPile.visibleToUserId !== null && existingPile.visibleToAllAtTick !== null) {
+          existingPile.visibleToAllAtTick += ItemManager.PRIVATE_STACK_VISIBILITY_EXTENSION_TICKS;
+        }
+
+        this.spatialIndexManager.updateItem(this.stateToSpatialEntry(existingPile));
+        return existingPile;
+      }
+    }
+
     // Create unique ID for this ground item (dynamic items use high IDs)
     const groundItemId = this.nextGroundItemId++;
 
@@ -86,8 +122,11 @@ export class ItemManager {
       ? this.currentTick + despawnTicks 
       : null;
 
-    // Calculate visibility - if restricted to a user, becomes visible to all after 3 minutes
-    const visibleToAllAtTick = (visibleToUserId !== null)
+    // Calculate visibility.
+    // Private drops normally become visible to all after 3 minutes, but non-tradeables
+    // stay private forever to prevent ownership transfer via floor drops.
+    const isTradeable = itemDef.isTradeable;
+    const visibleToAllAtTick = (visibleToUserId !== null && isTradeable)
       ? this.currentTick + ItemManager.VISIBLE_TO_ALL_DELAY_TICKS
       : null;
 
@@ -124,6 +163,31 @@ export class ItemManager {
     ));
 
     return state;
+  }
+
+  private findMergeTargetGroundItem(
+    itemId: number,
+    isIOU: boolean,
+    mapLevel: MapLevel,
+    x: number,
+    y: number,
+    visibleToUserId: number | null
+  ): GroundItemState | null {
+    for (const state of this.groundItemStates.values()) {
+      if (
+        state.isPresent &&
+        state.respawnTicks === 0 &&
+        state.mapLevel === mapLevel &&
+        state.x === x &&
+        state.y === y &&
+        state.itemId === itemId &&
+        state.isIOU === isIOU &&
+        state.visibleToUserId === visibleToUserId
+      ) {
+        return state;
+      }
+    }
+    return null;
   }
 
   /**
@@ -247,11 +311,10 @@ export class ItemManager {
 
       // Check if item should become visible to all players
       if (state.isPresent && state.visibleToAllAtTick !== null && currentTick >= state.visibleToAllAtTick) {
-        const itemDef = this.itemCatalog.getDefinitionById(state.itemId);
-        
         // Mark as visible to all
         state.visibleToUserId = null;
         state.visibleToAllAtTick = null;
+        this.spatialIndexManager.updateItem(this.stateToSpatialEntry(state));
 
         // Emit event so VisibilitySystem can notify other players
         this.eventBus.emit(createItemBecameVisibleToAllEvent(

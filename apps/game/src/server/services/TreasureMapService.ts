@@ -148,10 +148,15 @@ export class TreasureMapService {
     }
   }
 
-  getPersistedTreasureMapsForPlayer(userId: number, persistenceId: number): PersistedTreasureMapOwnership[] {
+  getPersistedTreasureMapsForPlayer(
+    userId: number,
+    persistenceId: number,
+    playerStateOverride?: PlayerState
+  ): PersistedTreasureMapOwnership[] {
     const rows: PersistedTreasureMapOwnership[] = [];
+    const playerState = playerStateOverride ?? this.config.playerStatesByUserId.get(userId) ?? null;
     for (const tier of [1, 2, 3] as const) {
-      if (!this.playerOwnsTier(userId, tier)) {
+      if (playerState && !this.playerOwnsTierForPlayerState(playerState, userId, tier)) {
         continue;
       }
 
@@ -339,11 +344,19 @@ export class TreasureMapService {
     return this.hasTierInInventoryOrBank(userId, tier) || this.hasTierOnFloor(userId, tier);
   }
 
+  private playerOwnsTierForPlayerState(player: PlayerState, userId: number, tier: TreasureMapTier): boolean {
+    return this.hasTierInInventoryOrBankForPlayer(player, tier) || this.hasTierOnFloor(userId, tier);
+  }
+
   private hasTierInInventoryOrBank(userId: number, tier: TreasureMapTier): boolean {
     const player = this.config.playerStatesByUserId.get(userId);
     if (!player) {
       return false;
     }
+    return this.hasTierInInventoryOrBankForPlayer(player, tier);
+  }
+
+  private hasTierInInventoryOrBankForPlayer(player: PlayerState, tier: TreasureMapTier): boolean {
     const itemId = TreasureMapService.ITEM_ID_BY_TIER[tier];
     if (player.countItem(itemId, 0) > 0) {
       return true;

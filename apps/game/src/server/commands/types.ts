@@ -39,7 +39,7 @@ export interface CommandContext {
   scheduleServerShutdown: (minutes: number) => { scheduled: boolean; reason?: string };
 
   // --- Player Lookups ---
-  /** Get a player's user ID by their username (online players only) */
+  /** Get an online player's user ID by display name (case-insensitive) */
   getPlayerIdByUsername: (username: string) => number | null;
 
   // --- Teleportation ---

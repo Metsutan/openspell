@@ -270,7 +270,8 @@ export class PlayerDeathDropService {
 
   /**
    * Drops items on the ground at the death position.
-   * Items are immediately visible to all players (no ownership restriction).
+   * Tradeables are visible to the killer first (if present).
+   * Non-tradeables are owner-bound to the player who died.
    */
   private dropItemsOnGround(
     items: ItemWithValue[],
@@ -283,8 +284,10 @@ export class PlayerDeathDropService {
     for (const item of items) {
       const itemDef = this.config.itemCatalog.getDefinitionById(item.itemId);
       const itemName = itemDef?.name ?? `Item ${item.itemId}`;
+      const isTradeable = itemDef?.isTradeable ?? false;
+      const dropVisibleToUserId = isTradeable ? visibleToUserId : dropperUserId;
 
-      // Spawn item with 5 minute despawn timer, visible to killer first
+      // Spawn item with 5 minute despawn timer.
       const spawned = this.config.itemManager.spawnGroundItem(
         item.itemId,
         item.amount,
@@ -293,7 +296,7 @@ export class PlayerDeathDropService {
         x,
         y,
         500, // 5 minutes despawn time (500 ticks)
-        visibleToUserId
+        dropVisibleToUserId
       );
       if (spawned) {
         this.config.itemAudit?.logItemDrop({

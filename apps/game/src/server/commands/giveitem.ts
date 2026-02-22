@@ -33,6 +33,17 @@ function parseAmount(arg: string | undefined): number {
 }
 
 /**
+ * Parses boolean flags from command args.
+ */
+function parseBooleanArg(arg: string | undefined): boolean | null {
+  if (!arg) return null;
+  const normalized = arg.toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return null;
+}
+
+/**
  * Formats a large number with commas for readability.
  */
 function formatNumber(num: number): string {
@@ -40,15 +51,16 @@ function formatNumber(num: number): string {
 }
 
 /**
- * /giveitem <itemId> [amount] [username]
+ * /giveitem <itemId> [amount] [noted] [username]
  * 
  * Gives items to yourself or another player.
  * 
  * Examples:
  *   /giveitem 1          - Give 1 of item #1 to yourself
  *   /giveitem 1 100      - Give 100 of item #1 to yourself
- *   /giveitem 1 50 Bob   - Give 50 of item #1 to player "Bob"
- *   /giveitem 1 50 Bob true - Give 50 of item #1 to player "Bob" as a noted item
+ *   /giveitem 1 50       - Give 50 of item #1 to yourself
+ *   /giveitem 1 50 true  - Give 50 of item #1 to yourself as a noted item
+ *   /giveitem 1 50 true Bob - Give 50 of item #1 to player "Bob" as a noted item
  * 
  * Notes:
  *   - Stackable items will stack in existing slots when possible
@@ -58,7 +70,7 @@ function formatNumber(num: number): string {
 export const giveitemCommand: CommandHandler = (ctx: CommandContext, args: string[]) => {
   // Validate arguments
   if (args.length < 1) {
-    ctx.reply("Usage: /giveitem <itemId> [amount] [username] [noted]", MessageStyle.Warning);
+    ctx.reply("Usage: /giveitem <itemId> [amount] [noted] [username]", MessageStyle.Warning);
     return;
   }
 
@@ -79,11 +91,30 @@ export const giveitemCommand: CommandHandler = (ctx: CommandContext, args: strin
   // Parse amount
   let amount = parseAmount(args[1]);
 
-  // Determine target player
+  // Parse noted + optional target player.
+  // New format: /giveitem <itemId> [amount] [noted] [username]
   let targetUserId = ctx.userId;
   let targetUsername = ctx.username;
+  let noted = false;
 
-  if (args.length >= 3) {
+  const notedArg = parseBooleanArg(args[2]);
+
+  if (notedArg !== null) {
+    noted = notedArg;
+    if (args.length >= 4) {
+      const targetName = args.slice(3).join(" "); // Handle spaces in usernames
+      const foundId = ctx.getPlayerIdByUsername(targetName);
+      
+      if (foundId === null) {
+        ctx.reply(`Player "${targetName}" is not online`, MessageStyle.Warning);
+        return;
+      }
+      
+      targetUserId = foundId;
+      targetUsername = targetName;
+    }
+  } else if (args.length >= 3) {
+    // Backward compatibility: if arg[2] is not a boolean, treat it as a username.
     const targetName = args.slice(2).join(" "); // Handle spaces in usernames
     const foundId = ctx.getPlayerIdByUsername(targetName);
     
@@ -95,8 +126,6 @@ export const giveitemCommand: CommandHandler = (ctx: CommandContext, args: strin
     targetUserId = foundId;
     targetUsername = targetName;
   }
-
-  const noted = args.length >= 4 && args[3] === 'true' ? true : false;
 
   const TIERED_TREASURE_MAP_IDS = new Set<number>([442, 443, 456]);
   const isTreasureMap = TIERED_TREASURE_MAP_IDS.has(itemId);

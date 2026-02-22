@@ -212,6 +212,17 @@ export class DelaySystem {
       delay.config.onComplete(userId);
     }
 
+    // If callback started a new delay, that new delay owns state management.
+    if (this.activeDelays.has(userId)) {
+      return;
+    }
+
+    // If callback moved player into dead state, never restore prior state.
+    const playerAfterComplete = this.config.playerStatesByUserId.get(userId);
+    if (playerAfterComplete?.currentState === States.PlayerDeadState) {
+      return;
+    }
+
     // Skip state restoration if configured (useful for continuous activities like woodcutting)
     if (delay.config.skipStateRestore) {
       return;

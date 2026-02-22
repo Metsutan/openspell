@@ -264,10 +264,10 @@ export class AggroSystem {
     y: number,
     area: EntityMovementArea
   ): boolean {
-    const minX = Math.min(area.minX, area.maxX);
-    const maxX = Math.max(area.minX, area.maxX);
-    const minY = Math.min(area.minY, area.maxY);
-    const maxY = Math.max(area.minY, area.maxY);
+    const innerBounds = this.getExclusiveMovementAreaBounds(area);
+    if (!innerBounds) return false;
+
+    const { minX, maxX, minY, maxY } = innerBounds;
     // Allow 1 tile outside the boundary for "adjacent"
     return isWithinBounds(x, y, minX - 1, maxX + 1, minY - 1, maxY + 1);
   }
@@ -280,10 +280,41 @@ export class AggroSystem {
     y: number,
     area: EntityMovementArea
   ): boolean {
+    const innerBounds = this.getExclusiveMovementAreaBounds(area);
+    if (!innerBounds) return false;
+
+    const { minX, maxX, minY, maxY } = innerBounds;
+    return isWithinBounds(x, y, minX, maxX, minY, maxY);
+  }
+
+  /**
+   * Converts a configured movement box to an exclusive interior box.
+   * Example: [min..max] becomes [min+1..max-1].
+   */
+  private getExclusiveMovementAreaBounds(area: EntityMovementArea): {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } | null {
     const minX = Math.min(area.minX, area.maxX);
     const maxX = Math.max(area.minX, area.maxX);
     const minY = Math.min(area.minY, area.maxY);
     const maxY = Math.max(area.minY, area.maxY);
-    return isWithinBounds(x, y, minX, maxX, minY, maxY);
+
+    const innerMinX = minX + 1;
+    const innerMaxX = maxX - 1;
+    const innerMinY = minY + 1;
+    const innerMaxY = maxY - 1;
+    if (innerMinX > innerMaxX || innerMinY > innerMaxY) {
+      return null;
+    }
+
+    return {
+      minX: innerMinX,
+      maxX: innerMaxX,
+      minY: innerMinY,
+      maxY: innerMaxY
+    };
   }
 }

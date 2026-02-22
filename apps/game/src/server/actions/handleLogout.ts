@@ -23,7 +23,14 @@ export const handleLogout: ActionHandler = async (ctx, actionData) => {
 
   // Mark this as an intentional/logout-request disconnect so GameServer can
   // distinguish it from an unclean client disconnect.
-  (ctx.socket.data as { logoutRequested?: boolean }).logoutRequested = true;
+  const socketData = ctx.socket.data as {
+    logoutRequested?: boolean;
+    disconnectSource?: "player_logout";
+    disconnectNote?: string;
+  };
+  socketData.logoutRequested = true;
+  socketData.disconnectSource = "player_logout";
+  socketData.disconnectNote = "Player requested logout";
 
   ctx.socket.emit(
     GameAction.LoggedOut.toString(),

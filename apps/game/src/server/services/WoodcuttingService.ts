@@ -53,6 +53,8 @@ const BASE_PROBABILITY = 0.0225;  // Base 2.25% chance
 const PROBABILITY_SCALE = 1747;   // Scaling factor for level contribution
 const MIN_PROBABILITY = 0.01;     // Floor: 1% minimum
 const MAX_PROBABILITY = 0.60;     // Ceiling: 60% maximum
+const LUCKY_LOG_ITEM_ID = 182;
+const LUCKY_LOG_DROP_CHANCE = 1 / 32;
 
 // =============================================================================
 // Axe Configuration
@@ -129,25 +131,24 @@ const AXE_CONFIG_BY_ITEM_ID: Map<number, AxeConfig> = new Map(
 // Tree Configuration (from worldentitydefs)
 // =============================================================================
 
-/** Tree configuration mapping type to log item ID and XP */
+/** Tree configuration mapping type to log item ID */
 interface TreeConfig {
     logItemId: number;
     logName: string;
-    xp: number;
     requiredLevel: number;
 }
 
-/** Tree configs - maps tree type to log item and XP */
+/** Tree configs - maps tree type to log item and required level */
 const TREE_CONFIGS: Record<string, TreeConfig> = {
-    normaltree: { logItemId: 64, logName: "logs", xp: 20, requiredLevel: 1 },
-    pinetree: { logItemId: 65, logName: "pine logs", xp: 50, requiredLevel: 10 },
-    oaktree: { logItemId: 66, logName: "oak logs", xp: 75, requiredLevel: 20 },
-    palmtree: { logItemId: 67, logName: "palm logs", xp: 100, requiredLevel: 30 },
-    cherryblossom: { logItemId: 68, logName: "cherry logs", xp: 250, requiredLevel: 50 },
-    moneytree: { logItemId: 182, logName: "lucky logs", xp: 400, requiredLevel: 70 },
-    deadtree: { logItemId: 64, logName: "logs", xp: 15, requiredLevel: 1 },
-    wizardstree: { logItemId: 353, logName: "wizard logs", xp: 350, requiredLevel: 65 },
-    deadwoodtree: { logItemId: 356, logName: "deadwood logs", xp: 500, requiredLevel: 80 }
+    normaltree: { logItemId: 64, logName: "logs", requiredLevel: 1 },
+    pinetree: { logItemId: 65, logName: "pine logs", requiredLevel: 10 },
+    oaktree: { logItemId: 66, logName: "oak logs", requiredLevel: 20 },
+    palmtree: { logItemId: 67, logName: "palm logs", requiredLevel: 35 },
+    cherryblossom: { logItemId: 68, logName: "cherry logs", requiredLevel: 45 },
+    moneytree: { logItemId: 182, logName: "lucky logs", requiredLevel: 60 },
+    deadtree: { logItemId: 64, logName: "logs", requiredLevel: 1 },
+    wizardstree: { logItemId: 353, logName: "wizard logs", requiredLevel: 70 },
+    deadwoodtree: { logItemId: 356, logName: "deadwood logs", requiredLevel: 85 }
 };
 
 // =============================================================================
@@ -444,9 +445,13 @@ export class WoodcuttingService {
             1,
             0 // Not IOU
         );
+        this.rollLuckyLogDrop(player);
 
-        // Award XP (sends GainedExp packet and handles level ups!)
-        this.config.experienceService.addSkillXp(player, SKILLS.forestry, treeConfig.xp);
+        // Award XP from the obtained log definition (itemdefs expFromObtaining).
+        const forestryXp = this.getForestryXpForItem(treeConfig.logItemId);
+        if (forestryXp > 0) {
+            this.config.experienceService.addSkillXp(player, SKILLS.forestry, forestryXp);
+        }
 
         // Send ObtainedResource packet (client calculates XP and shows "You get some <item>")
         const obtainedPayload = buildObtainedResourcePayload({
@@ -479,6 +484,36 @@ export class WoodcuttingService {
             // Continue chopping - next attempt after axe cooldown
             session.nextAttemptTick = currentTick + session.axeConfig.initialDelay;
         }
+    }
+
+    /**
+     * Rolls an extra lucky log drop that does not consume tree resources.
+     */
+    private rollLuckyLogDrop(player: PlayerState): void {
+        if (Math.random() >= LUCKY_LOG_DROP_CHANCE) {
+            return;
+        }
+
+        const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
+            player.userId,
+            LUCKY_LOG_ITEM_ID,
+            0 // Not IOU
+        );
+        if (availableCapacity < 1) {
+            return;
+        }
+
+        this.config.inventoryService.giveItem(player.userId, LUCKY_LOG_ITEM_ID, 1, 0);
+
+        const luckyLogXp = this.getForestryXpForItem(LUCKY_LOG_ITEM_ID);
+        if (luckyLogXp > 0) {
+            this.config.experienceService.addSkillXp(player, SKILLS.forestry, luckyLogXp);
+        }
+
+        const obtainedPayload = buildObtainedResourcePayload({
+            ItemID: LUCKY_LOG_ITEM_ID
+        });
+        this.config.enqueueUserMessage(player.userId, GameAction.ObtainedResource, obtainedPayload);
     }
 
 
@@ -592,6 +627,19 @@ export class WoodcuttingService {
 
         // Clamp between min and max
         return Math.max(MIN_PROBABILITY, Math.min(MAX_PROBABILITY, rawProbability));
+    }
+
+    /**
+     * Gets forestry XP granted when obtaining the given item.
+     */
+    private getForestryXpForItem(itemId: number): number {
+        const itemDef = this.config.itemCatalog.getDefinitionById(itemId);
+        const expFromObtaining = itemDef?.expFromObtaining;
+        if (expFromObtaining?.skill !== "forestry") {
+            return 0;
+        }
+
+        return expFromObtaining.amount > 0 ? expFromObtaining.amount : 0;
     }
 
     /**

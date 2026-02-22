@@ -5,7 +5,6 @@
 
 import { EntityType } from "../../protocol/enums/EntityType";
 import { States } from "../../protocol/enums/States";
-import { decodeSwitchToIdleStatePayload } from "../../protocol/packets/actions/SwitchToIdleState";
 import type { ActionContext, ActionHandler } from "./types";
 import type { EntityRef } from "../events/GameEvents";
 
@@ -32,11 +31,6 @@ export const handleSwitchToIdleState: ActionHandler = (ctx, actionData) => {
     console.warn(`[handleSwitchToIdleState] No player state for user ${ctx.userId}`);
     return;
   }
-
-  // Decode payload (contains a Switch field, though we don't need it)
-  const payload = decodeSwitchToIdleStatePayload(actionData);
-  
-  //console.log(`[handleSwitchToIdleState] Player ${ctx.userId} switching to idle state (from ${States[playerState.currentState]})`);
 
   // Clear any pending actions (NPC interactions, seamless pathfinding)
   if (playerState.pendingAction) {

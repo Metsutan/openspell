@@ -26,6 +26,7 @@ export type FollowSystemConfig = {
   getMessageService: () => MessageService;
   getSpellCatalog: () => SpellCatalog | null;
   hasLineOfSight: (fromX: number, fromY: number, toX: number, toY: number, mapLevel: number) => boolean;
+  canMeleeReach: (fromX: number, fromY: number, toX: number, toY: number, mapLevel: number) => boolean;
 };
 
 /**
@@ -348,7 +349,13 @@ export class FollowSystem {
     const hasLOS = this.config.hasLineOfSight(player.x, player.y, target.x, target.y, player.mapLevel);
 
     if (combatMode === "melee") {
-      return this.isAdjacentWithLOS(player, target);
+      const dx = Math.abs(player.x - target.x);
+      const dy = Math.abs(player.y - target.y);
+      const isAdjacent = dx <= 1 && dy <= 1 && (dx + dy > 0);
+      if (!isAdjacent) {
+        return false;
+      }
+      return this.config.canMeleeReach(player.x, player.y, target.x, target.y, player.mapLevel);
     }
 
     return isWithinRange(player.x, player.y, target.x, target.y, attackRange) && hasLOS;
