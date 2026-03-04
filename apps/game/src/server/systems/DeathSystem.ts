@@ -160,7 +160,7 @@ export class DeathSystem {
    * This allows clients to play death animations before the entity disappears.
    * Set to 2 to match OSRS behavior (entities persist for ~1 second before vanishing).
    */
-  private static readonly DEATH_ANIMATION_DELAY_TICKS = 2;
+  private static readonly DEATH_ANIMATION_DELAY_TICKS = 3;
   
   /**
    * Number of ticks players remain in dying state before respawn.
@@ -472,6 +472,7 @@ export class DeathSystem {
     npc.combatDelay = 0;
     npc.aggroTarget = null;
     npc.aggroDroppedTargetId = null;
+    npc.lastPlayerAttackAtMs = null;
 
     // Set state to idle (StateMachine handles state update internally)
     this.config.stateMachine.setState(

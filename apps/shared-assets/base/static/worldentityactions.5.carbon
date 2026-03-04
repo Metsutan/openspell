@@ -1,0 +1,11040 @@
+[
+    {
+        "worldEntityTypeId": 100,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -259,
+                            "y": -181,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 101,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -259,
+                            "y": -181,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 102,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -259,
+                            "y": -186,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 103,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -259,
+                            "y": -186,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 117,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -274,
+                            "y": -133,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 118,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -274,
+                            "y": -133,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 119,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -274,
+                            "y": -138,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 120,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -274,
+                            "y": -138,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 399,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -317,
+                            "y": -35,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 400,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -317,
+                            "y": -35,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 401,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -317,
+                            "y": -38,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 402,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -317,
+                            "y": -38,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1452,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -291,
+                            "y": -4,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1557,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -291,
+                            "y": -4,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1564,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -288,
+                            "y": 6,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -288,
+                            "y": 7,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1565,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -291,
+                            "y": -4,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -290,
+                            "y": -4,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1567,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -303,
+                            "y": 7,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -303,
+                            "y": 8,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1575,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -317,
+                            "y": 25,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -318,
+                            "y": 25,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1576,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -317,
+                            "y": 24,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -318,
+                            "y": 24,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1581,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -326,
+                            "y": 35,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -325,
+                            "y": 35,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1591,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 40,
+                            "y": 151,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 39,
+                            "y": 151,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1592,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -32,
+                            "y": 184,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -31,
+                            "y": 184,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1596,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 57,
+                            "y": 380,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 58,
+                            "y": 380,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1597,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 53,
+                            "y": 381,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 53,
+                            "y": 382,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1602,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 165,
+                            "y": 413,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 165,
+                            "y": 414,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1605,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 142,
+                            "y": 423,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 142,
+                            "y": 424,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1632,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "Needs mining lvl of 65 to enter",
+                        "type": "skill",
+                        "skill": "mining",
+                        "level": 65,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -303,
+                            "y": -89,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -304,
+                            "y": -89,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1633,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "Needs mining lvl of 65 to enter",
+                        "type": "skill",
+                        "skill": "mining",
+                        "level": 65,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -303,
+                            "y": -90,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -304,
+                            "y": -90,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1691,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -178,
+                            "y": -227,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -179,
+                            "y": -227,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1704,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -281,
+                            "y": -347,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -281,
+                            "y": -348,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1772,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 236,
+                            "y": 441,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 236,
+                            "y": 440,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1773,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 239,
+                            "y": 444,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 240,
+                            "y": 444,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1824,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 96,
+                            "y": 435,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1825,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 96,
+                            "y": 435,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1826,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 107,
+                            "y": 437,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1827,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 107,
+                            "y": 437,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1889,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -61,
+                            "y": 466,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1890,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -61,
+                            "y": 466,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1891,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -101,
+                            "y": 451,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1904,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -42,
+                            "y": 448,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1906,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -101,
+                            "y": 451,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1907,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -42,
+                            "y": 448,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1914,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more seashell shores bank key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 226,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -48,
+                            "y": 457,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -48,
+                            "y": 458,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1915,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -60,
+                            "y": 471,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 1916,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -60,
+                            "y": 471,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2052,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -20,
+                            "y": 180,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -20,
+                            "y": 179,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2089,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -30,
+                            "y": 224,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2090,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -30,
+                            "y": 224,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2120,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 99,
+                            "y": 256,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 99,
+                            "y": 257,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2123,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 100,
+                            "y": 260,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 99,
+                            "y": 260,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2130,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 88,
+                            "y": 256,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 87,
+                            "y": 256,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2131,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 88,
+                            "y": 255,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 87,
+                            "y": 255,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2256,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 145,
+                            "y": 203,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 145,
+                            "y": 202,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2359,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 75,
+                            "y": 207,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2385,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 93,
+                            "y": 187,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 92,
+                            "y": 187,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2387,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 96,
+                            "y": 188,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2610,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more sewer key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 229,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -2,
+                            "y": 150,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -2,
+                            "y": 151,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2611,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 75,
+                            "y": 207,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2655,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have given the doorman the password for Donald's Trumpet quest",
+                        "type": "quest",
+                        "questid": 0,
+                        "checkpoint": 6,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 89,
+                            "y": 185,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 88,
+                            "y": 185,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2656,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 96,
+                            "y": 188,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2657,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to not own a trumpet in bank, inv, or loadout",
+                        "type": "playerownsitem",
+                        "itemid": 230,
+                        "amount": 0,
+                        "isiou": false,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 230,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    },
+                    {
+                        "desc": "player needs to be at checkpoint 6 of Donald's Trumpet quest",
+                        "type": "quest",
+                        "questid": 0,
+                        "checkpoint": 6,
+                        "booleanoperator": null,
+                        "operator": "==="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 230,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2781,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 67,
+                            "y": -125,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 66,
+                            "y": -125,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2943,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 109,
+                            "y": -4,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 109,
+                            "y": -5,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2981,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 95,
+                            "y": 61,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 95,
+                            "y": 60,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2982,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 98,
+                            "y": 64,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 99,
+                            "y": 64,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 2989,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -154,
+                            "y": 192,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3216,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 328,
+                            "y": -37,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 327,
+                            "y": -37,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3510,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 379,
+                            "y": -262,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 379,
+                            "y": -263,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3650,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -368,
+                            "y": 55,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -368,
+                            "y": 56,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3674,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -371,
+                            "y": 52,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -370,
+                            "y": 52,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3715,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 146,
+                            "y": -85,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3730,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 143,
+                            "y": -108,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3731,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 143,
+                            "y": -108,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3732,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 146,
+                            "y": -85,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3739,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 143,
+                            "y": -90,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 143,
+                            "y": -91,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3834,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -46,
+                            "y": 172,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -47,
+                            "y": 172,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3870,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 370,
+                            "y": -55,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 370,
+                            "y": -56,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3880,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 368,
+                            "y": -61,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 3881,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "Must have lvl 50 or above potion making to enter this room.",
+                        "type": "skill",
+                        "skill": "potionmaking",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 369,
+                            "y": -62,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 370,
+                            "y": -62,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4086,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 69,
+                            "y": -125,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4087,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 69,
+                            "y": -125,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4095,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 74,
+                            "y": -125,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 74,
+                            "y": -124,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4161,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 244,
+                            "y": -8,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 244,
+                            "y": -9,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4228,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more sewer key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 229,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 326,
+                            "y": -94,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 326,
+                            "y": -93,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4312,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 29,
+                            "y": -8,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4356,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more gnome jail key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 296,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 19,
+                            "y": -22,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 19,
+                            "y": -23,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4357,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 30,
+                            "y": -3,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4365,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to have no gnome jail key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 296,
+                        "isiou": false,
+                        "amount": 0,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 296,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    },
+                    {
+                        "desc": "player needs to be at least at checkpoint 9 of Leprechaun Flute quest",
+                        "type": "quest",
+                        "questid": 1,
+                        "checkpoint": 9,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 296,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4390,
+        "onActions": [
+            {
+                "targetAction": "mine_through",
+                "requirements": [
+                    {
+                        "desc": "must have a mining lvl >= 30 to mine through the rocks",
+                        "type": "skill",
+                        "skill": "mining",
+                        "level": 30,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "MineThroughRocks",
+                        "sideOne": {
+                            "x": 28,
+                            "y": -19,
+                            "lvl": 0
+                        },
+                        "sideTwo": {
+                            "x": 28,
+                            "y": -17,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4391,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to have no bronze pickaxes in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 73,
+                        "isiou": false,
+                        "amount": 0,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 73,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 73,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4398,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": [
+                    {
+                        "desc": "Leprechaun Flute",
+                        "type": "quest",
+                        "questid": 1,
+                        "checkpoint": 1,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -196,
+                            "y": 193,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4399,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 61,
+                            "y": 18,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4407,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "Leprechaun Flute",
+                        "type": "quest",
+                        "questid": 1,
+                        "checkpoint": 5,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 137,
+                            "y": -8,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 137,
+                            "y": -9,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4411,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to not own a leprechaun flute in bank, inv, or loadout",
+                        "type": "playerownsitem",
+                        "itemid": 297,
+                        "amount": 0,
+                        "isiou": false,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 297,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    },
+                    {
+                        "desc": "player needs to be at least at checkpoint 5 of Leprechaun Flute quest",
+                        "type": "quest",
+                        "questid": 1,
+                        "checkpoint": 5,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 297,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4470,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 67,
+                            "y": 162,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4593,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 357,
+                            "y": -78,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 358,
+                            "y": -78,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4594,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 357,
+                            "y": -77,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 358,
+                            "y": -77,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4804,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 493,
+                            "y": -496,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 492,
+                            "y": -496,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4805,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 493,
+                            "y": -497,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 492,
+                            "y": -497,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 4816,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to have no basic rods in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 7,
+                        "isiou": false,
+                        "amount": 0,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 7,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 7,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5036,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 102,
+                            "y": -185,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 101,
+                            "y": -185,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5037,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 102,
+                            "y": -184,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 101,
+                            "y": -184,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5153,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 109,
+                            "y": -185,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 108,
+                            "y": -185,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5154,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 109,
+                            "y": -184,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 108,
+                            "y": -184,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5191,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more Anglham Castle Armoury key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 313,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 114,
+                            "y": -198,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 114,
+                            "y": -199,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5200,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 53,
+                            "y": 228,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5201,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 53,
+                            "y": 203,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5202,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 117,
+                            "y": -172,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5203,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 117,
+                            "y": -172,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 116,
+                            "y": -172,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5204,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 103,
+                            "y": -172,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 104,
+                            "y": -172,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5205,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 103,
+                            "y": -197,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 104,
+                            "y": -197,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5211,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 107,
+                            "y": -197,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 106,
+                            "y": -197,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5472,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -7,
+                            "y": -189,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -7,
+                            "y": -190,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5546,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -43,
+                            "y": -384,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -42,
+                            "y": -384,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5547,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -43,
+                            "y": -385,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -42,
+                            "y": -385,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5596,
+        "onActions": [
+            {
+                "targetAction": "bank_at",
+                "requirements": [
+                    {
+                        "desc": "player needs to have completed Sato's Trials quest",
+                        "type": "quest",
+                        "questid": 2,
+                        "checkpoint": 12,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "StartBanking"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5597,
+        "onActions": [
+            {
+                "targetAction": "bank_at",
+                "requirements": [
+                    {
+                        "desc": "player needs to have completed Sato's Trials quest",
+                        "type": "quest",
+                        "questid": 2,
+                        "checkpoint": 12,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "StartBanking"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5615,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -19,
+                            "y": -211,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -19,
+                            "y": -210,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5670,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 60,
+                            "y": -354,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5691,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 60,
+                            "y": -354,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5878,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -243,
+                            "y": -75,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5887,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -243,
+                            "y": -75,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5894,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "Needs mining lvl of 65 to enter",
+                        "type": "skill",
+                        "skill": "mining",
+                        "level": 65,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -243,
+                            "y": -75,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -243,
+                            "y": -76,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5938,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 371,
+                            "y": -32,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5943,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 372,
+                            "y": -30,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 372,
+                            "y": -29,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 5999,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 93,
+                            "y": 64,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6000,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -114,
+                            "y": 192,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6010,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -150,
+                            "y": 192,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6172,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -164,
+                            "y": -345,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -164,
+                            "y": -344,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6244,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -181,
+                            "y": -311,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6289,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 117,
+                            "y": -172,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6309,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "prevent door from opening from outside.",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 142,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 142,
+                            "y": -156,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6351,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -218,
+                            "y": -319,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6352,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -218,
+                            "y": -319,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6362,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -181,
+                            "y": -311,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6398,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -204,
+                            "y": -51,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6399,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -204,
+                            "y": -51,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6451,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "ClimbSameMapLevel",
+                        "sideOne": {
+                            "x": -176,
+                            "y": -47,
+                            "lvl": 1
+                        },
+                        "sideTwo": {
+                            "x": -176,
+                            "y": -49,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6635,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -65,
+                            "y": -304,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -65,
+                            "y": -305,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6639,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more mansion key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 379,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -49,
+                            "y": -296,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -48,
+                            "y": -296,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6640,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more mansion key in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 379,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -49,
+                            "y": -297,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -48,
+                            "y": -297,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6658,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -67,
+                            "y": 215,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6666,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -62,
+                            "y": -298,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -61,
+                            "y": -298,
+                            "lvl": 1
+                        }
+                    },
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 2,
+                        "spawnOnDoorSide": "in",
+                        "requirements": [
+                            {
+                                "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                                "type": "skill",
+                                "skill": "hitpoints",
+                                "level": 10,
+                                "operator": ">="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6667,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -62,
+                            "y": -306,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -61,
+                            "y": -306,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6668,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -57,
+                            "y": -305,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -57,
+                            "y": -304,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6669,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -57,
+                            "y": -293,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -57,
+                            "y": -294,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6670,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -62,
+                            "y": -295,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -61,
+                            "y": -295,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6671,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -63,
+                            "y": -285,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -63,
+                            "y": -286,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6695,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -41,
+                            "y": -296,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -40,
+                            "y": -296,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6696,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -41,
+                            "y": -297,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -40,
+                            "y": -297,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6768,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -56,
+                            "y": -297,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6780,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -63,
+                            "y": 207,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -62,
+                            "y": 207,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6781,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -63,
+                            "y": 224,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -62,
+                            "y": 224,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6893,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -216,
+                            "y": -323,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 6894,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -216,
+                            "y": -323,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7000,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -65,
+                            "y": -159,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7001,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -65,
+                            "y": -159,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7016,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -68,
+                            "y": -158,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7017,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -68,
+                            "y": -158,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7175,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -337,
+                            "y": -105,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -337,
+                            "y": -104,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7176,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -336,
+                            "y": -105,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -336,
+                            "y": -104,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7179,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -285,
+                            "y": -177,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -285,
+                            "y": -176,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7180,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -284,
+                            "y": -177,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -284,
+                            "y": -176,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7183,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -297,
+                            "y": -261,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -296,
+                            "y": -261,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7184,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -297,
+                            "y": -260,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -296,
+                            "y": -260,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7244,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -153,
+                            "y": -258,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7245,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -153,
+                            "y": -258,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7282,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -172,
+                            "y": -260,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -171,
+                            "y": -260,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7283,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -172,
+                            "y": -261,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -171,
+                            "y": -261,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7343,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -200,
+                            "y": -251,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -201,
+                            "y": -251,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7344,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -194,
+                            "y": -249,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -194,
+                            "y": -248,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7346,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -210,
+                            "y": -280,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -210,
+                            "y": -281,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7347,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to have no bronze pickaxes in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 73,
+                        "isiou": false,
+                        "amount": 0,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 73,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 73,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7348,
+        "onActions": [
+            {
+                "targetAction": "mine_through",
+                "requirements": [
+                    {
+                        "desc": "must have a mining lvl >= 40 to mine through the rocks",
+                        "type": "skill",
+                        "skill": "mining",
+                        "level": 40,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "MineThroughRocks",
+                        "sideOne": {
+                            "x": -160,
+                            "y": -270,
+                            "lvl": 0
+                        },
+                        "sideTwo": {
+                            "x": -160,
+                            "y": -272,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7360,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -149,
+                            "y": -258,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7361,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -149,
+                            "y": -258,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7407,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -54,
+                            "y": -242,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -55,
+                            "y": -242,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7517,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 55,
+                            "y": 203,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": 56,
+                            "y": 203,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7518,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 55,
+                            "y": 228,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": 56,
+                            "y": 228,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7558,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 101,
+                            "y": -197,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7559,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 101,
+                            "y": -172,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7617,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -200,
+                            "y": -186,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7618,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -197,
+                            "y": -180,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7619,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 317,
+                            "y": -37,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7620,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 312,
+                            "y": -42,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7621,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 315,
+                            "y": -36,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7622,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -176,
+                            "y": -155,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7623,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -168,
+                            "y": -176,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7624,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -167,
+                            "y": -186,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7625,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 336,
+                            "y": -12,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7626,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 345,
+                            "y": -33,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7627,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 346,
+                            "y": -43,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7628,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -145,
+                            "y": -175,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7629,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -136,
+                            "y": -180,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7630,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -136,
+                            "y": -187,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7631,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 376,
+                            "y": -36,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7632,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 376,
+                            "y": -43,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7633,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 367,
+                            "y": -31,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7643,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -139,
+                            "y": -179,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -138,
+                            "y": -179,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7644,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -139,
+                            "y": -184,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -138,
+                            "y": -184,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7645,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -136,
+                            "y": -182,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -136,
+                            "y": -181,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7671,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more kitchen keys",
+                        "type": "inventoryitem",
+                        "itemid": 382,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -162,
+                            "y": -191,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -163,
+                            "y": -191,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7697,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 332,
+                            "y": -45,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7711,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to not own a kitchen key in bank, inv, or loadout",
+                        "type": "playerownsitem",
+                        "itemid": 382,
+                        "amount": 0,
+                        "isiou": false,
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have space in their inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": 382,
+                        "isiou": false,
+                        "availableslotsneeded": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 382,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7724,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 13,
+                            "y": -308,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 13,
+                            "y": -309,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7725,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -165,
+                            "y": 157,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7767,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 13,
+                            "y": -303,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7855,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 276,
+                            "y": -320,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 276,
+                            "y": -321,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 7961,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 210,
+                            "y": -297,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 210,
+                            "y": -296,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8005,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 479,
+                            "y": -157,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 478,
+                            "y": -157,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8006,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 486,
+                            "y": -154,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 487,
+                            "y": -154,
+                            "lvl": 1
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8030,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 357,
+                            "y": -67,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 357,
+                            "y": -68,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8031,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 356,
+                            "y": -67,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8197,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 176,
+                            "y": -498,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8280,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 167,
+                            "y": -488,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 168,
+                            "y": -488,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8281,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 167,
+                            "y": -487,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 168,
+                            "y": -487,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8282,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 175,
+                            "y": -496,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 176,
+                            "y": -496,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8283,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 175,
+                            "y": -495,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 176,
+                            "y": -495,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8284,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 182,
+                            "y": -482,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 182,
+                            "y": -481,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8285,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 183,
+                            "y": -482,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 183,
+                            "y": -481,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8286,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 184,
+                            "y": -483,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 184,
+                            "y": -484,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8287,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 185,
+                            "y": -483,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 185,
+                            "y": -484,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8288,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 183,
+                            "y": -500,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 184,
+                            "y": -500,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8289,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 183,
+                            "y": -499,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 184,
+                            "y": -499,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8290,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 174,
+                            "y": -504,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 174,
+                            "y": -505,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8291,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 175,
+                            "y": -504,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 175,
+                            "y": -505,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8292,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 162,
+                            "y": -494,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 162,
+                            "y": -493,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8293,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 163,
+                            "y": -494,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 163,
+                            "y": -493,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8294,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 170,
+                            "y": -486,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 170,
+                            "y": -485,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8295,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 171,
+                            "y": -486,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 171,
+                            "y": -485,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8296,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 178,
+                            "y": -491,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 178,
+                            "y": -490,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8297,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 179,
+                            "y": -491,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 179,
+                            "y": -490,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8298,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 167,
+                            "y": -482,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 168,
+                            "y": -482,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8299,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 167,
+                            "y": -481,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 168,
+                            "y": -481,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8312,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 189,
+                            "y": -490,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 190,
+                            "y": -490,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8313,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 189,
+                            "y": -489,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 190,
+                            "y": -489,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8369,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 151,
+                            "y": -340,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 152,
+                            "y": -340,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8370,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 151,
+                            "y": -339,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 152,
+                            "y": -339,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8542,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 320,
+                            "y": -473,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 320,
+                            "y": -472,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8589,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 426,
+                            "y": -360,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 426,
+                            "y": -361,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8758,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 113,
+                            "y": -71,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8759,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 113,
+                            "y": -71,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8760,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 117,
+                            "y": -48,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8761,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 117,
+                            "y": -48,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8762,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 111,
+                            "y": -74,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8763,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 111,
+                            "y": -74,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8764,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 117,
+                            "y": -47,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8765,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 117,
+                            "y": -47,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 8813,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -186,
+                            "y": -160,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -185,
+                            "y": -160,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9022,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -213,
+                            "y": 156,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9064,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 111,
+                            "y": -283,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 111,
+                            "y": -282,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9084,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 111,
+                            "y": -285,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9104,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -202,
+                            "y": 116,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9105,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -199,
+                            "y": 89,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9116,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -295,
+                            "y": 26,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9117,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -292,
+                            "y": -1,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9138,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -301,
+                            "y": 21,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -301,
+                            "y": 20,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9151,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -206,
+                            "y": 115,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -205,
+                            "y": 115,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9152,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -206,
+                            "y": 110,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -205,
+                            "y": 110,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9153,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -203,
+                            "y": 113,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -204,
+                            "y": 113,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9154,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -203,
+                            "y": 108,
+                            "lvl": 2
+                        },
+                        "outsideLocation": {
+                            "x": -204,
+                            "y": 108,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9200,
+        "onActions": [
+            {
+                "targetAction": "go_through",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "ClimbSameMapLevel",
+                        "sideOne": {
+                            "x": 119,
+                            "y": -179,
+                            "lvl": 0
+                        },
+                        "sideTwo": {
+                            "x": 122,
+                            "y": -179,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9356,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -166,
+                            "y": -346,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -165,
+                            "y": -346,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9533,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 75,
+                            "y": 180,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9566,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "ClimbSameMapLevel",
+                        "sideOne": {
+                            "x": -143,
+                            "y": -485,
+                            "lvl": 1
+                        },
+                        "sideTwo": {
+                            "x": -143,
+                            "y": -483,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9744,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 357,
+                            "y": -66,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9747,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 329,
+                            "y": -38,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9748,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 315,
+                            "y": -37,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9749,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 372,
+                            "y": -33,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9750,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 368,
+                            "y": -61,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9801,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 378,
+                            "y": -207,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 377,
+                            "y": -207,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9804,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 385,
+                            "y": -210,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9829,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 389,
+                            "y": -207,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 388,
+                            "y": -207,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9830,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 389,
+                            "y": -208,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 388,
+                            "y": -208,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9857,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #1 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 386,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 407,
+                            "y": -208,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 406,
+                            "y": -208,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 386,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9862,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 3,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 1 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 386,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9863,
+        "onActions": [
+            {
+                "targetAction": "brew",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 4,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 2 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 387,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9868,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #2 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 387,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 421,
+                            "y": -215,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 421,
+                            "y": -214,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": false
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9869,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #2 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 387,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 420,
+                            "y": -215,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 420,
+                            "y": -214,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": false
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9870,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #2 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 387,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 424,
+                            "y": -226,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 423,
+                            "y": -226,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 387,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9909,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #3 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 388,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 448,
+                            "y": -223,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 447,
+                            "y": -223,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 388,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9950,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 8,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 6 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 391,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9952,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 467,
+                            "y": -214,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 466,
+                            "y": -214,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9953,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #6 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 391,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 466,
+                            "y": -209,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 467,
+                            "y": -209,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": false
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9954,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #6 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 391,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 465,
+                            "y": -200,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 465,
+                            "y": -201,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 391,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9963,
+        "onActions": [
+            {
+                "targetAction": "sleep_in",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 5,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 3 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 388,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9966,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #3 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 388,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 432,
+                            "y": -233,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 432,
+                            "y": -232,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9967,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #4 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 389,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 457,
+                            "y": -223,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 456,
+                            "y": -223,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 389,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9968,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 6,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 4 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 389,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9969,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #5 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 390,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 465,
+                            "y": -216,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 465,
+                            "y": -217,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 390,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9970,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 7,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 5 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 390,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9971,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #7 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 392,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 465,
+                            "y": -184,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 465,
+                            "y": -185,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 392,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9973,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 9,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 7 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 392,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9974,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #8 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 393,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 465,
+                            "y": -168,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 465,
+                            "y": -169,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": false,
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9975,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 10,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 8 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 393,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9978,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 478,
+                            "y": -159,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 478,
+                            "y": -158,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9980,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #8 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 393,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 460,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 461,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 393,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9989,
+        "onActions": [
+            {
+                "targetAction": "chop",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 11,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 9 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 394,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "targetAction": "shake",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 11,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 9 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 394,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 9998,
+        "onActions": [
+            {
+                "targetAction": "chop",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 12,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 10 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 395,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "targetAction": "shake",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 12,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 10 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 395,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10013,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 437,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 438,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10014,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #9 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 394,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 423,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 424,
+                            "y": -157,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 394,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10015,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #10 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 395,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 414,
+                            "y": -152,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 414,
+                            "y": -153,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 395,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10016,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 418,
+                            "y": -136,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 418,
+                            "y": -137,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10017,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #11 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 396,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 417,
+                            "y": -120,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 417,
+                            "y": -121,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 396,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10018,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #12 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 397,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 424,
+                            "y": -113,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 423,
+                            "y": -113,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 397,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10019,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 444,
+                            "y": -118,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 443,
+                            "y": -118,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10029,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #13 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 398,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 452,
+                            "y": -108,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 452,
+                            "y": -109,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 398,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10030,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 452,
+                            "y": -102,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 452,
+                            "y": -103,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10031,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #14 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 399,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 453,
+                            "y": -90,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 453,
+                            "y": -91,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10032,
+        "onActions": [
+            {
+                "targetAction": "mine",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 13,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 11 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 396,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10033,
+        "onActions": [
+            {
+                "targetAction": "mine",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 14,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 12 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 397,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10034,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 15,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 13 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 398,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10035,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 16,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 14 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 399,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10070,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 17,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 15 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 400,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10071,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 18,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 16 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 401,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10072,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #14 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 399,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 432,
+                            "y": -70,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 432,
+                            "y": -71,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 399,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10073,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #15 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 400,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 433,
+                            "y": -56,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 433,
+                            "y": -57,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 400,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10074,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #16 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 401,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 440,
+                            "y": -48,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 439,
+                            "y": -48,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10075,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #16 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 401,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 472,
+                            "y": -48,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 471,
+                            "y": -48,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 401,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10076,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #17 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 402,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 481,
+                            "y": -40,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 481,
+                            "y": -41,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 402,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10077,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #18 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 403,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 480,
+                            "y": -24,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 480,
+                            "y": -25,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 403,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10078,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #19 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 404,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 471,
+                            "y": -16,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 472,
+                            "y": -16,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 404,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10079,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #20 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 405,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 455,
+                            "y": -17,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 456,
+                            "y": -17,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 405,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10080,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 19,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 17 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 402,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10081,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 20,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 18 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 403,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10082,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 21,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 19 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 404,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10083,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 22,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 20 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 405,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10084,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 22,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 20 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 405,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10085,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 23,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 21 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 406,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10086,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 23,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 21 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 406,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10119,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #21 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 406,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 448,
+                            "y": -8,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 448,
+                            "y": -9,
+                            "lvl": 0
+                        },
+                        "checkRequirementsFromBothSides": true
+                    },
+                    {
+                        "type": "PlayerGiveItems",
+                        "executeOnDoorSide": "in",
+                        "messageToPlayer": "Your key crumbles to dust",
+                        "playerGiveItems": [
+                            {
+                                "id": 406,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10120,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 448,
+                            "y": 8,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 448,
+                            "y": 7,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10121,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more undercroft key #22 in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 407,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 448,
+                            "y": 22,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 448,
+                            "y": 21,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10122,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "SpawnInstancedNPC",
+                        "id": 24,
+                        "spawnOnDoorSide": null,
+                        "requirements": [
+                            {
+                                "desc": "player needs to not own a undercroft key 22 in bank, inv, or loadout",
+                                "type": "playerownsitem",
+                                "itemid": 407,
+                                "amount": 0,
+                                "isiou": false,
+                                "operator": "==="
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10131,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 434,
+                            "y": -242,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10132,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 434,
+                            "y": -242,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10133,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 488,
+                            "y": -157,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10134,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 486,
+                            "y": -157,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10137,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 466,
+                            "y": -52,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10138,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 466,
+                            "y": -52,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10139,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 443,
+                            "y": 35,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10140,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 443,
+                            "y": 35,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10173,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 467,
+                            "y": -84,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10174,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 470,
+                            "y": -82,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10175,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 468,
+                            "y": -49,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10176,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 468,
+                            "y": -49,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10241,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 385,
+                            "y": -210,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10301,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 121,
+                            "y": 201,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10305,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to be at checkpoint 1, 11, or 12 of satos trials",
+                        "type": "quest",
+                        "questid": 2,
+                        "checkpoint": [
+                            1,
+                            11,
+                            12
+                        ],
+                        "booleanoperator": "or",
+                        "operator": "==="
+                    },
+                    {
+                        "desc": "player needs to have NO items equipped",
+                        "type": "equippeditem",
+                        "equipmenttype": null,
+                        "itemids": null,
+                        "isequipped": null,
+                        "noitemsequipped": true
+                    },
+                    {
+                        "desc": "player needs to have an empty inventory",
+                        "type": "availableinventoryspace",
+                        "itemid": null,
+                        "isiou": null,
+                        "availableslotsneeded": 28,
+                        "operator": "==="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -55,
+                            "y": -390,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -55,
+                            "y": -389,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10312,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": [
+                    {
+                        "desc": "player must be at checkpoint 1, 11, or 12 of satos trials",
+                        "type": "quest",
+                        "questid": 2,
+                        "checkpoint": [
+                            1,
+                            11,
+                            12
+                        ],
+                        "booleanoperator": "or",
+                        "operator": "==="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -55,
+                            "y": -390,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10471,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -355,
+                            "y": -479,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10542,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -355,
+                            "y": -479,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10397,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -351,
+                            "y": -472,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10398,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -351,
+                            "y": -472,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10539,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -353,
+                            "y": -472,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10540,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -353,
+                            "y": -472,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10577,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -290,
+                            "y": -479,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10608,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -290,
+                            "y": -495,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10478,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -399,
+                            "y": -467,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10541,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -395,
+                            "y": -466,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10479,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -446,
+                            "y": -447,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10480,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -446,
+                            "y": -447,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10499,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -453,
+                            "y": -452,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10500,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -453,
+                            "y": -452,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10676,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "ClimbSameMapLevel",
+                        "sideOne": {
+                            "x": -404,
+                            "y": -421,
+                            "lvl": 1
+                        },
+                        "sideTwo": {
+                            "x": -402,
+                            "y": -421,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10713,
+        "onActions": [
+            {
+                "targetAction": "search",
+                "requirements": [
+                    {
+                        "desc": "player needs to not own a bottle of rum in bank, inv, or loadout",
+                        "type": "playerownsitem",
+                        "itemid": 424,
+                        "amount": 0,
+                        "isiou": false,
+                        "operator": "==="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "PlayerReceiveItems",
+                        "playerReceiveItems": [
+                            {
+                                "id": 424,
+                                "isIOU": false,
+                                "amt": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10733,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to be at or past checkpoint 10 of Dragonsmoke Island quest",
+                        "type": "quest",
+                        "questid": 3,
+                        "checkpoint": 10,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -436,
+                            "y": -450,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -435,
+                            "y": -450,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10734,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to be at or past checkpoint 10 of Dragonsmoke Island quest",
+                        "type": "quest",
+                        "questid": 3,
+                        "checkpoint": 10,
+                        "booleanoperator": null,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -436,
+                            "y": -449,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -435,
+                            "y": -449,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10737,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -475,
+                            "y": -424,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -475,
+                            "y": -425,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10743,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -128,
+                            "y": -272,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10744,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -131,
+                            "y": -268,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 10863,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have completed Dragonsmoke island quest",
+                        "type": "quest",
+                        "questid": 3,
+                        "checkpoint": 15,
+                        "booleanoperator": null,
+                        "operator": "==="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -479,
+                            "y": -408,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -479,
+                            "y": -409,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11087,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 434,
+                            "y": -241,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 434,
+                            "y": -242,
+                            "lvl": 1
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11088,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 465,
+                            "y": -82,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 466,
+                            "y": -82,
+                            "lvl": 1
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11092,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 466,
+                            "y": -54,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 466,
+                            "y": -53,
+                            "lvl": 1
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11118,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -492,
+                            "y": -145,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -491,
+                            "y": -145,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11119,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -116,
+                            "y": 155,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11221,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -465,
+                            "y": -24,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -465,
+                            "y": -25,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11222,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "hack to prevent player from opening door from the outside. (can't open the door if hitpoints level is less than 9999999)",
+                        "type": "skill",
+                        "skill": "hitpoints",
+                        "level": 9999999,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -464,
+                            "y": -24,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -464,
+                            "y": -25,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11266,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -485,
+                            "y": -36,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -485,
+                            "y": -37,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11336,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 175,
+                            "y": -440,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 175,
+                            "y": -441,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11366,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 171,
+                            "y": -496,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11500,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more goblin bankers keys in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 481,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -151,
+                            "y": 34,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -152,
+                            "y": 34,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11504,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -223,
+                            "y": 27,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -223,
+                            "y": 26,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11593,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -192,
+                            "y": 41,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -192,
+                            "y": 42,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11594,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -191,
+                            "y": 41,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -191,
+                            "y": 42,
+                            "lvl": 0
+                        },
+                        "doesLockAfterEntering": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11598,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more goblin bankers keys in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 481,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -228,
+                            "y": 31,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -227,
+                            "y": 31,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11646,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -196,
+                            "y": -61,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11647,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -196,
+                            "y": -61,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11699,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -237,
+                            "y": -49,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11700,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -241,
+                            "y": -52,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11749,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [
+                    {
+                        "desc": "player needs to have 1 or more goblin bankers keys in their inventory",
+                        "type": "inventoryitem",
+                        "itemid": 481,
+                        "isiou": false,
+                        "amount": 1,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -142,
+                            "y": 4,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": -143,
+                            "y": 4,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11751,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -139,
+                            "y": 4,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11752,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -139,
+                            "y": 4,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11794,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -496,
+                            "y": -145,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11819,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -321,
+                            "y": -215,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11820,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -321,
+                            "y": -215,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11839,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -320,
+                            "y": -223,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11840,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -320,
+                            "y": -223,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11856,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -119,
+                            "y": 192,
+                            "lvl": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 11858,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": [
+                    {
+                        "desc": "Need enchanting level >= 70 (required level to make warp scrolls)",
+                        "type": "skill",
+                        "skill": "enchanting",
+                        "level": 70,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -389,
+                            "y": -92,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12325,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -34,
+                            "y": 28,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12326,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -34,
+                            "y": 28,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12327,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -66,
+                            "y": 57,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12328,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -66,
+                            "y": 57,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12333,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -43,
+                            "y": 23,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12334,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -43,
+                            "y": 23,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12335,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -68,
+                            "y": 55,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12336,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -68,
+                            "y": 55,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12647,
+        "onActions": [
+            {
+                "targetAction": "squeeze_through",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 68,
+                            "y": -80,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 68,
+                            "y": -81,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12659,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": -203,
+                            "y": -283,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": -200,
+                            "y": -283,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12663,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 263,
+                            "y": 168,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 263,
+                            "y": 165,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12804,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 430,
+                            "y": 108,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 430,
+                            "y": 107,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12805,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 433,
+                            "y": 110,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 432,
+                            "y": 110,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12809,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 447,
+                            "y": 135,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 447,
+                            "y": 134,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12810,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 448,
+                            "y": 135,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 448,
+                            "y": 134,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13117,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 306,
+                            "y": 302,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 305,
+                            "y": 302,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13118,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 306,
+                            "y": 289,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 305,
+                            "y": 289,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13119,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 415,
+                            "y": 154,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 415,
+                            "y": 153,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13120,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 416,
+                            "y": 154,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 416,
+                            "y": 153,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13121,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 415,
+                            "y": 162,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 415,
+                            "y": 161,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13122,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 416,
+                            "y": 162,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 416,
+                            "y": 161,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13123,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 415,
+                            "y": 168,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 415,
+                            "y": 167,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13124,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 416,
+                            "y": 168,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 416,
+                            "y": 167,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13125,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 480,
+                            "y": 201,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13213,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 476,
+                            "y": 94,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 475,
+                            "y": 94,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13249,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 341,
+                            "y": 319,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13250,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 341,
+                            "y": 319,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13279,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 338,
+                            "y": 318,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+    
+        "worldEntityTypeId": 13280,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 338,
+                            "y": 318,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13333,
+        "onActions": [
+            {
+                "targetAction": "climb_over",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 440,
+                            "y": 241,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 440,
+                            "y": 242,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13335,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 175,
+                            "y": 111,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13337,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 143,
+                            "y": 94,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13339,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -193,
+                            "y": -306,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13341,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -2,
+                            "y": -450,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13345,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 406,
+                            "y": 311,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13349,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 406,
+                            "y": 312,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13353,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 409,
+                            "y": 312,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13361,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 409,
+                            "y": 311,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13367,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 478,
+                            "y": 201,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13371,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 476,
+                            "y": 207,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": 476,
+                            "y": 206,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13376,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -322,
+                            "y": -482,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13381,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 486,
+                            "y": 204,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13447,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 349,
+                            "y": 289,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 349,
+                            "y": 292,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13459,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 374,
+                            "y": 305,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 374,
+                            "y": 308,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13461,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 343,
+                            "y": 207,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 346,
+                            "y": 207,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13484,
+        "onActions": [
+            {
+                "targetAction": "jump_over",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 337,
+                            "y": 186,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 337,
+                            "y": 194,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13496,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 331,
+                            "y": 227,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 330,
+                            "y": 227,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13540,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": 358,
+                            "y": 171,
+                            "lvl": 1
+                        },
+                        "outsideLocation": {
+                            "x": 357,
+                            "y": 171,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13553,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 357,
+                            "y": 174,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13554,
+        "onActions": [
+            {
+                "targetAction": "touch",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": -251,
+                            "y": -500,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 13596,
+        "onActions": [
+            {
+                "targetAction": "squeeze_through",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 376,
+                            "y": 6,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 375,
+                            "y": 6,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

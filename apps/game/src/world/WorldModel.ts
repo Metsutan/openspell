@@ -475,11 +475,15 @@ export class PathingFlags {
  * A tile can block pathfinding but not projectiles (e.g., fence with canProjectile=true).
  */
 export class PathingGrid {
+    private readonly wallEdgeFlags: Uint8Array;
+
     constructor(
       private readonly flags: Uint8Array, // Pathfinding flags: length = width*height
       private readonly width: number,
       private readonly projectileFlags: Uint8Array = new Uint8Array(flags.length) // Projectile flags
-    ) {}
+    ) {
+      this.wallEdgeFlags = new Uint8Array(flags.length);
+    }
   
     getWidth() { return this.width; }
     getHeight() { return (this.flags.length / this.width) | 0; }
@@ -596,6 +600,36 @@ export class PathingGrid {
      * @param y - Tile Y coordinate
      * @param forProjectiles - If true, blocks projectiles; if false, blocks pathfinding
      */
+    /**
+     * Checks if a wall/door/gate edge blocks between two adjacent tiles.
+     * Unlike isMovementBlocked, this ignores solid-object occupancy and only
+     * detects edges placed by wall/door/gate entities.
+     */
+    isWallEdgeBlocked(fromX: number, fromY: number, toX: number, toY: number): boolean {
+      const width = this.width;
+      const height = this.getHeight();
+
+      if (fromX < 0 || fromY < 0 || fromX >= width || fromY >= height) return false;
+      if (toX < 0 || toY < 0 || toX >= width || toY >= height) return false;
+
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+
+      let direction: PathingDirection | null = null;
+      if (dx === 0 && dy === 1) direction = PathingDirection.North;
+      else if (dx === 0 && dy === -1) direction = PathingDirection.South;
+      else if (dx === 1 && dy === 0) direction = PathingDirection.East;
+      else if (dx === -1 && dy === 0) direction = PathingDirection.West;
+      else if (dx === 1 && dy === 1) direction = PathingDirection.NorthEast;
+      else if (dx === 1 && dy === -1) direction = PathingDirection.SouthEast;
+      else if (dx === -1 && dy === -1) direction = PathingDirection.SouthWest;
+      else if (dx === -1 && dy === 1) direction = PathingDirection.NorthWest;
+      else return false;
+
+      const fromIdx = fromY * width + fromX;
+      return (this.wallEdgeFlags[fromIdx] & (1 << direction)) !== 0;
+    }
+
     private blockDirection(direction: PathingDirection, x: number, y: number, forProjectiles: boolean): void {
         const width = this.width;
         const height = this.getHeight();
@@ -606,6 +640,7 @@ export class PathingGrid {
                 this.projectileFlags[idx] |= flag;
             } else {
                 this.flags[idx] |= flag;
+                this.wallEdgeFlags[idx] |= flag;
             }
         }
     }

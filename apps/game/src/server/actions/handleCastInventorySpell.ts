@@ -117,7 +117,7 @@ export const handleCastInventorySpell: ActionHandler = (ctx, actionData) => {
     return;
   }
 
-  if (!hasSpellResources(playerState, spellDefinition.recipe ?? null)) {
+  if (!consumeSpellResources(ctx.userId, ctx.inventoryService, playerState, spellDefinition.recipe ?? null)) {
     ctx.messageService.sendServerInfo(ctx.userId, "You don't have the required scrolls.");
     return;
   }
@@ -162,7 +162,9 @@ export const handleCastInventorySpell: ActionHandler = (ctx, actionData) => {
   );
 };
 
-function hasSpellResources(
+function consumeSpellResources(
+  userId: number,
+  inventoryService: { removeItem: (userId: number, itemId: number, amount: number, isIOU: number) => { removed: number } },
   playerState: { countItem: (itemId: number, isIOU?: number) => number; equipment: { weapon?: [number, number] | null } },
   recipe: { itemId: number; amount: number }[] | null
 ): boolean {
@@ -182,6 +184,20 @@ function hasSpellResources(
       return false;
     }
   }
+
+  for (const entry of recipe) {
+    if (!entry || !Number.isInteger(entry.itemId) || !Number.isInteger(entry.amount)) {
+      continue;
+    }
+    if (staffOverrideItemId !== null && entry.itemId === staffOverrideItemId) {
+      continue;
+    }
+    const removal = inventoryService.removeItem(userId, entry.itemId, entry.amount, 0);
+    if (removal.removed < entry.amount) {
+      return false;
+    }
+  }
+
   return true;
 }
 

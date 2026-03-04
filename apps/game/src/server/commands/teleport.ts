@@ -69,7 +69,7 @@ const SPELL_TELEPORT_LOCATIONS: Record<string, TeleportLocation> = {
     xMin: -64, xMax: -60, yMin: 360, yMax: 364, mapLevel: 0, description: "Fire Obelisk Teleport"
   }),
   furyobelisk: fixedTeleportFromRange({
-    xMin: -238, xMax: -234, yMin: -167, yMax: -163, mapLevel: 0, description: "Fury Obelisk Teleport"
+    xMin: -238, xMax: -235, yMin: -166, yMax: -163, mapLevel: 0, description: "Fury Obelisk Teleport"
   }),
   energyobelisk: fixedTeleportFromRange({
     xMin: -3, xMax: 1, yMin: 461, yMax: 465, mapLevel: 1, description: "Energy Obelisk Teleport"

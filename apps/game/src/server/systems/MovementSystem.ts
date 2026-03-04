@@ -105,7 +105,9 @@ export class MovementSystem {
         this.config.movementPlans.delete(entityKey);
         return;
       }
-      plan.speed = this.getPlayerMovementSpeed(playerState);
+      if (!plan.lockSpeed) {
+        plan.speed = this.getPlayerMovementSpeed(playerState);
+      }
       
       // Check if tracking an NPC that has moved - trigger re-pathfind if necessary
       if (playerState.pendingAction?.entityType === EntityType.NPC) {

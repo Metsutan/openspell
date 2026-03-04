@@ -388,6 +388,27 @@ export class DamageService {
   }
 
   /**
+   * Calculates splash magic damage with a scaled max damage.
+   * Used for AoE spells where each ring from center has a reduced max hit.
+   * Rolls hit chance independently per target using magic attack/defense formulas.
+   */
+  calculateSplashMagicDamage(
+    attacker: PlayerState | NPCState,
+    target: PlayerState | NPCState,
+    scaledMaxDamage: number
+  ): number {
+    if (scaledMaxDamage <= 0) return 0;
+
+    const attackRoll = this.calculateMagicAttackRoll(attacker);
+    const defenseRoll = this.calculateMagicDefenseRoll(target);
+    const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
+
+    if (Math.random() > hitChance) return 0;
+
+    return Math.floor(Math.random() * scaledMaxDamage) + 1;
+  }
+
+  /**
    * Calculates effective strength for an attacker.
    * Formula: floor(floor(floor(strength + tempBuffs) * percentageBonuses) + styleBonus + 8)
    * 

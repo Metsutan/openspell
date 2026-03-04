@@ -23,6 +23,12 @@ export type SpellRecipeEntry = {
   amount: number;
 };
 
+export type SplashDamage = {
+  size: number;
+  damageAmountsFromCenter: number[];
+  doesSplashDamageGiveXP: boolean;
+};
+
 export type SpellDefinition = {
   id: number;
   name: string;
@@ -34,6 +40,7 @@ export type SpellDefinition = {
   recipe: SpellRecipeEntry[] | null;
   requirements: unknown;
   range?: number | null;
+  splashDamage?: SplashDamage | null;
 };
 
 type RawSpellDefinition = {
@@ -47,6 +54,7 @@ type RawSpellDefinition = {
   recipe?: SpellRecipeEntry[] | null;
   requirements?: unknown;
   range?: number | null;
+  splashDamage?: SplashDamage | null;
 };
 
 export class SpellCatalog {
@@ -71,7 +79,8 @@ export class SpellCatalog {
         maxDamage: raw.maxDamage ?? 0,
         recipe: raw.recipe ?? null,
         requirements: raw.requirements ?? null,
-        range: raw.range ?? null
+        range: raw.range ?? null,
+        splashDamage: raw.splashDamage ?? null
       };
       definitionsById.set(definition.id, definition);
     }

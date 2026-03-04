@@ -35,6 +35,7 @@ export interface MovementPlan {
   path: Point[];
   nextIndex: number;
   speed: number;
+  lockSpeed?: boolean;
   onComplete?: () => void;
   preserveStateOnStart?: boolean;
   preserveStateOnComplete?: boolean;
@@ -556,7 +557,7 @@ export class PathfindingSystem {
     path: Point[],
     speed: number,
     onComplete?: () => void,
-    options?: { preserveStateOnStart?: boolean; preserveStateOnComplete?: boolean }
+    options?: { preserveStateOnStart?: boolean; preserveStateOnComplete?: boolean; lockSpeed?: boolean }
   ): void {
     if (path.length <= 1) {
       this.cancelMovementPlan(entityRef);
@@ -572,6 +573,7 @@ export class PathfindingSystem {
       path,
       nextIndex: 1,
       speed,
+      lockSpeed: options?.lockSpeed,
       onComplete,
       preserveStateOnStart: options?.preserveStateOnStart,
       preserveStateOnComplete: options?.preserveStateOnComplete

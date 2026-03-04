@@ -1458,6 +1458,127 @@ app.get('/api/auth/me', requireWebServerSecret, verifyToken, async (req, res) =>
   }
 });
 
+// Export account data (requires authentication)
+app.get('/api/account/export', requireWebServerSecret, verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        createdAt: true,
+        timePlayed: true,
+        playerType: true,
+        lastLoginAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const [
+      playerLocations,
+      playerSkills,
+      playerEquipment,
+      playerInventory,
+      playerStateSnapshots,
+      playerBanks,
+      playerAbilities,
+      playerSettings,
+      playerAppearances,
+      playerQuests,
+      playerTreasureMaps
+    ] = await Promise.all([
+      prisma.playerLocation.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }]
+      }),
+      prisma.playerSkill.findMany({
+        where: { userId },
+        include: {
+          skill: {
+            select: { slug: true }
+          }
+        },
+        orderBy: [{ persistenceId: 'asc' }, { skillId: 'asc' }]
+      }),
+      prisma.playerEquipment.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }, { slot: 'asc' }]
+      }),
+      prisma.playerInventory.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }, { slot: 'asc' }]
+      }),
+      prisma.playerStateSnapshot.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }]
+      }),
+      prisma.playerBank.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }]
+      }),
+      prisma.playerAbility.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }]
+      }),
+      prisma.playerSetting.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }]
+      }),
+      prisma.playerAppearance.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }]
+      }),
+      prisma.playerQuest.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }, { questId: 'asc' }]
+      }),
+      prisma.playerTreasureMap.findMany({
+        where: { userId },
+        orderBy: [{ persistenceId: 'asc' }, { tier: 'asc' }]
+      })
+    ]);
+
+    const exportPayload = {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      source: {
+        serverId: Number.parseInt(process.env.SERVER_ID || '0', 10) || null
+      },
+      user,
+      gameData: {
+        playerLocations,
+        playerSkills: playerSkills.map((row) => ({
+          ...row,
+          experience: row.experience != null ? row.experience.toString() : null,
+          skillSlug: row.skill?.slug ?? null
+        })),
+        playerEquipment,
+        playerInventory: playerInventory.map((row) => ({
+          ...row,
+          amount: row.amount != null ? row.amount.toString() : null
+        })),
+        playerStateSnapshots,
+        playerBanks,
+        playerAbilities,
+        playerSettings,
+        playerAppearances,
+        playerQuests,
+        playerTreasureMaps
+      }
+    };
+
+    res.json(exportPayload);
+  } catch (error) {
+    console.error('Account export error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Update display name (requires authentication and admin privileges) - ADMIN ONLY
 app.put('/api/auth/display-name', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
   try {

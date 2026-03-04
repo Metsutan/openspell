@@ -14296,5 +14296,22 @@
         "y": -501,
         "shopdef_id": null,
         "conversationdef_id": null
+    },
+    {
+        "_id": 14423,
+        "desc": "Damogui",
+        "npcdef_id": 163,
+        "mapLevel": 0,
+        "x": 171,
+        "y": -438,
+        "movementAreaMinX": 166,
+        "movementAreaMaxX": 185,
+        "movementAreaMinY": -442,
+        "movementAreaMaxY": -423,
+        "wanderRadius": 7.5,
+        "shopdef_id": null,
+        "conversationdef_id": null,
+        "firstSeen": "2026-02-24T17:47:13.071Z",
+        "lastSeen": "2026-02-24T17:53:55.404Z"
     }
 ]

@@ -49,6 +49,7 @@ import { buildCastedSingleCombatOrStatusSpellPayload } from "../../protocol/pack
 import { GameAction } from "../../protocol/enums/GameAction";
 import { getStatusSpellEffect } from "../../world/spells/statusSpellEffects";
 import { canPlayerInteractWithNpc, getInstancedNpcOwnerUserId } from "../services/instancedNpcUtils";
+import { NPC_COMBAT_SCRIPTS, type NpcCombatContext } from "../scripts/DamoguiScript";
 
 export interface CombatSystemConfig {
   playerStates: Map<number, PlayerState>;
@@ -74,6 +75,7 @@ const STAFF_SCROLL_OVERRIDES: Record<number, number> = {
 };
 const DEFAULT_NPC_RANGED_ATTACK_RANGE = 5;
 const DEFAULT_NPC_RANGED_PROJECTILE_ID = 335;
+const NPC_AGGRO_STICKY_HIT_WINDOW_MS = 10_000;
 
 /**
  * System for handling combat between entities.
@@ -243,16 +245,19 @@ export class CombatSystem {
       const targetRef: EntityRef = { type: EntityType.NPC, id: targetNpc.id };
       this.executeAttack(player, targetNpc, attackerRef, targetRef);
 
-      // Auto-retaliate: If NPC has no current target, set target to attacking player
-      if (!targetNpc.aggroTarget) {
+      // Retaliation aggro: switch only when NPC is not actively pressuring its current target.
+      if (this.shouldRetargetNpcOnPlayerHit(targetNpc, player.userId)) {
+        const hadNoTarget = !targetNpc.aggroTarget;
         this.config.targetingService.setNpcTarget(targetNpc.id, {
           type: EntityType.Player,
           id: player.userId
         });
         
-        // Set 3-tick delay before NPC can retaliate (authentic behavior)
-        // NPC will immediately face/aggro onto player, but won't deal damage for 3 ticks
-        targetNpc.combatDelay = 6;
+        if (hadNoTarget) {
+          // Set 3-tick delay before NPC can retaliate (authentic behavior)
+          // NPC will immediately face/aggro onto player, but won't deal damage for 3 ticks
+          targetNpc.combatDelay = 6;
+        }
       }
     }
 
@@ -322,6 +327,12 @@ export class CombatSystem {
       // Check if NPC can attack this tick (delay already decremented above)
       if (npc.combatDelay > 0) continue;
 
+      // Delegate to custom NPC combat script if one is registered for this definition
+      const customScript = NPC_COMBAT_SCRIPTS.get(npc.definitionId);
+      if (customScript && customScript(npc, this.buildNpcCombatContext())) {
+        continue;
+      }
+
       // Get target position
       const targetPosition = this.getTargetPosition(npc.aggroTarget);
       if (!targetPosition) {
@@ -358,30 +369,40 @@ export class CombatSystem {
         }
       }
 
+      const currentAggroTarget = npc.aggroTarget;
+
       // Get target entity for damage calculation
-      const target = this.getTargetEntity(npc.aggroTarget);
+      const target = this.getTargetEntity(currentAggroTarget);
       if (!target) continue;
 
       // Safety check: Skip if target is a dead player (should already be cleared, but defensive check)
-      if (npc.aggroTarget.type === EntityType.Player) {
-        const targetState = this.config.stateMachine.getCurrentState(npc.aggroTarget);
+      if (currentAggroTarget.type === EntityType.Player) {
+        const targetState = this.config.stateMachine.getCurrentState(currentAggroTarget);
         if (targetState === States.PlayerDeadState) continue;
       }
 
       // Execute attack (handles damage, XP, death tracking, delay reset)
       const attackerRef: EntityRef = { type: EntityType.NPC, id: npc.id };
-      this.executeAttack(npc, target, attackerRef, npc.aggroTarget, npcMagicSpellId);
+      this.executeAttack(npc, target, attackerRef, currentAggroTarget, npcMagicSpellId);
+      if (currentAggroTarget.type === EntityType.Player) {
+        // "Hits" include 0-damage splats; if an attack resolves, keep aggro sticky.
+        npc.lastPlayerAttackAtMs = Date.now();
+      }
+
+      const targetUnchangedAfterAttack =
+        npc.aggroTarget?.type === currentAggroTarget.type &&
+        npc.aggroTarget.id === currentAggroTarget.id;
 
       // Auto-retaliate: If target is a player with AutoRetaliate enabled, target the attacker
-      if (npc.aggroTarget && npc.aggroTarget.type === EntityType.Player) {
-        const playerState = this.config.playerStates.get(npc.aggroTarget.id);
+      if (targetUnchangedAfterAttack && currentAggroTarget.type === EntityType.Player) {
+        const playerState = this.config.playerStates.get(currentAggroTarget.id);
         if (playerState) {
           const autoRetaliateEnabled = playerState.settings[PlayerSetting.AutoRetaliate] === 1;
           if (autoRetaliateEnabled) {
             // Set player's target to the attacking NPC (if they don't already have one)
             // TODO: handle range and magic combat states
-            if(!this.config.targetingService.getPlayerTarget(npc.aggroTarget.id)) {
-              this.config.targetingService.setPlayerTarget(npc.aggroTarget.id, {
+            if(!this.config.targetingService.getPlayerTarget(currentAggroTarget.id)) {
+              this.config.targetingService.setPlayerTarget(currentAggroTarget.id, {
                 type: EntityType.NPC,
                 id: npc.id
               });
@@ -391,7 +412,7 @@ export class CombatSystem {
                 : combatMode === "range"
                   ? States.RangeCombatState
                   : States.MeleeCombatState;
-              this.config.stateMachine.setState({ type: EntityType.Player, id: npc.aggroTarget.id }, nextState);
+              this.config.stateMachine.setState({ type: EntityType.Player, id: currentAggroTarget.id }, nextState);
               
               // Attempt immediate retaliatory attack if player's cooldown is ready
               // If cooldown is active or player is out of range, they'll attack on next tick
@@ -404,6 +425,24 @@ export class CombatSystem {
     }
   }
 
+
+  private shouldRetargetNpcOnPlayerHit(npc: NPCState, attackerUserId: number): boolean {
+    const currentTarget = npc.aggroTarget;
+    if (!currentTarget) {
+      return true;
+    }
+
+    if (currentTarget.type === EntityType.Player && currentTarget.id === attackerUserId) {
+      return false;
+    }
+
+    const lastAttackAtMs = npc.lastPlayerAttackAtMs;
+    if (lastAttackAtMs !== null && Date.now() - lastAttackAtMs <= NPC_AGGRO_STICKY_HIT_WINDOW_MS) {
+      return false;
+    }
+
+    return true;
+  }
 
   /**
    * Checks if two positions are adjacent (Chebyshev distance of 1).
@@ -594,7 +633,7 @@ export class CombatSystem {
 
       if (combatMode === "magic") {
         magicSpellId = attacker.singleCastSpellId ?? attacker.autoCastSpellId ?? null;
-        rawDamage = this.config.damageService.calculateMagicDamage(magicSpellId ?? -1);
+        rawDamage = this.config.damageService.calculateMagicSpellDamage(attacker, target, magicSpellId ?? -1);
         isMagicAttack = true;
       } else if (combatMode === "range") {
         isRangedAttack = true;
@@ -621,8 +660,8 @@ export class CombatSystem {
       }
     }
 
-    // Instanced NPC idle should reset on real combat attempts, including 0-damage hits.
-    this.resetInstancedNpcIdleTicksOnAttack(attacker, target);
+    // Only instanced NPC attackers refresh idle on combat attempts, including 0-damage hits.
+    this.resetInstancedNpcIdleTicksOnAttack(attacker);
     
     // Cap damage to target's current health (can't deal more damage than they have HP)
     const currentHp = this.getCurrentHitpoints(target);
@@ -698,7 +737,7 @@ export class CombatSystem {
             targetPosition.x,
             targetPosition.y,
             undefined,
-            null
+            attacker.userId
           );
         }
       }
@@ -808,6 +847,11 @@ export class CombatSystem {
       if (topDamager) {
         topDamager.combatDelay = 1;
       }
+    }
+
+    // Process splash damage for AoE spells (Outburst, etc.)
+    if (isMagicAttack && magicSpellId !== null) {
+      this.processSplashDamage(attacker, attackerRef, targetRef, targetPosition, magicSpellId);
     }
   }
 
@@ -1064,15 +1108,160 @@ export class CombatSystem {
     return true;
   }
 
-  private resetInstancedNpcIdleTicksOnAttack(
+  /**
+   * Builds the context object passed to custom NPC combat scripts.
+   */
+  private buildNpcCombatContext(): NpcCombatContext {
+    return {
+      spatialIndex: this.config.spatialIndex,
+      playerStates: this.config.playerStates,
+      stateMachine: this.config.stateMachine,
+      hasLineOfSight: (fromX, fromY, toX, toY, mapLevel) =>
+        this.hasLineOfSight(fromX, fromY, toX, toY, mapLevel),
+      executeAttack: (npc, target, attackerRef, targetRef, spellId) =>
+        this.executeAttack(npc, target, attackerRef, targetRef, spellId),
+    };
+  }
+
+  /**
+   * Processes splash (AoE) damage for spells that have splashDamage defined.
+   * Queries entities near the primary target and applies scaled damage per ring.
+   * Each splash target gets an independent hit chance roll.
+   */
+  private processSplashDamage(
     attacker: PlayerState | NPCState,
-    target: PlayerState | NPCState
+    attackerRef: EntityRef,
+    primaryTargetRef: EntityRef,
+    primaryTargetPosition: Position,
+    spellId: number
+  ): void {
+    const spell = this.config.spellCatalog?.getDefinitionById(spellId);
+    if (!spell?.splashDamage) return;
+
+    const { size, damageAmountsFromCenter, doesSplashDamageGiveXP } = spell.splashDamage;
+    const { mapLevel, x: centerX, y: centerY } = primaryTargetPosition;
+
+    const nearbyPlayers = this.config.spatialIndex.getPlayersInAggroRange(
+      mapLevel, centerX, centerY, size
+    );
+    const nearbyNpcs = this.config.spatialIndex.getNPCsInRadius(
+      mapLevel, centerX, centerY, size
+    );
+
+    for (const playerEntry of nearbyPlayers) {
+      if (primaryTargetRef.type === EntityType.Player && primaryTargetRef.id === playerEntry.id) continue;
+      if (attackerRef.type === EntityType.Player && attackerRef.id === playerEntry.id) continue;
+
+      const targetPlayer = this.config.playerStates.get(playerEntry.id);
+      if (!targetPlayer) continue;
+
+      const state = this.config.stateMachine.getCurrentState({ type: EntityType.Player, id: playerEntry.id });
+      if (state === States.PlayerDeadState) continue;
+      if (this.getCurrentHitpoints(targetPlayer) <= 0) continue;
+
+      if (!WildernessService.isInWilderness(playerEntry.x, playerEntry.y, mapLevel)) continue;
+
+      const distance = Math.max(Math.abs(playerEntry.x - centerX), Math.abs(playerEntry.y - centerY));
+      if (distance >= damageAmountsFromCenter.length) continue;
+
+      const multiplier = damageAmountsFromCenter[distance];
+      const scaledMaxDamage = Math.floor(spell.maxDamage * multiplier);
+      if (scaledMaxDamage <= 0) continue;
+      if (!this.hasLineOfSight(attacker.x, attacker.y, playerEntry.x, playerEntry.y, mapLevel)) continue;
+
+      const rawDamage = this.config.damageService.calculateSplashMagicDamage(attacker, targetPlayer, scaledMaxDamage);
+      const currentHp = this.getCurrentHitpoints(targetPlayer);
+      const actualDamage = Math.min(rawDamage, currentHp);
+
+      if (actualDamage >= 0) targetPlayer.noteIncomingCombatHit();
+
+      const targetPosition: Position = { mapLevel, x: playerEntry.x, y: playerEntry.y };
+      const splashTargetRef: EntityRef = { type: EntityType.Player, id: playerEntry.id };
+
+      this.config.damageService.broadcastDamage(attackerRef, splashTargetRef, actualDamage, targetPosition);
+      this.config.experienceService.applyDamageToTarget(targetPlayer, actualDamage);
+
+      if (actualDamage > 0 && attackerRef.type === EntityType.Player) {
+        this.recordPlayerDamage(playerEntry.id, attackerRef.id, actualDamage);
+      }
+
+      if (this.getCurrentHitpoints(targetPlayer) <= 0) {
+        const topDamager = this.getTopPlayerDamageDealer(playerEntry.id);
+        const killerRef = topDamager !== null
+          ? { type: EntityType.Player as const, id: topDamager }
+          : attackerRef;
+        this.dyingPlayers.set(playerEntry.id, killerRef);
+        this.config.stateMachine.setState(
+          { type: EntityType.Player, id: playerEntry.id },
+          States.PlayerDeadState
+        );
+        this.config.targetingService.clearAllNPCsTargetingPlayer(playerEntry.id);
+        this.playerDamageContributors.delete(playerEntry.id);
+      }
+
+      if (doesSplashDamageGiveXP && 'userId' in attacker) {
+        this.config.experienceService.awardMagicExperience(attacker, null, actualDamage);
+      }
+    }
+
+    for (const npcEntry of nearbyNpcs) {
+      if (primaryTargetRef.type === EntityType.NPC && primaryTargetRef.id === npcEntry.id) continue;
+      if (attackerRef.type === EntityType.NPC && attackerRef.id === npcEntry.id) continue;
+
+      const npcState = this.config.npcStates.get(npcEntry.id);
+      if (!npcState) continue;
+      if (!npcState.definition.combat) continue;
+      if (this.getCurrentHitpoints(npcState) <= 0) continue;
+
+      const npcCurrentState = this.config.stateMachine.getCurrentState({ type: EntityType.NPC, id: npcEntry.id });
+      if (npcCurrentState === States.NPCDeadState) continue;
+
+      const distance = Math.max(Math.abs(npcEntry.x - centerX), Math.abs(npcEntry.y - centerY));
+      if (distance >= damageAmountsFromCenter.length) continue;
+
+      const multiplier = damageAmountsFromCenter[distance];
+      const scaledMaxDamage = Math.floor(spell.maxDamage * multiplier);
+      if (scaledMaxDamage <= 0) continue;
+      if (!this.hasLineOfSight(attacker.x, attacker.y, npcEntry.x, npcEntry.y, mapLevel)) continue;
+
+      const rawDamage = this.config.damageService.calculateSplashMagicDamage(attacker, npcState, scaledMaxDamage);
+      const currentHp = this.getCurrentHitpoints(npcState);
+      const actualDamage = Math.min(rawDamage, currentHp);
+
+      const targetPosition: Position = { mapLevel, x: npcEntry.x, y: npcEntry.y };
+      const splashTargetRef: EntityRef = { type: EntityType.NPC, id: npcEntry.id };
+
+      this.config.damageService.broadcastDamage(attackerRef, splashTargetRef, actualDamage, targetPosition);
+      this.config.experienceService.applyDamageToTarget(npcState, actualDamage);
+
+      if (actualDamage > 0 && attackerRef.type === EntityType.Player) {
+        this.recordNpcDamage(npcEntry.id, attackerRef.id, actualDamage);
+      }
+
+      if (this.getCurrentHitpoints(npcState) <= 0) {
+        const topDamager = this.getTopDamageDealer(npcEntry.id);
+        const killerRef = topDamager !== null
+          ? { type: EntityType.Player as const, id: topDamager }
+          : attackerRef;
+        this.dyingNpcs.set(npcEntry.id, killerRef);
+        this.config.stateMachine.setState(
+          { type: EntityType.NPC, id: npcEntry.id },
+          States.NPCDeadState
+        );
+        this.npcDamageContributors.delete(npcEntry.id);
+      }
+
+      if (doesSplashDamageGiveXP && 'userId' in attacker) {
+        this.config.experienceService.awardMagicExperience(attacker, null, actualDamage);
+      }
+    }
+  }
+
+  private resetInstancedNpcIdleTicksOnAttack(
+    attacker: PlayerState | NPCState
   ): void {
     if (!("userId" in attacker) && attacker.instanced) {
       attacker.instanced.idleTicks = 0;
-    }
-    if (!("userId" in target) && target.instanced) {
-      target.instanced.idleTicks = 0;
     }
   }
 

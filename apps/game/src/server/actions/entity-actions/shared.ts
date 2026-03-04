@@ -203,7 +203,10 @@ export function checkAdjacentToDirectionalBlockingEntity(
  * Checks if player is adjacent to a world entity (environment object).
  * Handles multi-tile entities (like trees that span multiple tiles).
  * 
- * A player is adjacent if they are within 1 tile of ANY tile that the entity occupies.
+ * A player is adjacent if they are within 1 tile of ANY tile that the entity
+ * occupies, AND there is no wall/door/gate edge between the player tile and
+ * the entity tile (for blocked entity tiles) or no melee-blocking obstacle
+ * (for non-blocked entity tiles).
  */
 export function checkAdjacentToEnvironment(
   ctx: ActionContext,
@@ -215,11 +218,15 @@ export function checkAdjacentToEnvironment(
   const playerX = playerState.x;
   const playerY = playerState.y;
   
-  // Calculate the bounding box of the entity
+  // Calculate the bounding box of the entity in tile space.
+  // Use Math.max(Math.trunc(...), 1) to match how the pathing grid treats entity extents,
+  // ensuring sub-1 sizes (e.g. 0.8) still occupy at least one tile.
+  const tileWidth = Math.max(Math.trunc(entityState.width), 1);
+  const tileLength = Math.max(Math.trunc(entityState.length), 1);
   const entityMinX = entityState.x;
   const entityMinY = entityState.y;
-  const entityMaxX = entityState.x + entityState.width - 1;
-  const entityMaxY = entityState.y + entityState.length - 1;
+  const entityMaxX = entityState.x + tileWidth - 1;
+  const entityMaxY = entityState.y + tileLength - 1;
   
   // Check if player is standing on the entity
   const isOnEntity = playerX >= entityMinX && playerX <= entityMaxX && 
@@ -231,22 +238,47 @@ export function checkAdjacentToEnvironment(
     // forceAdjacent = false: Door-like entities - standing on them is allowed
     return !forceAdjacent;
   }
-  
-  // Player is NOT on entity, check if adjacent (within 1 tile)
-  // Find the closest point on the entity to the player
-  const closestX = Math.max(entityMinX, Math.min(playerX, entityMaxX));
-  const closestY = Math.max(entityMinY, Math.min(playerY, entityMaxY));
-  
-  // Calculate distance from player to closest point on entity
-  const dx = Math.abs(playerX - closestX);
-  const dy = Math.abs(playerY - closestY);
 
-  if (!allowDiagonal) {
-    // Cardinal directions only (N, S, E, W) - for doors
-    // Either dx or dy must be 0, and the other must be 1
-    return (dx === 0 && dy === 1) || (dx === 1 && dy === 0);
+  const grid = ctx.pathfindingSystem.getPathingGridForLevel(playerState.mapLevel);
+
+  for (let entityTileX = entityMinX; entityTileX <= entityMaxX; entityTileX++) {
+    for (let entityTileY = entityMinY; entityTileY <= entityMaxY; entityTileY++) {
+      const dx = Math.abs(playerX - entityTileX);
+      const dy = Math.abs(playerY - entityTileY);
+
+      const isAdjacent = allowDiagonal
+        ? dx <= 1 && dy <= 1
+        : (dx === 0 && dy === 1) || (dx === 1 && dy === 0);
+
+      if (!isAdjacent) {
+        continue;
+      }
+
+      if (grid) {
+        const playerGrid = worldToGrid(playerX, playerY, grid);
+        const entityGrid = worldToGrid(entityTileX, entityTileY, grid);
+        const entityTileBlocked = grid.getOrAllBlockedValue(entityGrid.x, entityGrid.y) === 0xff;
+
+        if (entityTileBlocked) {
+          // For blocked tiles (solid objects), only reject if a wall/door/gate
+          // edge exists between the two tiles. Object occupancy alone is fine.
+          if (grid.isWallEdgeBlocked(playerGrid.x, playerGrid.y, entityGrid.x, entityGrid.y)) {
+            continue;
+          }
+        } else if (ctx.losSystem && ctx.losSystem.isMeleeBlocked(
+          playerX,
+          playerY,
+          entityTileX,
+          entityTileY,
+          playerState.mapLevel
+        )) {
+          continue;
+        }
+      }
+
+      return true;
+    }
   }
-  
-  // Adjacent if within 1 tile (using Chebyshev distance)
-  return dx <= 1 && dy <= 1;
+
+  return false;
 }

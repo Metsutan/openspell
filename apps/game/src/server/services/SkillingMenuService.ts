@@ -7,7 +7,7 @@ import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/Stop
 import { buildCreatedItemPayload } from "../../protocol/packets/actions/CreatedItem";
 import type { CreateItemPayload } from "../../protocol/packets/actions/CreateItem";
 import { SkillClientReference, isSkillSlug } from "../../world/PlayerState";
-import type { PlayerState } from "../../world/PlayerState";
+import type { FullInventory, InventoryItem, PlayerState } from "../../world/PlayerState";
 import type { ItemCatalog, ItemDefinition } from "../../world/items/ItemCatalog";
 import type { ExperienceService } from "./ExperienceService";
 import type { InventoryService } from "./InventoryService";
@@ -18,6 +18,7 @@ import type { StateMachine } from "../StateMachine";
 import type { EventBus } from "../events/EventBus";
 import type { PacketAuditService } from "./PacketAuditService";
 import { createPlayerStartedSkillingEvent } from "../events/GameEvents";
+import { InventoryManager } from "../../world/systems/InventoryManager";
 
 type SkillingMenuDefinition = {
   menuType: MenuType;
@@ -141,6 +142,8 @@ const MENU_ITEM_IDS: Partial<Record<MenuType, number[]>> = {
     372, // steel chainmail body
     127, // steel great sword
     42, // steel chestplate
+    255, // silver warrior helm
+    254, // gold warrior helm
     94, // palladium gloves
     331, // palladium arrowheads
     76, // palladium pickaxe
@@ -557,25 +560,28 @@ export class SkillingMenuService {
       return;
     }
 
-    const outputItemId = resolveCraftOutputItemId(session.menuType, session.itemId);
-    const outputAmount = getCraftOutputAmount(outputItemId);
-    const availableCapacity = this.config.inventoryService.calculateAvailableCapacity(
-      userId,
-      outputItemId,
-      0
-    );
-    if (availableCapacity + recipeIngredients.length < outputAmount) {
-      this.config.messageService.sendServerInfo(userId, "Your inventory is full.");
-      this.endSession(userId, false);
-      return;
-    }
-
     for (const ingredient of recipeIngredients) {
       if (!playerState.hasItem(ingredient.itemId, ingredient.amount, 0)) {
         this.config.messageService.sendServerInfo(userId, "You have nothing left to craft.");
         this.endSession(userId, true);
         return;
       }
+    }
+
+    const outputItemId = resolveCraftOutputItemId(session.menuType, session.itemId);
+    const outputAmount = getCraftOutputAmount(outputItemId);
+    if (
+      !canFitCraftOutputAfterConsumingIngredients(
+        playerState,
+        this.config.itemCatalog,
+        outputItemId,
+        outputAmount,
+        recipeIngredients
+      )
+    ) {
+      this.config.messageService.sendServerInfo(userId, "Your inventory is full.");
+      this.endSession(userId, false);
+      return;
     }
 
     for (const ingredient of recipeIngredients) {
@@ -601,7 +607,11 @@ export class SkillingMenuService {
 
     const outputDefinition = this.config.itemCatalog.getDefinitionById(outputItemId);
     const expFromObtaining = outputDefinition?.expFromObtaining ?? itemDefinition.expFromObtaining;
-    if (expFromObtaining && isSkillSlug(expFromObtaining.skill)) {
+    if (
+      outputItemId !== PIG_IRON_BAR_ITEM_ID &&
+      expFromObtaining &&
+      isSkillSlug(expFromObtaining.skill)
+    ) {
       const xpAmount = expFromObtaining.amount * outputAmount;
       if (xpAmount > 0) {
         this.config.experienceService.addSkillXp(playerState, expFromObtaining.skill, xpAmount);
@@ -783,4 +793,27 @@ function calculateMaxCraftable(playerState: PlayerState, ingredients: RecipeIngr
     }
   }
   return Number.isFinite(maxCraftable) ? maxCraftable : 0;
+}
+
+function canFitCraftOutputAfterConsumingIngredients(
+  playerState: PlayerState,
+  itemCatalog: ItemCatalog,
+  outputItemId: number,
+  outputAmount: number,
+  recipeIngredients: RecipeIngredient[]
+): boolean {
+  // Simulate ingredient removal first to account for newly freed slots.
+  const simulatedInventory = playerState.inventory.map((slot) =>
+    slot ? ([slot[0], slot[1], slot[2]] as InventoryItem) : null
+  ) as FullInventory;
+  const simulatedInventoryManager = new InventoryManager(simulatedInventory, itemCatalog);
+
+  for (const ingredient of recipeIngredients) {
+    const removalResult = simulatedInventoryManager.removeItems(ingredient.itemId, ingredient.amount, 0);
+    if (removalResult.removed < ingredient.amount) {
+      return false;
+    }
+  }
+
+  return simulatedInventoryManager.calculateAddCapacity(outputItemId, 0) >= outputAmount;
 }

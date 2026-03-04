@@ -606,6 +606,18 @@ export class SpatialIndexManager {
   }
 
   /**
+   * Finds NPCs within a given radius of a position.
+   */
+  getNPCsInRadius(
+    mapLevel: MapLevel,
+    x: number,
+    y: number,
+    radius: number
+  ): NPCSpatialEntry[] {
+    return this.npcIndex.queryRadius(mapLevel, x, y, radius);
+  }
+
+  /**
    * Gets the position of an entity by reference.
    */
   getEntityPosition(entityRef: EntityRef): Position | null {

@@ -69,6 +69,7 @@ export class StateLoaderService {
         aggroTarget: null,
         aggroDroppedTargetId: null,
         combatDelay: 0,
+        lastPlayerAttackAtMs: null,
         instanced: null
       };
       

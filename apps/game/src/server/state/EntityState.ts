@@ -69,6 +69,8 @@ export interface NPCState extends SpatialEntity {
    * then the NPC can attack again. 
    */
   combatDelay: number;
+  /** Timestamp of the last attack attempt that connected with a player target (0 damage included). */
+  lastPlayerAttackAtMs: number | null;
   /** Runtime metadata for per-player instanced NPCs. Null for world NPCs. */
   instanced: InstancedNpcRuntimeState | null;
 }

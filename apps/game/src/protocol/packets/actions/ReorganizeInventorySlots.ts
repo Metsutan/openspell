@@ -26,7 +26,7 @@ export function decodeReorganizeInventorySlotsPayload(payload: unknown): Reorgan
     IsIOU2: arr[ReorganizeInventorySlotsFields.IsIOU2] as any,
     Type: arr[ReorganizeInventorySlotsFields.Type] as any,
   };
-}
+} 
 
 export function buildReorganizeInventorySlotsPayload(data: ReorganizeInventorySlotsPayload): unknown[] {
   const arr: unknown[] = new Array(8);

@@ -35,6 +35,10 @@ export interface PlayerEventAction {
   sideOne?: WorldEntityActionLocation;
   /** Used by MineThroughRocks - position on other side of the rocks */
   sideTwo?: WorldEntityActionLocation;
+  /** Used by athleticsObstacle - position on one side of obstacle */
+  location1?: WorldEntityActionLocation;
+  /** Used by athleticsObstacle - position on other side of obstacle */
+  location2?: WorldEntityActionLocation;
   /** Used by PlayerGiveItems - optional message when items are removed */
   messageToPlayer?: string;
   /** Used by PlayerGiveItems - item stacks removed from player inventory */

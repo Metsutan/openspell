@@ -217,6 +217,7 @@ export class InstancedNpcService {
       aggroTarget: null,
       aggroDroppedTargetId: null,
       combatDelay: 0,
+      lastPlayerAttackAtMs: null,
       instanced: {
         configId,
         ownerUserId,

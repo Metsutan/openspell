@@ -30,6 +30,9 @@ export interface TeleportOptions {
   
   /** Whether to validate the teleport (default: true) */
   validate?: boolean;
+
+  /** Whether to bypass wilderness teleport restriction checks */
+  skipWildernessRestriction?: boolean;
 }
 
 export interface TeleportResult {
@@ -73,12 +76,13 @@ export class TeleportService {
       type = TeleportType.Teleport,
       spellId,
       broadcastSpellCast = !!spellId,
-      validate = true
+      validate = true,
+      skipWildernessRestriction = false
     } = options;
 
     // Validation (can be disabled for admin commands)
     if (validate) {
-      const validation = this.validateTeleport(userId, x, y, mapLevel, type);
+      const validation = this.validateTeleport(userId, x, y, mapLevel, type, skipWildernessRestriction);
       if (!validation.success) {
         return validation;
       }
@@ -202,7 +206,8 @@ export class TeleportService {
     x: number,
     y: number,
     mapLevel: MapLevel,
-    teleportType: TeleportType
+    teleportType: TeleportType,
+    skipWildernessRestriction: boolean
   ): TeleportResult {
     const playerState = this.deps.playerStatesByUserId.get(userId);
     if (!playerState) {
@@ -222,6 +227,7 @@ export class TeleportService {
 
     if (
       teleportType === TeleportType.Teleport
+      && !skipWildernessRestriction
       && !WildernessService.canTeleport(playerState.x, playerState.y, playerState.mapLevel)
     ) {
       return { success: false, reason: WildernessService.TELEPORT_BLOCK_MESSAGE };

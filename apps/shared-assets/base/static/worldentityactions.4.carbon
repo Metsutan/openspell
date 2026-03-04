@@ -3844,12 +3844,12 @@
                         "insideLocation":{
                             "x":-297,
                             "y":-261,
-                            "lvl":0
+                            "lvl":1
                         },
                         "outsideLocation":{
                             "x":-296,
                             "y":-261,
-                            "lvl":0
+                            "lvl":1
                         }
                     }
                 ]
@@ -3868,12 +3868,12 @@
                         "insideLocation":{
                             "x":-297,
                             "y":-260,
-                            "lvl":0
+                            "lvl":1
                         },
                         "outsideLocation":{
                             "x":-296,
                             "y":-260,
-                            "lvl":0
+                            "lvl":1
                         }
                     }
                 ]

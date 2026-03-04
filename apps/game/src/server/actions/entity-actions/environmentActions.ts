@@ -34,6 +34,7 @@ import { DelayType } from "../../systems/DelaySystem";
 import { buildPathfindingFailedPayload } from "../../../protocol/packets/actions/PathfindingFailed";
 import { buildShowLootMenuPayload } from "../../../protocol/packets/actions/ShowLootMenu";
 import type { WorldEntityAction } from "../../services/WorldEntityActionService";
+import { Point } from "../../../world/pathfinding";
 
 // =============================================================================
 // Constants
@@ -85,6 +86,8 @@ const ACTION_TO_STRING: Partial<Record<Action, string>> = {
 const DOOR_LIKE_TYPES = new Set(["door", "opendoor", "gate"]);
 const SEARCH_DELAY_TICKS = 4;
 const PICKLOCK_DELAY_TICKS = 4;
+const DISABLED_WORLD_ENTITY_LOOT_IDS = new Set([23, 24]);
+const DISABLED_WORLD_ENTITY_LOOT_MESSAGE = "This content is currently disabled.";
 
 function isDoorLikeEntity(entityState: WorldEntityState): boolean {
   return DOOR_LIKE_TYPES.has(entityState.type);
@@ -194,6 +197,11 @@ export function handleEnvironmentAction(
 
   ctx.targetingService.setPlayerTarget(playerState.userId, { type: EntityType.Environment, id: entityState.id });
   if (isInPosition) {
+    // If the player clicked while already adjacent, cancel any stale movement plan so
+    // they don't continue walking away before the pending action executes this tick.
+    const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
+    ctx.pathfindingSystem.deleteMovementPlan(entityRef);
+
     // Already in position - set initial wait ticks
     // Teleports and doors wait 1 tick, others execute immediately
     const needsWait = requiresWaitTick(ctx, entityState, actionName);
@@ -316,6 +324,16 @@ function checkPosition(
   isDoor: boolean,
   actionName?: string
 ): boolean {
+  if (actionName) {
+    const athleticsObstacle = getAthleticsObstacleLocations(ctx, entityState.id, actionName);
+    if (athleticsObstacle) {
+      return (
+        isPlayerAtLocation(playerState, athleticsObstacle.location1) ||
+        isPlayerAtLocation(playerState, athleticsObstacle.location2)
+      );
+    }
+  }
+
   // Doors use special directional blocking logic
   if (isDoor) {
     return checkAdjacentToDirectionalBlockingEntity(ctx, playerState, entityState);
@@ -355,6 +373,30 @@ function startPathfinding(
   isDoor: boolean,
   actionName?: string
 ): void {
+  const athleticsPath = getBestPathToAthleticsObstacleLocation(
+    ctx,
+    playerState,
+    entityState,
+    actionName
+  );
+  if (athleticsPath) {
+    const speed = playerState.settings[PlayerSetting.IsSprinting] === 1 ? 2 : 1;
+    const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
+    ctx.pathfindingSystem.scheduleMovementPlan(
+      entityRef,
+      playerState.mapLevel,
+      athleticsPath,
+      speed
+    );
+    return;
+  }
+
+  if (actionName && getAthleticsObstacleLocations(ctx, entityState.id, actionName)) {
+    ctx.messageService.sendServerInfo(playerState.userId, "Can't reach that");
+    playerState.pendingAction = null;
+    return;
+  }
+
   // Determine adjacency rules based on entity size
   const isSmallEntity = entityState.width <= 1 && entityState.length <= 1;
   const allowDiagonal = isDoor ? false : !isSmallEntity; // Doors: false, Small: false, Large: true
@@ -368,7 +410,8 @@ function startPathfinding(
     playerState.mapLevel,
     !isDoor, // forceAdjacent: true for non-doors
     null,
-    allowDiagonal // Cardinal only for doors and small entities
+    allowDiagonal, // Cardinal only for doors and small entities
+    isDoor // skipEdgeFilter: doors need wall-side adjacency; position validated after arrival
   );
 
   if (!path || path.length <= 1) {
@@ -432,6 +475,32 @@ function getClimbSameMapLevelSideLocations(
   return locations;
 }
 
+function getAthleticsObstacleLocations(
+  ctx: ActionContext,
+  entityId: number,
+  actionName: string
+): { location1: WorldEntityActionLocation; location2: WorldEntityActionLocation } | null {
+  const actionConfig = ctx.worldEntityActionService.getActionConfig(entityId, actionName);
+  if (!actionConfig) {
+    return null;
+  }
+
+  for (const eventAction of actionConfig.playerEventActions) {
+    if (
+      eventAction.type === "athleticsObstacle" &&
+      eventAction.location1 &&
+      eventAction.location2
+    ) {
+      return {
+        location1: eventAction.location1,
+        location2: eventAction.location2
+      };
+    }
+  }
+
+  return null;
+}
+
 function isPlayerAtLocation(
   playerState: PlayerState,
   location: WorldEntityActionLocation
@@ -460,6 +529,47 @@ function getBestPathToClimbSameMapLevelSide(
 
   let bestPath: ReturnType<typeof buildMovementPath> = null;
   for (const location of sideLocations) {
+    if (location.lvl !== playerState.mapLevel) {
+      continue;
+    }
+
+    const candidatePath = buildMovementPath(
+      ctx,
+      playerState.x,
+      playerState.y,
+      location.x,
+      location.y,
+      playerState.mapLevel
+    );
+    if (!candidatePath || candidatePath.length <= 1) {
+      continue;
+    }
+
+    if (!bestPath || candidatePath.length < bestPath.length) {
+      bestPath = candidatePath;
+    }
+  }
+
+  return bestPath;
+}
+
+function getBestPathToAthleticsObstacleLocation(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState,
+  actionName?: string
+) {
+  if (!actionName) {
+    return null;
+  }
+
+  const athleticsObstacle = getAthleticsObstacleLocations(ctx, entityState.id, actionName);
+  if (!athleticsObstacle) {
+    return null;
+  }
+
+  let bestPath: ReturnType<typeof buildMovementPath> = null;
+  for (const location of [athleticsObstacle.location1, athleticsObstacle.location2]) {
     if (location.lvl !== playerState.mapLevel) {
       continue;
     }
@@ -680,9 +790,21 @@ function executeOverrideAction(
       case "ClimbSameMapLevel":
         executeClimbSameMapLevel(ctx, playerState, entityState, eventAction.sideOne, eventAction.sideTwo);
         break;
+      case "athleticsObstacle":
+        executeAthleticsObstacle(
+          ctx,
+          playerState,
+          entityState,
+          eventAction.location1,
+          eventAction.location2
+        );
+        break;
 
       case "PlayerGiveItems":
         executePlayerGiveItemsEvent(ctx, playerState.userId, eventAction as any);
+        break;
+      case "PlayerReceiveItems":
+        executePlayerReceiveItemsEvent(ctx, playerState.userId, eventAction as any);
         break;
       case "StartBanking":
         // Mirror default Action.BankAt behavior for scripted world-entity actions.
@@ -764,6 +886,36 @@ function executePlayerGiveItemsEvent(
   }
 }
 
+function executePlayerReceiveItemsEvent(
+  ctx: ActionContext,
+  userId: number,
+  eventAction: {
+    messageToPlayer?: string;
+    playerReceiveItems?: Array<{ id?: number; itemId?: number; amt?: number; amount?: number; isIOU?: boolean; isiou?: boolean }>;
+  }
+): void {
+  const toReceive = Array.isArray(eventAction.playerReceiveItems) ? eventAction.playerReceiveItems : [];
+
+  for (const item of toReceive) {
+    const itemId = typeof item.id === "number" ? item.id : item.itemId;
+    const amount = typeof item.amt === "number" ? item.amt : item.amount;
+    if (!Number.isFinite(itemId) || !Number.isFinite(amount) || (amount as number) <= 0) {
+      continue;
+    }
+
+    ctx.inventoryService.giveItem(
+      userId,
+      itemId as number,
+      amount as number,
+      (item.isIOU ?? item.isiou) ? 1 : 0
+    );
+  }
+
+  if (typeof eventAction.messageToPlayer === "string" && eventAction.messageToPlayer.trim().length > 0) {
+    ctx.messageService.sendServerInfo(userId, eventAction.messageToPlayer);
+  }
+}
+
 /**
  * Executes default behavior for environment actions.
  */
@@ -817,7 +969,7 @@ function executeDefaultAction(
       }
       break;
     case Action.Open:
-      ctx.messageService.sendServerInfo(playerState.userId, `Please let us know how you managed to trigger this`);
+      ctx.messageService.sendServerInfo(playerState.userId, `Hmm it won't open`);
       break;
     case Action.Close:
       ctx.messageService.sendServerInfo(playerState.userId, `Hmm it won't close`);
@@ -901,6 +1053,11 @@ function executePicklockAction(
     return;
   }
 
+  if (isWorldEntityLootIdDisabled(worldEntityLootId)) {
+    ctx.messageService.sendServerInfo(playerState.userId, DISABLED_WORLD_ENTITY_LOOT_MESSAGE);
+    return;
+  }
+
   if (!ctx.worldEntityLootService) {
     ctx.messageService.sendServerInfo(playerState.userId, "Picklock loot is not available right now.");
     return;
@@ -935,6 +1092,11 @@ function executeUnlockAction(
   const worldEntityLootId = getWorldEntityLootIdForUnlock(entityState);
   if (!worldEntityLootId) {
     ctx.messageService.sendServerInfo(playerState.userId, "It's locked shut");
+    return;
+  }
+
+  if (isWorldEntityLootIdDisabled(worldEntityLootId)) {
+    ctx.messageService.sendServerInfo(playerState.userId, DISABLED_WORLD_ENTITY_LOOT_MESSAGE);
     return;
   }
 
@@ -1005,6 +1167,11 @@ function resolveSearchAction(
   const worldEntityLootId = getWorldEntityLootIdForSearch(entityState);
   if (!worldEntityLootId) {
     ctx.messageService.sendServerInfo(playerState.userId, "You find nothing interesting");
+    return;
+  }
+
+  if (isWorldEntityLootIdDisabled(worldEntityLootId)) {
+    ctx.messageService.sendServerInfo(playerState.userId, DISABLED_WORLD_ENTITY_LOOT_MESSAGE);
     return;
   }
 
@@ -1092,6 +1259,11 @@ function resolvePicklockAction(
     return;
   }
 
+  if (isWorldEntityLootIdDisabled(worldEntityLootId)) {
+    ctx.messageService.sendServerInfo(playerState.userId, DISABLED_WORLD_ENTITY_LOOT_MESSAGE);
+    return;
+  }
+
   if (!ctx.worldEntityLootService) {
     ctx.messageService.sendServerInfo(playerState.userId, "Picklock loot is not available right now.");
     return;
@@ -1127,7 +1299,7 @@ function resolvePicklockAction(
       if (!Number.isFinite(reward.amount) || reward.amount <= 0) {
         continue;
       }
-      ctx.experienceService.addSkillXp(playerState, reward.skill, reward.amount);
+      ctx.experienceService.addSkillXp(playerState, reward.skill, reward.amount, { sendGainedExp: true });
     }
   }
 
@@ -1176,6 +1348,11 @@ function resolveUnlockAction(
 
   if (!ctx.worldEntityLootService) {
     ctx.messageService.sendServerInfo(playerState.userId, "Unlock loot is not available right now.");
+    return;
+  }
+
+  if (isWorldEntityLootIdDisabled(worldEntityLootId)) {
+    ctx.messageService.sendServerInfo(playerState.userId, DISABLED_WORLD_ENTITY_LOOT_MESSAGE);
     return;
   }
 
@@ -1324,6 +1501,10 @@ function getWorldEntityLootIdForUnlock(entityState: WorldEntityState): number | 
   return entityState.worldEntityLootIdOverride ?? null;
 }
 
+function isWorldEntityLootIdDisabled(worldEntityLootId: number): boolean {
+  return DISABLED_WORLD_ENTITY_LOOT_IDS.has(worldEntityLootId);
+}
+
 function exhaustEntityLootIfNeeded(
   ctx: ActionContext,
   entityState: WorldEntityState,
@@ -1468,6 +1649,84 @@ function executeClimbSameMapLevel(
       ctx.messageService.sendServerInfo(playerState.userId, "Unable to climb.");
     }
   }
+}
+
+function buildStraightLinePath(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number
+): Point[] {
+  const path: Point[] = [new Point(startX, startY)];
+  let currentX = startX;
+  let currentY = startY;
+  const stepX = Math.sign(endX - startX);
+  const stepY = Math.sign(endY - startY);
+  const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+
+  for (let i = 0; i < steps; i += 1) {
+    if (currentX !== endX) {
+      currentX += stepX;
+    }
+    if (currentY !== endY) {
+      currentY += stepY;
+    }
+    path.push(new Point(currentX, currentY));
+  }
+
+  return path;
+}
+
+function executeAthleticsObstacle(
+  ctx: ActionContext,
+  playerState: PlayerState,
+  entityState: WorldEntityState,
+  location1: WorldEntityActionLocation | undefined,
+  location2: WorldEntityActionLocation | undefined
+): void {
+  if (!location1 || !location2) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You cannot do that right now.");
+    return;
+  }
+
+  if (location1.lvl !== location2.lvl || location1.lvl !== playerState.mapLevel) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You cannot do that right now.");
+    return;
+  }
+
+  const isAtLocation1 = isPlayerAtLocation(playerState, location1);
+  const isAtLocation2 = isPlayerAtLocation(playerState, location2);
+  if (!isAtLocation1 && !isAtLocation2) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You need to be in position first.");
+    return;
+  }
+
+  const destination = isAtLocation1 ? location2 : location1;
+  const path = buildStraightLinePath(playerState.x, playerState.y, destination.x, destination.y);
+  const travelTicks = path.length - 1;
+  if (travelTicks <= 0) {
+    return;
+  }
+
+  const started = ctx.delaySystem.startDelay({
+    userId: playerState.userId,
+    type: DelayType.Blocking,
+    ticks: travelTicks
+  });
+  if (!started) {
+    return;
+  }
+
+  const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
+  ctx.pathfindingSystem.deleteMovementPlan(entityRef);
+  ctx.pathfindingSystem.scheduleMovementPlan(
+    entityRef,
+    playerState.mapLevel,
+    path,
+    1,
+    undefined,
+    { lockSpeed: true }
+  );
 }
 
 /**

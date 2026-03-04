@@ -267,25 +267,13 @@ export class WorldEntityLootService {
     itemCatalog: ItemCatalog | null
   ): Array<{ itemId: number; amount: number; isIOU: boolean }> {
     const drops: Array<{ itemId: number; amount: number; isIOU: boolean }> = [];
+    const hasConfiguredRolls = Object.prototype.hasOwnProperty.call(lootDef, "rolls");
 
-    // There is always one guaranteed roll.
-    const guaranteedRoll = this.rollOnCumulativeTable(lootDef.cumulativeLoot, Math.random());
-    if (guaranteedRoll) {
-      drops.push({
-        itemId: guaranteedRoll.itemId,
-        amount: this.randomizeStackableAmount(
-          guaranteedRoll.itemId,
-          guaranteedRoll.amount,
-          guaranteedRoll.isIOU,
-          lootDef.minRandomizedStackableFactor,
-          itemCatalog
-        ),
-        isIOU: guaranteedRoll.isIOU
-      });
-    }
-
-    // Additional roll chances from `rolls`.
-    if (Array.isArray(lootDef.rolls)) {
+    // If `rolls` is explicitly configured, only those chances are used.
+    if (hasConfiguredRolls) {
+      if (!Array.isArray(lootDef.rolls)) {
+        return drops;
+      }
       for (const rollChance of lootDef.rolls) {
         const chance = Number.isFinite(rollChance) ? rollChance : 0;
         if (Math.random() >= chance) {
@@ -306,6 +294,23 @@ export class WorldEntityLootService {
           });
         }
       }
+      return drops;
+    }
+
+    // Backward compatibility: no `rolls` means one guaranteed roll.
+    const guaranteedRoll = this.rollOnCumulativeTable(lootDef.cumulativeLoot, Math.random());
+    if (guaranteedRoll) {
+      drops.push({
+        itemId: guaranteedRoll.itemId,
+        amount: this.randomizeStackableAmount(
+          guaranteedRoll.itemId,
+          guaranteedRoll.amount,
+          guaranteedRoll.isIOU,
+          lootDef.minRandomizedStackableFactor,
+          itemCatalog
+        ),
+        isIOU: guaranteedRoll.isIOU
+      });
     }
 
     return drops;

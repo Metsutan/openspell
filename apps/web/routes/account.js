@@ -172,6 +172,9 @@ router.get('/', async (req, res) => {
                 ` : ''}
                 <li>Player since <span class="fw-bold">${createdDateStr}</span></li>
                 <li>Total play time: <span class="fw-bold">${totalPlayTimeStr}</span></li>
+                <li>
+                    <a href="/account/download-data" class="anchor-submit-button" title="Download Account Data">Download account data</a>
+                </li>
                 <li></li>
                 <li><h3>Account Management</h3></li>
                 ${passwordCooldownInfo}
@@ -186,6 +189,31 @@ router.get('/', async (req, res) => {
 
     const html = generatePage('OpenSpell - My Account', bodyContent, null, user);
     res.send(html);
+});
+
+// Route: Download account data export (requires authentication)
+router.get('/download-data', async (req, res) => {
+    try {
+        const exportData = await makeApiRequest('/api/account/export', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${req.session.token}`
+            }
+        });
+
+        const usernameRaw = (exportData && exportData.user && exportData.user.username) || req.session.username || 'user';
+        const safeUsername = String(usernameRaw).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40) || 'user';
+        const exportedAt = new Date().toISOString().slice(0, 10);
+        const fileName = `openspell-account-export-${safeUsername}-${exportedAt}.json`;
+
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.send(`${JSON.stringify(exportData, null, 2)}\n`);
+    } catch (error) {
+        console.error('Account export download error:', error);
+        const errorMessage = extractApiErrorMessage(error);
+        return res.redirect(`/account?error=${encodeURIComponent(errorMessage || 'Failed to download account data')}`);
+    }
 });
 
 // Route: Change Password page (requires authentication)

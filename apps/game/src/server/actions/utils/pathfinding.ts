@@ -45,13 +45,13 @@ export function buildMovementPath(
  * Builds a movement path to a target or adjacent to it if the target is blocked.
  * This is useful for interacting with NPCs, items on tables, or blocked tiles.
  * 
- * When finding adjacent tiles, prioritizes tiles with line of sight to the target.
- * This prevents pathfinding to tiles on the opposite side of walls.
+ * When finding adjacent tiles, rejects candidates separated from the target by
+ * wall/door/gate edges. For non-blocked targets, also uses melee-blocked and LOS checks.
  * 
  * Tries in order:
  * 1. Path directly to target (if walkable and forceAdjacent is false)
- * 2. Path to adjacent tiles with LOS, sorted by distance (cardinal first, then diagonal if allowed)
- * 3. Path to adjacent tiles without LOS (fallback if no LOS tiles available)
+ * 2. Path to adjacent tiles without wall edges between them and the target
+ * 3. Fallback to remaining tiles when no wall-aware filtering is available
  * 
  * For door-like entities (forceAdjacent=false, allowDiagonal=false):
  * - Tries direct path first (player inside room standing on door)
@@ -68,6 +68,8 @@ export function buildMovementPath(
  * @param forceAdjacent - If true, always path adjacent even if target is walkable (for NPCs, solid objects)
  * @param maxSearchRadius - Optional: Maximum tile distance from start to search (null = unlimited)
  * @param allowDiagonal - If false, only consider cardinal adjacency (N, S, E, W), not diagonals (for doors)
+ * @param skipEdgeFilter - If true, skip wall-edge / melee / LOS filtering on adjacent tiles (for doors,
+ *   where the valid interaction side IS the wall side). Position validation is deferred to the caller.
  * @returns Path to target or adjacent tile, or null if no path found
  */
 export function buildMovementPathAdjacent(
@@ -79,7 +81,8 @@ export function buildMovementPathAdjacent(
   mapLevel: MapLevel,
   forceAdjacent: boolean = false,
   maxSearchRadius: number | null = DEFAULT_CLICK_MAX_SEARCH_RADIUS,
-  allowDiagonal: boolean = true
+  allowDiagonal: boolean = true,
+  skipEdgeFilter: boolean = false
 ): Point[] | null {
   const grid = ctx.pathfindingSystem.getPathingGridForLevel(mapLevel);
   if (!grid) {
@@ -88,6 +91,7 @@ export function buildMovementPathAdjacent(
 
   const gridStart = worldToGrid(startX, startY, grid);
   const gridTarget = worldToGrid(targetX, targetY, grid);
+  const targetTileBlocked = grid.getOrAllBlockedValue(gridTarget.x, gridTarget.y) === 0xff;
 
   // Try direct path first (if target is walkable and not forced to be adjacent)
   if (!forceAdjacent) {
@@ -126,7 +130,6 @@ export function buildMovementPathAdjacent(
   // Sort by distance (shortest first)
   adjacentWithDistance.sort((a, b) => a.distSq - b.distSq);
 
-  // Check LOS for each adjacent tile if LOS system is available
   const tilesWithLOS: typeof adjacentWithDistance = [];
   const tilesWithoutLOS: typeof adjacentWithDistance = [];
 
@@ -134,14 +137,29 @@ export function buildMovementPathAdjacent(
     // Check if adjacent tile is walkable (not 0xff)
     const tileValue = grid.getOrAllBlockedValue(tile.adjX, tile.adjY);
     if (tileValue === 0xff) {
-      continue; // Skip blocked tiles
+      continue;
     }
 
     // Convert grid coordinates to world coordinates for LOS check
     const worldAdj = gridToWorld(new Point(tile.adjX, tile.adjY), grid);
-    
-    // Check LOS from adjacent tile to target
-    if (ctx.losSystem) {
+
+    if (skipEdgeFilter) {
+      // For doors: skip wall/melee/LOS filtering entirely.
+      // The caller validates which side is valid after the player arrives.
+      tilesWithLOS.push(tile);
+    } else if (targetTileBlocked) {
+      // For blocked targets (solid objects like chests/ovens), reject only if
+      // a wall/door/gate edge separates this tile from the target tile.
+      if (grid.isWallEdgeBlocked(tile.adjX, tile.adjY, gridTarget.x, gridTarget.y)) {
+        continue;
+      }
+      tilesWithLOS.push(tile);
+    } else if (ctx.losSystem) {
+      // For non-blocked targets, use full melee-blocked check
+      if (ctx.losSystem.isMeleeBlocked(worldAdj.x, worldAdj.y, targetX, targetY, mapLevel)) {
+        continue;
+      }
+      // Then sort by LOS preference
       const losResult = ctx.losSystem.checkLOS(worldAdj.x, worldAdj.y, targetX, targetY, mapLevel);
       if (losResult.hasLOS) {
         tilesWithLOS.push(tile);
@@ -149,7 +167,6 @@ export function buildMovementPathAdjacent(
         tilesWithoutLOS.push(tile);
       }
     } else {
-      // No LOS system - treat all tiles equally
       tilesWithLOS.push(tile);
     }
   }
@@ -164,13 +181,16 @@ export function buildMovementPathAdjacent(
     }
   }
 
-  // Fallback: Try tiles without LOS (in case all LOS tiles are unreachable)
-  for (const { adjX, adjY } of tilesWithoutLOS) {
-    const adjPoint = new Point(adjX, adjY);
-    const path = astarPathfinding(grid, gridStart, adjPoint, maxSearchRadius);
-    
-    if (path && path.length > 1) {
-      return path.map((p) => gridToWorld(p, grid));
+  // For non-blocked targets with LOS, don't fall back to non-LOS tiles.
+  // For blocked targets (or no LOS system), allow all passing tiles.
+  if (!ctx.losSystem || targetTileBlocked) {
+    for (const { adjX, adjY } of tilesWithoutLOS) {
+      const adjPoint = new Point(adjX, adjY);
+      const path = astarPathfinding(grid, gridStart, adjPoint, maxSearchRadius);
+      
+      if (path && path.length > 1) {
+        return path.map((p) => gridToWorld(p, grid));
+      }
     }
   }
 

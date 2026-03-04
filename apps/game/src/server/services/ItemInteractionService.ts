@@ -92,6 +92,7 @@ type ItemOnItemSession = {
   expPerCraft: number;
   skillToCreate: SkillSlug | null;
   state: States | null;
+  delayTicks: number;
 };
 
 type ItemOnEntityRecipeIngredient = {
@@ -120,6 +121,12 @@ type ItemOnEntitySession = {
 
 const ITEM_ON_ITEM_INTERVAL_TICKS = 5;
 const ITEM_ON_ENTITY_INTERVAL_TICKS = 5;
+const RAPID_ARROW_ITEM_ON_ITEM_TICKS = 1;
+const ARROW_SHAFTS_ITEM_ID = 326;
+const HEADLESS_ARROWS_ITEM_ID = 327;
+const FEATHERS_ITEM_ID = 340;
+const ARROWHEAD_MIN_ITEM_ID = 328;
+const ARROWHEAD_MAX_ITEM_ID = 333;
 
 export class ItemInteractionService {
   private readonly worldEntityHandlers = new Map<number, Map<string, ItemOnWorldEntityHandler>>();
@@ -386,8 +393,14 @@ export class ItemInteractionService {
     }
 
     const { action, index, useItemId, usedOnItemId } = actionMatch;
+    const isRapidArrowAction = this.isRapidArrowAssemblyAction(useItemId, usedOnItemId);
     const parsedAmountToCreate = Number(amountToCreate);
-    if (!action.canCreateMultiple && Number.isFinite(parsedAmountToCreate) && parsedAmountToCreate !== 1) {
+    if (
+      !action.canCreateMultiple &&
+      !isRapidArrowAction &&
+      Number.isFinite(parsedAmountToCreate) &&
+      parsedAmountToCreate !== 1
+    ) {
       this.deps.packetAudit?.logInvalidPacket({
         userId: playerState.userId,
         packetName: "ItemOnItem",
@@ -397,21 +410,25 @@ export class ItemInteractionService {
       return { handled: true, success: false };
     }
 
-    const craftCount = this.getCraftCount(action, amountToCreate);
-    if (craftCount <= 0) {
-      return { handled: true, success: false };
-    }
-
     const maxCrafts = this.getMaxCrafts(playerState, action.itemsToRemove);
     if (maxCrafts <= 0) {
       this.deps.messageService.sendServerInfo(playerState.userId, "You don't have the required items.");
       return { handled: true, success: false };
     }
 
+    const craftCount = this.getCraftCount(action, amountToCreate, {
+      isRapidArrowAction,
+      maxCrafts
+    });
+    if (craftCount <= 0) {
+      return { handled: true, success: false };
+    }
+
     const craftsToRun = Math.min(craftCount, maxCrafts);
-    const expPerCraft = this.getActionExpAmount(action);
     const skillToCreate: SkillSlug | null = isSkillSlug(action.skillToCreate) ? action.skillToCreate : null;
+    const expPerCraft = this.getActionExpAmount(action, skillToCreate);
     const state = skillToCreate ? getStateForSkill(skillToCreate) : null;
+    const delayTicks = isRapidArrowAction ? RAPID_ARROW_ITEM_ON_ITEM_TICKS : ITEM_ON_ITEM_INTERVAL_TICKS;
 
     if (!skillToCreate && !action.canCreateMultiple) {
       const crafted = this.performItemOnItemCraft(playerState, {
@@ -432,7 +449,8 @@ export class ItemInteractionService {
       remainingCrafts: craftsToRun,
       expPerCraft,
       skillToCreate,
-      state
+      state,
+      delayTicks
     });
 
     if (!started) {
@@ -487,12 +505,23 @@ export class ItemInteractionService {
     return { action: actions[firstPairAbsoluteIndex], index: 0, useItemId, usedOnItemId };
   }
 
-  private getCraftCount(action: ItemOnItemAction, amountToCreate?: number): number {
-    if (!action.canCreateMultiple) {
+  private getCraftCount(
+    action: ItemOnItemAction,
+    amountToCreate: number | undefined,
+    options?: { isRapidArrowAction?: boolean; maxCrafts?: number }
+  ): number {
+    const isRapidArrowAction = Boolean(options?.isRapidArrowAction);
+    const maxCrafts = options?.maxCrafts ?? 0;
+    if (!action.canCreateMultiple && !isRapidArrowAction) {
       return 1;
     }
 
     const parsedAmount = Number(amountToCreate);
+    if (isRapidArrowAction && (!Number.isFinite(parsedAmount) || parsedAmount <= 1)) {
+      // Arrow shaft feathering/tipping should queue until materials are exhausted.
+      return Math.max(1, maxCrafts);
+    }
+
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       return 1;
     }
@@ -556,23 +585,31 @@ export class ItemInteractionService {
     }
   }
 
-  private getActionExpAmount(action: ItemOnItemAction): number {
-    if (!action.resultItems || action.resultItems.length === 0) {
+  private getActionExpAmount(action: ItemOnItemAction, skillToCreate: SkillSlug | null): number {
+    if (!skillToCreate || !action.resultItems || action.resultItems.length === 0) {
       return 0;
     }
 
-    const firstResultItem = action.resultItems[0];
-    if (!firstResultItem) {
-      return 0;
+    let totalExpPerCraft = 0;
+    for (const resultItem of action.resultItems) {
+      if (!resultItem || resultItem.amount <= 0) {
+        continue;
+      }
+
+      const definition = this.deps.itemCatalog.getDefinitionById(resultItem.id);
+      const expFromObtaining = definition?.expFromObtaining;
+      if (!expFromObtaining || !isSkillSlug(expFromObtaining.skill)) {
+        continue;
+      }
+
+      if (expFromObtaining.skill !== skillToCreate) {
+        continue;
+      }
+
+      totalExpPerCraft += expFromObtaining.amount * resultItem.amount;
     }
 
-    const definition = this.deps.itemCatalog.getDefinitionById(firstResultItem.id);
-    const expFromObtaining = definition?.expFromObtaining;
-    if (!expFromObtaining || !isSkillSlug(expFromObtaining.skill)) {
-      return 0;
-    }
-
-    return expFromObtaining.amount;
+    return totalExpPerCraft;
   }
 
   private performItemOnItemCraft(
@@ -615,7 +652,7 @@ export class ItemInteractionService {
     const delayStarted = this.deps.delaySystem.startDelay({
       userId: playerState.userId,
       type: DelayType.NonBlocking,
-      ticks: ITEM_ON_ITEM_INTERVAL_TICKS,
+      ticks: session.delayTicks,
       state: session.state ?? undefined,
       skipStateRestore: true,
       onComplete: (userId) => this.handleItemOnItemDelayComplete(userId),
@@ -694,7 +731,7 @@ export class ItemInteractionService {
     const delayStarted = this.deps.delaySystem.startDelay({
       userId,
       type: DelayType.NonBlocking,
-      ticks: ITEM_ON_ITEM_INTERVAL_TICKS,
+      ticks: session.delayTicks,
       state: session.state ?? undefined,
       skipStateRestore: true,
       onComplete: (nextUserId) => this.handleItemOnItemDelayComplete(nextUserId),
@@ -978,10 +1015,26 @@ export class ItemInteractionService {
     }
     this.endItemOnItemSession(userId, setIdle);
   }
+
+  private isRapidArrowAssemblyAction(useItemId: number, usedOnItemId: number): boolean {
+    const pair = new Set([useItemId, usedOnItemId]);
+    const isFeathering =
+      pair.has(ARROW_SHAFTS_ITEM_ID) &&
+      pair.has(FEATHERS_ITEM_ID);
+    if (isFeathering) {
+      return true;
+    }
+
+    const isArrowheadInPair =
+      (useItemId >= ARROWHEAD_MIN_ITEM_ID && useItemId <= ARROWHEAD_MAX_ITEM_ID) ||
+      (usedOnItemId >= ARROWHEAD_MIN_ITEM_ID && usedOnItemId <= ARROWHEAD_MAX_ITEM_ID);
+    const isTipping = pair.has(HEADLESS_ARROWS_ITEM_ID) && isArrowheadInPair;
+    return isTipping;
+  }
 }
 
 function getItemRecipeIngredients(definition: ItemDefinition): ItemOnEntityRecipeIngredient[] {
-  const recipe = definition.recipe as unknown;
+  const recipe = definition.recipe as unknown; 
   if (Array.isArray(recipe)) {
     return recipe
       .map((entry) => ({

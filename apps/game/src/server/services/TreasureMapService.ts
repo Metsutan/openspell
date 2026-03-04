@@ -77,6 +77,7 @@ export class TreasureMapService {
   public static readonly TIER1_ITEM_ID = 442;
   public static readonly TIER2_ITEM_ID = 443;
   public static readonly TIER3_ITEM_ID = 456;
+  private static readonly DIG_TOLERANCE_TILES = 1;
 
   private static readonly ITEM_ID_BY_TIER: Record<TreasureMapTier, number> = {
     1: TreasureMapService.TIER1_ITEM_ID,
@@ -191,8 +192,8 @@ export class TreasureMapService {
       }
       if (
         ownerState.coordinate.level !== mapLevel ||
-        ownerState.coordinate.x !== x ||
-        ownerState.coordinate.y !== y
+        Math.abs(ownerState.coordinate.x - x) > TreasureMapService.DIG_TOLERANCE_TILES ||
+        Math.abs(ownerState.coordinate.y - y) > TreasureMapService.DIG_TOLERANCE_TILES
       ) {
         continue;
       }

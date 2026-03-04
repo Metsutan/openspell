@@ -5,7 +5,7 @@ A browser-based MMORPG with a TypeScript game server, Express API, and SSR web f
 
 ## Foreword
 
-OpenSpell is now in Alpha - a large portion of the game is playable and under development. There are still missing features, known bugs, and areas of the codebase that need architectural improvement to scale beyond their current state. That said, the foundation is there and the game is functional. Community contributions are welcome and encouraged — if you see something that can be improved, open a pull request.
+Thank you to everyone who participated in the open Alpha of OpenSpell. Without your help I would not have been able to find anywhere near the amount of bugs we were able to.
 
 This repository comes with many of the assets *except* the client. To get the client you'll need to gather it yourself from the official website and place it in the `apps\shared-assets\base\js\client` path. This can be done with f12 and the Network tab of Chrome Developer tools. Just look for a `client.61.js` file and copy that. You might need to also look at the `assetsClient` while you're there if the client number has changed.
 
@@ -79,7 +79,8 @@ Please always remember to take backups, download, and keep a hold of anything pr
 | `/ban`  | ✅ Tentatively implemented |
 | `/kick` | Not implemented |
 
-### Major Systems
+> **Note:**  
+> The following sections of this document were written before the implementation of `apps/chat`. Some information may miss referencing the application, such as starting the server up.
 
 | System | Notes |
 |--------|-------|
@@ -102,11 +103,9 @@ Future additions with placeholders
 
 ### Other TODOs in Code
 
-| Item | Location |
-|------|----------|
-| Health regeneration | `GameServer.ts` tick loop |
-| Treasure map item ID | `MonsterDropService.ts` |
-| Teleport spell coordinates | `handleCastTeleportSpell.ts` |
+| Item                      | Location                     |
+|---------------------------|------------------------------|
+| Athletics skill (entirety)| Various (see game logic)     |
 
 ---
 

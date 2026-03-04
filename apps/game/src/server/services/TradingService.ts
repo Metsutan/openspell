@@ -273,6 +273,21 @@ export class TradingService {
       return false;
     }
 
+    const session = this.getActiveTradeSession(userId);
+    if (!session) {
+      this.logInvalid(userId, "InvokeInventoryItemAction", "offer_trade_item_missing_session", payload);
+      sendOfferResponse(false);
+      return false;
+    }
+
+    if (session.phase !== "offer") {
+      this.logInvalid(userId, "InvokeInventoryItemAction", "offer_trade_item_invalid_phase", payload, {
+        phase: session.phase
+      });
+      sendOfferResponse(false);
+      return false;
+    }
+
     const playerState = this.config.playerStatesByUserId.get(userId);
     if (!playerState) {
       this.logInvalid(userId, "InvokeInventoryItemAction", "offer_trade_item_missing_player_state", payload);
@@ -498,6 +513,21 @@ export class TradingService {
     const partnerId = this.activeTradePartnerByUserId.get(userId);
     if (partnerId === undefined) {
       this.logInvalid(userId, "InvokeInventoryItemAction", "revoke_trade_item_no_active_trade", payload);
+      sendRevokeResponse(false);
+      return false;
+    }
+
+    const session = this.getActiveTradeSession(userId);
+    if (!session) {
+      this.logInvalid(userId, "InvokeInventoryItemAction", "revoke_trade_item_missing_session", payload);
+      sendRevokeResponse(false);
+      return false;
+    }
+
+    if (session.phase !== "offer") {
+      this.logInvalid(userId, "InvokeInventoryItemAction", "revoke_trade_item_invalid_phase", payload, {
+        phase: session.phase
+      });
       sendRevokeResponse(false);
       return false;
     }
