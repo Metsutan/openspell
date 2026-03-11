@@ -417,6 +417,7 @@ export class PlayerState {
   public combatDelay: number = 0; // Combat cooldown in ticks. When 0, player can attack.
   public lastLocalMessageTick: number = Number.NEGATIVE_INFINITY; // Tick of last local chat message.
   public lastEdibleActionTick: number = Number.NEGATIVE_INFINITY; // Tick of last eat/drink action.
+  public nextInventorySpellCastTick: number = Number.NEGATIVE_INFINITY; // Earliest tick when another inventory spell can be cast.
   public combatLevel: number = 3; // Cached combat level (recalculated when combat skills change)
   public autoCastSpellId: number | null = null; // Selected auto-cast spell (ephemeral, not persisted)
   public singleCastSpellId: number | null = null; // Single-cast spell queued for next magic attack

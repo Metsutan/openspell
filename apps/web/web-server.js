@@ -33,11 +33,45 @@ const WEB_HOSTNAME = (() => {
 })();
 function buildCspHeaderValue(nonce) {
     const nonceValue = nonce ? ` 'nonce-${nonce}'` : '';
-    // CSP should reflect the browser-facing origin (typically HTTPS behind reverse proxy),
-    // not whether this Node process terminates TLS locally.
-    const httpScheme = 'https';
-    const wsScheme = 'wss';
-    return `default-src 'self';base-uri 'self';block-all-mixed-content;connect-src 'self' ${httpScheme}://${WEB_HOSTNAME}:${API_PORT} ${httpScheme}://${WEB_HOSTNAME}:${PORT} ${httpScheme}://${WEB_HOSTNAME}:${GAME_PORT} ${wsScheme}://${WEB_HOSTNAME}:${GAME_PORT} ${httpScheme}://*.${WEB_HOSTNAME}:* ${wsScheme}://*.${WEB_HOSTNAME}:* ${httpScheme}://${WEB_HOSTNAME}:${CHAT_PORT} ${wsScheme}://${WEB_HOSTNAME}:${CHAT_PORT} https://www.google.com https://www.gstatic.com https://recaptcha.google.com data: blob:;font-src 'self' https: data:;frame-src www.google.com imgur.com https://recaptcha.google.com;frame-ancestors 'self';img-src 'self' data: blob: *.imgur.com ${httpScheme}://${WEB_HOSTNAME}:${PORT} https://www.gstatic.com;object-src 'none';script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net 'unsafe-eval'${nonceValue};script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests;worker-src 'self' blob:`;
+    // Keep CSP protocol rules aligned with runtime HTTPS mode to avoid
+    // rejecting valid dev HTTP asset/API origins.
+    const httpScheme = IS_HTTPS ? 'https' : 'http';
+    const wsScheme = IS_HTTPS ? 'wss' : 'ws';
+    const connectSrc = [
+        `'self'`,
+        `${httpScheme}://${WEB_HOSTNAME}:${API_PORT}`,
+        `${httpScheme}://${WEB_HOSTNAME}:${PORT}`,
+        `${httpScheme}://${WEB_HOSTNAME}:${GAME_PORT}`,
+        `${wsScheme}://${WEB_HOSTNAME}:${GAME_PORT}`,
+        `${httpScheme}://*.${WEB_HOSTNAME}:*`,
+        `${wsScheme}://*.${WEB_HOSTNAME}:*`,
+        `${httpScheme}://${WEB_HOSTNAME}:${CHAT_PORT}`,
+        `${wsScheme}://${WEB_HOSTNAME}:${CHAT_PORT}`,
+        'https://www.google.com',
+        'https://www.gstatic.com',
+        'https://recaptcha.google.com',
+        'data:',
+        'blob:'
+    ].join(' ');
+
+    const directives = [
+        `default-src 'self'`,
+        `base-uri 'self'`,
+        `block-all-mixed-content`,
+        `connect-src ${connectSrc}`,
+        `font-src 'self' https: data:`,
+        `frame-src www.google.com imgur.com https://recaptcha.google.com`,
+        `frame-ancestors 'self'`,
+        `img-src 'self' data: blob: *.imgur.com ${httpScheme}://${WEB_HOSTNAME}:${PORT} https://www.gstatic.com`,
+        `object-src 'none'`,
+        `script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net 'unsafe-eval'${nonceValue}`,
+        `script-src-attr 'none'`,
+        `style-src 'self' https: 'unsafe-inline'`,
+        `upgrade-insecure-requests`,
+        `worker-src 'self' blob:`
+    ];
+
+    return directives.join(';');
 }
 
 // reCAPTCHA configuration

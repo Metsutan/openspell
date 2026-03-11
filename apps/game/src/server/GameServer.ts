@@ -280,7 +280,7 @@ export class GameServer {
   constructor(private readonly config: GameServerConfig) {
     this.dbEnabled = !!process.env.DATABASE_URL;
     this.world = new World(config.tickMs);
-    this.clock = new InGameClock({ initialHour: 1, msPerHour: 150_000 });
+    this.clock = new InGameClock({ initialHour: 0, msPerHour: 150_000 });
     this.serverId = this.parseServerId(config.serverId ?? process.env.SERVER_ID);
     this.banEnforcementIntervalTicks = Math.max(
       1,

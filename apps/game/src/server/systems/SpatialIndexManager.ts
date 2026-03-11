@@ -555,6 +555,17 @@ export class SpatialIndexManager {
       }
     }
 
+    // Query nearby world entities (trees, rocks, etc.)
+    const nearbyWorldEntities = this.worldEntityIndex.queryRadius(
+      mapLevel,
+      x,
+      y,
+      ENTITY_VIEW_RADIUS
+    );
+    for (const worldEntity of nearbyWorldEntities) {
+      result.add(this.makeEntityKey(EntityType.Environment, worldEntity.id));
+    }
+
     return result;
   }
 

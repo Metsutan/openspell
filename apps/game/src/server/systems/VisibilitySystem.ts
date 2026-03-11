@@ -1165,12 +1165,14 @@ export class VisibilitySystem {
     if (!entityRef) return;
 
     let packet: OutgoingPacket | null = null;
+    let trackVisibility = false;
 
     switch (entityRef.type) {
       case EntityType.Player: {
         const player = this.spatialIndex.getPlayer(entityRef.id);
         if (player) {
           packet = this.packetBuilder.buildPlayerEnteredChunk(player.playerState);
+          trackVisibility = true;
         }
         break;
       }
@@ -1178,6 +1180,7 @@ export class VisibilitySystem {
         const npc = this.spatialIndex.getNPC(entityRef.id);
         if (npc) {
           packet = this.packetBuilder.buildNPCEnteredChunk(npc);
+          trackVisibility = true;
         }
         break;
       }
@@ -1187,11 +1190,15 @@ export class VisibilitySystem {
           // Check if item is visible to this viewer
           if (item.visibleToUserId === null || item.visibleToUserId === viewerId) {
             packet = this.packetBuilder.buildItemEnteredChunk(item);
+            trackVisibility = true;
           }
         }
         break;
       }
       case EntityType.Environment: {
+        // Track environment visibility so we can detect "entering view" transitions.
+        trackVisibility = true;
+
         // Check if this environment entity is exhausted
         if (this.resourceExhaustionTracker.isExhausted(entityRef.id)) {
           this.resourceExhaustionTracker.notifyExhausted(entityRef.id, viewerId);
@@ -1200,8 +1207,11 @@ export class VisibilitySystem {
       }
     }
 
-    if (packet) {
+    if (trackVisibility) {
       this.viewerState.addVisibility(viewerId, entityKey);
+    }
+
+    if (packet) {
       this.packetSender.sendToUser(viewerId, packet);
     }
   }
@@ -1213,8 +1223,14 @@ export class VisibilitySystem {
     const entityRef = this.spatialIndex.parseEntityKey(entityKey);
     if (!entityRef) return;
 
-    const packet = this.packetBuilder.buildEntityExitedChunk(entityRef);
     this.viewerState.removeVisibility(viewerId, entityKey);
+
+    // Environment entities are static world objects; no enter/exit packet is needed.
+    if (entityRef.type === EntityType.Environment) {
+      return;
+    }
+
+    const packet = this.packetBuilder.buildEntityExitedChunk(entityRef);
     this.packetSender.sendToUser(viewerId, packet);
   }
 

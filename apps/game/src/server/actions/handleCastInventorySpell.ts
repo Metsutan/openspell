@@ -8,6 +8,7 @@ import { isValidSlotIndex } from "../../world/systems/InventoryManager";
 import { createPlayerCastedInventorySpellEvent } from "../events/GameEvents";
 
 const COIN_ITEM_ID = 6;
+const INVENTORY_SPELL_RECAST_DELAY_TICKS = 4;
 
 type InventorySpellEffect = {
   kind: "alchemy";
@@ -24,6 +25,7 @@ export const handleCastInventorySpell: ActionHandler = (ctx, actionData) => {
 
   const playerState = ctx.playerStatesByUserId.get(ctx.userId);
   if (!playerState) return;
+  if (ctx.currentTick < playerState.nextInventorySpellCastTick) return;
 
   const decoded = decodeCastInventorySpellPayload(actionData);
   const spellId = Number(decoded.SpellID);
@@ -160,6 +162,7 @@ export const handleCastInventorySpell: ActionHandler = (ctx, actionData) => {
     spellDefinition.exp ?? 0,
     { sendGainedExp: false }
   );
+  playerState.nextInventorySpellCastTick = ctx.currentTick + INVENTORY_SPELL_RECAST_DELAY_TICKS;
 };
 
 function consumeSpellResources(

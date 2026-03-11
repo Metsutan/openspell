@@ -1,5 +1,5 @@
 export type InGameClockOptions = {
-  /** Starting hour (1..24). Defaults to 1. */
+  /** Starting hour (0..23). Defaults to 0. */
   initialHour?: number;
   /** Milliseconds per in-game hour. Defaults to 150_000 (150 seconds). */
   msPerHour?: number;
@@ -11,9 +11,9 @@ export class InGameClock {
   private carryMs = 0;
 
   constructor(opts: InGameClockOptions = {}) {
-    const initialHour = opts.initialHour ?? 1;
-    if (!Number.isInteger(initialHour) || initialHour < 1 || initialHour > 24) {
-      throw new Error("initialHour must be an integer in [1, 24]");
+    const initialHour = opts.initialHour ?? 0;
+    if (!Number.isInteger(initialHour) || initialHour < 0 || initialHour > 23) {
+      throw new Error("initialHour must be an integer in [0, 23]");
     }
     const msPerHour = opts.msPerHour ?? 150_000;
     if (!Number.isFinite(msPerHour) || msPerHour <= 0) {
@@ -24,7 +24,7 @@ export class InGameClock {
     this.msPerHour = msPerHour;
   }
 
-  /** Current in-game hour (1..24). */
+  /** Current in-game hour (0..23). */
   getCurrentHour(): number {
     return this.hour;
   }
@@ -41,7 +41,7 @@ export class InGameClock {
     while (this.carryMs >= this.msPerHour) {
       this.carryMs -= this.msPerHour;
       this.hour++;
-      if (this.hour > 24) this.hour = 1;
+      if (this.hour > 23) this.hour = 0;
       changed.push(this.hour);
     }
     return changed;
