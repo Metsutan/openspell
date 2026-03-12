@@ -9,7 +9,7 @@ services:
       - ./:/app
     environment:
       ENV_MODE: ${ENV_MODE:-dev}
-    command: ["sh", "-c", "node scripts/setup-env.js --mode=$ENV_MODE --write-docker-env --force"]
+    command: [ "sh", "-c", "node scripts/setup-env.js --mode=$ENV_MODE --write-docker-env --force" ]
 
   api:
     build:
@@ -17,8 +17,6 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: openspell-api
     restart: unless-stopped
-    env_file:
-      - ./config/docker.env
     environment:
       PORT: ${API_PORT:-3002}
       NODE_ENV: ${NODE_ENV:-production}
@@ -59,8 +57,6 @@ services:
       dockerfile: apps/web/Dockerfile
     container_name: openspell-web
     restart: unless-stopped
-    env_file:
-      - ./config/docker.env
     environment:
       PORT: ${WEB_PORT:-8887}
       NODE_ENV: ${NODE_ENV:-production}
@@ -97,8 +93,6 @@ services:
       dockerfile: apps/game/Dockerfile
     container_name: openspell-game
     restart: unless-stopped
-    env_file:
-      - ./config/docker.env
     environment:
       PORT: ${GAME_PORT:-8888}
       NODE_ENV: ${NODE_ENV:-production}
@@ -146,8 +140,6 @@ services:
     profiles:
       - migrate
     restart: "no"
-    env_file:
-      - ./config/docker.env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: ${DATABASE_URL}
@@ -175,7 +167,7 @@ services:
     volumes:
       - openspell_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openspell -d openspell"]
+      test: [ "CMD-SHELL", "pg_isready -U openspell -d openspell" ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -195,7 +187,7 @@ services:
     volumes:
       - openspell_redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -208,4 +200,5 @@ services:
 volumes:
   openspell_pg_data:
   openspell_redis_data:
+
 

@@ -242,19 +242,12 @@ See `ENV-VARIABLES-REFERENCE.md` for the complete list.
 This is the simplest, lowest-security setup. Email verification, CAPTCHA, Redis, and heavy logging are **off** by default.
 
 1. Clone the repo and open a terminal in the repo root.
-2. Generate env files + secrets:
-   - PowerShell: `$env:ENV_MODE="docker"; docker compose --env-file config/docker.env --profile init run --rm env-init`
-   - Bash/Zsh: `ENV_MODE=docker docker compose --env-file config/docker.env --profile init run --rm env-init`
-3. Build and start the stack:
-   - `docker compose --env-file config/docker.env up -d --build`
-4. Run database migrations (creates tables):
-   - `docker compose --env-file config/docker.env --profile migrate run --rm migrate`
-5. Seed initial data (worlds, skills, admin user):
-   - `docker compose --env-file config/docker.env run --rm api node packages/db/prisma/seed.js`
-   - **Important:** Skip this step if you want a clean database or are upgrading an existing install
-6. Verify containers are running: `docker compose ps`
-7. Open the site: `http://localhost:8887`
-8. Click "Play" and select "World 1" to enter the game
+2. Run the automated setup script:
+   - PowerShell: `.\setup-docker.ps1`
+   - Bash/Zsh: `./setup-docker.sh`
+3. Verify containers are running: `docker compose ps`
+4. Open the site: `http://localhost:8887`
+5. Click "Play" and select "World 1" to enter the game
 
 **Default admin account** (created by seed):
 Please change this or delete it from the database for any serious use. This is here for your convenience.
@@ -266,20 +259,16 @@ Note: Docker Compose only uses shell or `.env` values for interpolation, so thes
 
 ### Fresh clone checklist (Docker-only)
 - Clone repo
-- PowerShell: `$env:ENV_MODE="docker"; docker compose --env-file config/docker.env --profile init run --rm env-init`
-- Bash/Zsh: `ENV_MODE=docker docker compose --env-file config/docker.env --profile init run --rm env-init`
-- `docker compose --env-file config/docker.env up -d --build`
-- `docker compose --env-file config/docker.env --profile migrate run --rm migrate` (creates tables)
-- `docker compose --env-file config/docker.env run --rm api node packages/db/prisma/seed.js` (seeds data)
+- Run `.\setup-docker.ps1` (Windows) or `./setup-docker.sh` (Linux/Mac)
 - Go to http://localhost:8887, click Play, select World 1
 - Login with `admin` / `admin123` or create a new account
 
 If something fails:
-- Check logs: `docker compose --env-file config/docker.env logs -f api` or `docker compose --env-file config/docker.env logs -f game`
-- Re-run migrations: `docker compose --env-file config/docker.env --profile migrate run --rm migrate`
+- Check logs: `docker compose logs -f api` or `docker compose logs -f game`
+- Re-run migrations: `docker compose --profile migrate run --rm migrate`
 - If you see `Cannot find module 'dotenv'` during Docker build, ensure the root dependency is installed (it is listed in `package.json`).
 - On Windows PowerShell, set env vars with `$env:NAME="value"` (not `NAME=value`).
-- To reset everything: `docker compose --env-file config/docker.env down -v` (removes volumes), then start from step 2.
+- To reset everything: `docker compose down -v` (removes volumes), then start from step 2.
 
 **Verify database was seeded:**
 If worlds don't appear on the /play page or the admin login doesn't work, the seed likely didn't run.
@@ -288,7 +277,7 @@ If worlds don't appear on the /play page or the admin login doesn't work, the se
 docker exec openspell-postgres psql -U openspell -d openspell -c "SELECT COUNT(*) FROM worlds;"
 
 # If count is 0, run the seed manually:
-docker compose --env-file config/docker.env run --rm api node packages/db/prisma/seed.js
+docker compose run --rm api node packages/db/prisma/seed.js
 ```
 
 ### Rebuilding containers after code changes
@@ -299,10 +288,10 @@ docker compose --env-file config/docker.env run --rm api node packages/db/prisma
 
 | What you changed | Rebuild command |
 |------------------|-----------------|
-| `apps/web/*` (website) | `docker compose --env-file config/docker.env up -d --build web` |
-| `apps/api/*` (API server) | `docker compose --env-file config/docker.env up -d --build api` |
-| `apps/game/*` (game server) | `docker compose --env-file config/docker.env up -d --build game` |
-| Multiple services | `docker compose --env-file config/docker.env up -d --build` |
+| `apps/web/*` (website) | `docker compose up -d --build web` |
+| `apps/api/*` (API server) | `docker compose up -d --build api` |
+| `apps/game/*` (game server) | `docker compose up -d --build game` |
+| Multiple services | `docker compose up -d --build` |
 | Database schema (`packages/db/prisma/*`) | See "Database changes" below |
 
 #### Step-by-step: Rebuild a single service
@@ -311,7 +300,7 @@ Example: You edited `apps/web/web-server.js`
 
 ```powershell
 # PowerShell / Bash - rebuild and restart the web container
-docker compose --env-file config/docker.env up -d --build web
+docker compose up -d --build web
 ```
 
 This command:
@@ -325,7 +314,7 @@ This command:
 If you changed files in multiple apps, rebuild everything:
 
 ```powershell
-docker compose --env-file config/docker.env up -d --build
+docker compose up -d --build
 ```
 
 #### Database changes (schema/migrations/seed)
@@ -334,13 +323,13 @@ If you changed `packages/db/prisma/schema.prisma` or `seed.js`:
 
 ```powershell
 # 1. Rebuild api and game (they include the Prisma client)
-docker compose --env-file config/docker.env up -d --build api game
+docker compose up -d --build api game
 
 # 2. Run migrations (creates/updates tables)
-docker compose --env-file config/docker.env --profile migrate run --rm migrate
+docker compose --profile migrate run --rm migrate
 
 # 3. Run seed (optional - only if you want to reset initial data)
-docker compose --env-file config/docker.env run --rm api node packages/db/prisma/seed.js
+docker compose run --rm api node packages/db/prisma/seed.js
 ```
 
 #### Force a clean rebuild (if something seems stuck)
@@ -349,8 +338,8 @@ If your changes still aren't showing up, force a rebuild without Docker's cache:
 
 ```powershell
 # Rebuild without cache (slower, but guarantees fresh build)
-docker compose --env-file config/docker.env build --no-cache web
-docker compose --env-file config/docker.env up -d web
+docker compose build --no-cache web
+docker compose up -d web
 ```
 
 #### Nuclear option: Reset everything
@@ -359,28 +348,28 @@ If all else fails, tear it all down and start fresh:
 
 ```powershell
 # Stop and remove all containers + volumes (WARNING: deletes database data!)
-docker compose --env-file config/docker.env down -v
+docker compose down -v
 
 # Rebuild and start everything from scratch
-docker compose --env-file config/docker.env up -d --build
+docker compose up -d --build
 
 # Re-run migrations (creates tables)
-docker compose --env-file config/docker.env --profile migrate run --rm migrate
+docker compose --profile migrate run --rm migrate
 
 # Re-run seed (populates initial data)
-docker compose --env-file config/docker.env run --rm api node packages/db/prisma/seed.js
+docker compose run --rm api node packages/db/prisma/seed.js
 ```
 
 #### View logs to debug issues
 
 ```powershell
 # Follow logs for a specific service
-docker compose --env-file config/docker.env logs -f web
-docker compose --env-file config/docker.env logs -f api
-docker compose --env-file config/docker.env logs -f game
+docker compose logs -f web
+docker compose logs -f api
+docker compose logs -f game
 
 # View last 100 lines of all services
-docker compose --env-file config/docker.env logs --tail 100
+docker compose logs --tail 100
 ```
 
 ### Production/Dev (Ubuntu + Cloudflare Tunnel)
