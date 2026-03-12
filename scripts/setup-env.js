@@ -149,17 +149,26 @@ if (fs.existsSync(sharedEnvPath) && !force) {
 }
 
 if (writeDockerEnv) {
-  const dockerEnvPath = mode === "prod"
+  const sourceEnvPath = mode === "prod"
     ? path.join(rootDir, "config", "docker.env.prod")
     : path.join(rootDir, "config", "docker.env");
-  updateEnvFile(dockerEnvPath, {
-    API_WEB_SECRET: secrets.API_WEB_SECRET,
-    GAME_SERVER_SECRET: secrets.GAME_SERVER_SECRET,
-    API_JWT_SECRET: secrets.API_JWT_SECRET,
-    WEB_SESSION_SECRET: secrets.WEB_SESSION_SECRET,
-    GAME_JWT_SECRET: secrets.GAME_JWT_SECRET,
-    WORLD_REGISTRATION_SECRET: secrets.WORLD_REGISTRATION_SECRET,
-    HISCORES_UPDATE_SECRET: secrets.HISCORES_UPDATE_SECRET
-  });
-  console.log(`[env] updated secrets in ${dockerEnvPath}`);
+  const targetEnvPath = path.join(rootDir, ".env");
+  
+  if (fs.existsSync(sourceEnvPath)) {
+    if (!fs.existsSync(targetEnvPath) || force) {
+      fs.copyFileSync(sourceEnvPath, targetEnvPath);
+      console.log(`[env] copied ${path.basename(sourceEnvPath)} to .env`);
+    }
+    
+    updateEnvFile(targetEnvPath, {
+      API_WEB_SECRET: secrets.API_WEB_SECRET,
+      GAME_SERVER_SECRET: secrets.GAME_SERVER_SECRET,
+      API_JWT_SECRET: secrets.API_JWT_SECRET,
+      WEB_SESSION_SECRET: secrets.WEB_SESSION_SECRET,
+      GAME_JWT_SECRET: secrets.GAME_JWT_SECRET,
+      WORLD_REGISTRATION_SECRET: secrets.WORLD_REGISTRATION_SECRET,
+      HISCORES_UPDATE_SECRET: secrets.HISCORES_UPDATE_SECRET
+    });
+    console.log(`[env] updated secrets in ${targetEnvPath}`);
+  }
 }

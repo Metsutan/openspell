@@ -42,9 +42,9 @@
 - `apps/shared-assets/base/static` provides `.carbon` game data files.
 
 ## Compose env files
-- Local: `config/docker.env`
-- Production: `config/docker.env.prod`
-- Copy these to match your secrets and domains before deployment.
+- Local Template: `config/docker.env`
+- Production Template: `config/docker.env.prod`
+- The `setup-env` script will copy the appropriate template to `.env` in the root directory and inject secrets. Edit these templates to change configurations before deployment.
 
 ## Environment initialization
 - Docker: `docker compose --profile init run --rm env-init`
