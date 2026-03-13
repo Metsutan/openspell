@@ -142,7 +142,10 @@ export class LoginService {
     emailVerified: boolean;
     lastLogin: { ip: string | null; browser: string | null; timeMs: number | null };
   }): Promise<unknown[]> {
-    const secret = process.env.JWT_SECRET || "dev-secret-change-me";
+    const secret = process.env.CHAT_JWT_SECRET?.trim();
+    if (!secret || secret === "change-me" || secret === "dev-secret-change-me") {
+      throw new Error("Invalid CHAT_JWT_SECRET. Set a strong non-default secret for chat token signing.");
+    }
     const nowMs = Date.now();
     const token = jwt.sign(
       { id: params.accountId, name: params.name, time: nowMs, isMuted: false, type: 0 },
