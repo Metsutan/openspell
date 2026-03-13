@@ -14,7 +14,11 @@ config({ path: sharedEnvPath });
 
 const USE_HTTPS = process.env.USE_HTTPS === "true";
 const CHAT_PORT = Number(process.env.CHAT_PORT ?? process.env.PORT ?? 8765);
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const CHAT_JWT_SECRET = process.env.CHAT_JWT_SECRET?.trim();
+if (!CHAT_JWT_SECRET || CHAT_JWT_SECRET === "change-me" || CHAT_JWT_SECRET === "dev-secret-change-me") {
+  throw new Error("Invalid CHAT_JWT_SECRET. Set a strong non-default secret for chat token verification.");
+}
+const JWT_SECRET = CHAT_JWT_SECRET;
 
 const DEFAULT_CERT_PATH = path.join(__dirname, "..", "..", "..", "certs", "localhost.pem");
 const DEFAULT_KEY_PATH = path.join(__dirname, "..", "..", "..", "certs", "localhost-key.pem");

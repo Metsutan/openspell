@@ -728,7 +728,7 @@ export class CombatSystem {
       const consumeResult = this.config.equipmentService.consumeProjectileAmmo(attacker.userId, 1);
       if (consumeResult.success) {
         this.config.inventoryService.sendWeightUpdate(attacker.userId, attacker);
-        if (consumeResult.itemId !== undefined && Math.random() < 0.5) {
+        if (consumeResult.itemId !== undefined && Math.random() < 0.8) {
           this.config.itemManager?.spawnGroundItem(
             consumeResult.itemId,
             1,
