@@ -2162,7 +2162,9 @@ app.get('/api/admin/user-ips/:userId', requireWebServerSecret, verifyToken, veri
           user: {
             select: {
               id: true,
-              username: true
+              username: true,
+              banReason: true,
+              bannedUntil: true
             }
           }
         }
@@ -2190,6 +2192,8 @@ app.get('/api/admin/user-ips/:userId', requireWebServerSecret, verifyToken, veri
         alternativesByUserId.set(entry.userId, {
           userId: entry.user.id,
           username: entry.user.username,
+          isBanned: !!entry.user.banReason,
+          isPermanentlyBanned: !!entry.user.banReason && !entry.user.bannedUntil,
           sharedIps: [entry.ip],
           firstSeen: entry.firstSeen,
           lastSeen: entry.lastSeen

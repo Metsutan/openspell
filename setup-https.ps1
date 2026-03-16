@@ -143,6 +143,7 @@ Write-Host "Updating apps/api/.env and apps/web/.env to enable HTTPS..." -Foregr
 
 $apiEnv = Join-Path $repoRoot "apps\api\.env"
 Upsert-EnvVar -FilePath $apiEnv -Key "USE_HTTPS" -Value "true"
+Upsert-EnvVar -FilePath $apiEnv -Key "USING_REVERSE_PROXY" -Value "false"
 Upsert-EnvVar -FilePath $apiEnv -Key "SSL_CERT_PATH" -Value "`"$certPathEnv`""
 Upsert-EnvVar -FilePath $apiEnv -Key "SSL_KEY_PATH" -Value "`"$keyPathEnv`""
 Upsert-EnvVar -FilePath $apiEnv -Key "WEB_URL" -Value "`"https://localhost:8887`""
@@ -150,6 +151,7 @@ Upsert-EnvVar -FilePath $apiEnv -Key "API_URL" -Value "`"https://localhost:3002`
 
 $webEnv = Join-Path $repoRoot "apps\web\.env"
 Upsert-EnvVar -FilePath $webEnv -Key "USE_HTTPS" -Value "true"
+Upsert-EnvVar -FilePath $webEnv -Key "USING_REVERSE_PROXY" -Value "false"
 Upsert-EnvVar -FilePath $webEnv -Key "SSL_CERT_PATH" -Value "`"$certPathEnv`""
 Upsert-EnvVar -FilePath $webEnv -Key "SSL_KEY_PATH" -Value "`"$keyPathEnv`""
 Upsert-EnvVar -FilePath $webEnv -Key "API_URL" -Value "`"https://localhost:3002`""
