@@ -20,10 +20,11 @@ const GAME_PORT = process.env.GAME_PORT || 8888;
 const CHAT_PORT = process.env.CHAT_PORT || 8765;
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.WEB_SESSION_SECRET || 'change-this-secret-in-production';
 const USE_HTTPS = process.env.USE_HTTPS === 'true';
-// Only use HTTPS when explicitly enabled - don't assume production means HTTPS
-// (allows running production mode behind reverse proxy or Cloudflare Tunnel without local TLS)
-const IS_HTTPS = USE_HTTPS;
-const WEB_URL = process.env.WEB_URL || `${IS_HTTPS ? 'https' : 'http'}://localhost:${PORT}`;
+const USING_REVERSE_PROXY = process.env.USING_REVERSE_PROXY === 'true';
+// Local server TLS is controlled by USE_HTTPS. Client-facing protocol is HTTPS when
+// either local TLS is enabled OR TLS is terminated by a reverse proxy.
+const IS_CLIENT_HTTPS = USE_HTTPS || USING_REVERSE_PROXY;
+const WEB_URL = process.env.WEB_URL || `${IS_CLIENT_HTTPS ? 'https' : 'http'}://localhost:${PORT}`;
 const WEB_HOSTNAME = (() => {
     try {
         return new URL(WEB_URL).hostname;
@@ -33,10 +34,10 @@ const WEB_HOSTNAME = (() => {
 })();
 function buildCspHeaderValue(nonce) {
     const nonceValue = nonce ? ` 'nonce-${nonce}'` : '';
-    // Keep CSP protocol rules aligned with runtime HTTPS mode to avoid
+    // Keep CSP protocol rules aligned with client-facing HTTPS mode to avoid
     // rejecting valid dev HTTP asset/API origins.
-    const httpScheme = IS_HTTPS ? 'https' : 'http';
-    const wsScheme = IS_HTTPS ? 'wss' : 'ws';
+    const httpScheme = IS_CLIENT_HTTPS ? 'https' : 'http';
+    const wsScheme = IS_CLIENT_HTTPS ? 'wss' : 'ws';
     const connectSrc = [
         `'self'`,
         `${httpScheme}://${WEB_HOSTNAME}:${API_PORT}`,
@@ -84,8 +85,8 @@ const DEFAULT_KEY_PATH = path.join(__dirname, '..', '..', 'certs', 'localhost-ke
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || DEFAULT_CERT_PATH;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || DEFAULT_KEY_PATH;
 
-// If we ever enable secure cookies behind a proxy, Express needs this.
-if (IS_HTTPS) {
+// Forwarded protocol headers are only trusted when running behind a reverse proxy.
+if (USING_REVERSE_PROXY) {
     app.set('trust proxy', 1);
 }
 
@@ -125,7 +126,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: IS_HTTPS, // HTTPS in production or when USE_HTTPS=true in dev
+        secure: IS_CLIENT_HTTPS, // Secure when clients connect over HTTPS directly or via proxy TLS
         httpOnly: true, // Prevent XSS attacks
         // No maxAge = session cookie (expires when browser is closed)
         // This means users must log in again when they close their browser
@@ -249,11 +250,11 @@ const { emailLimiter } = require('./middleware/rateLimit');
 const CLIENT_API_URL = process.env.CLIENT_API_URL || process.env.API_URL || 'http://localhost:3002';
 const CLIENT_CHAT_URL = process.env.CHAT_URL || 'http://localhost:8765';
 const CLIENT_CDN_URL = process.env.CDN_URL || `http://localhost:${PORT}`;
-const GAME_API_ORIGIN = `${IS_HTTPS ? 'https' : 'http'}://${WEB_HOSTNAME}:${API_PORT}`;
-const GAME_WS_ORIGIN = `${IS_HTTPS ? 'wss' : 'ws'}://${WEB_HOSTNAME}:${GAME_PORT}`;
-const GAME_SERVER_ORIGIN = `${IS_HTTPS ? 'https' : 'http'}://${WEB_HOSTNAME}:${GAME_PORT}`;
-const CHAT_HTTP_ORIGIN = `${IS_HTTPS ? 'https' : 'http'}://${WEB_HOSTNAME}:${CHAT_PORT}`;
-const CHAT_WS_ORIGIN = `${IS_HTTPS ? 'wss' : 'ws'}://${WEB_HOSTNAME}:${CHAT_PORT}`;
+const GAME_API_ORIGIN = `${IS_CLIENT_HTTPS ? 'https' : 'http'}://${WEB_HOSTNAME}:${API_PORT}`;
+const GAME_WS_ORIGIN = `${IS_CLIENT_HTTPS ? 'wss' : 'ws'}://${WEB_HOSTNAME}:${GAME_PORT}`;
+const GAME_SERVER_ORIGIN = `${IS_CLIENT_HTTPS ? 'https' : 'http'}://${WEB_HOSTNAME}:${GAME_PORT}`;
+const CHAT_HTTP_ORIGIN = `${IS_CLIENT_HTTPS ? 'https' : 'http'}://${WEB_HOSTNAME}:${CHAT_PORT}`;
+const CHAT_WS_ORIGIN = `${IS_CLIENT_HTTPS ? 'wss' : 'ws'}://${WEB_HOSTNAME}:${CHAT_PORT}`;
 
 // The client bundle version is sourced from the API server's assetsClient.json.
 // We intentionally do NOT verify the file exists. If it doesn't, the client load should break

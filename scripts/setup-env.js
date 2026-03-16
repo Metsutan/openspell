@@ -29,6 +29,7 @@ const modeDefaults = {
     DATABASE_URL: "postgresql://openspell:openspell@postgres:5432/openspell?schema=public",
     NODE_ENV: "production",
     USE_HTTPS: "false",
+    USING_REVERSE_PROXY: "true",
     SSL_CERT_PATH: "/app/certs/localhost.pem",
     SSL_KEY_PATH: "/app/certs/localhost-key.pem",
     API_URL: "https://api.your-domain.com",
@@ -48,6 +49,7 @@ const modeDefaults = {
     DATABASE_URL: "postgresql://openspell:openspell@postgres:5432/openspell?schema=public",
     NODE_ENV: "production",
     USE_HTTPS: "false",
+    USING_REVERSE_PROXY: "false",
     SSL_CERT_PATH: "/app/certs/localhost.pem",
     SSL_KEY_PATH: "/app/certs/localhost-key.pem",
     API_URL: "http://api:3002",           // Container-to-container (web/game → api)
@@ -66,6 +68,7 @@ const modeDefaults = {
     DATABASE_URL: "postgresql://openspell:openspell@localhost:5432/openspell?schema=public",
     NODE_ENV: "development",
     USE_HTTPS: "false",
+    USING_REVERSE_PROXY: "false",
     SSL_CERT_PATH: "../../certs/localhost.pem",
     SSL_KEY_PATH: "../../certs/localhost-key.pem",
     API_URL: "http://localhost:3002",
@@ -91,7 +94,8 @@ const secrets = {
   WORLD_REGISTRATION_SECRET: makeSecret(),
   HISCORES_UPDATE_SECRET: makeSecret(),
   WEB_SESSION_SECRET: makeSecret(),
-  GAME_JWT_SECRET: makeSecret()
+  GAME_JWT_SECRET: makeSecret(),
+  CHAT_JWT_SECRET: makeSecret()
 };
 
 const ensureDir = (dir) => {
@@ -158,6 +162,7 @@ if (writeDockerEnv) {
     API_JWT_SECRET: secrets.API_JWT_SECRET,
     WEB_SESSION_SECRET: secrets.WEB_SESSION_SECRET,
     GAME_JWT_SECRET: secrets.GAME_JWT_SECRET,
+    CHAT_JWT_SECRET: secrets.CHAT_JWT_SECRET,
     WORLD_REGISTRATION_SECRET: secrets.WORLD_REGISTRATION_SECRET,
     HISCORES_UPDATE_SECRET: secrets.HISCORES_UPDATE_SECRET
   });

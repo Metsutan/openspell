@@ -1693,12 +1693,16 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                     ? escapeHtml(sharedIps.join(', '))
                     : 'Unknown';
                 const altUserId = Number.isInteger(account.userId) ? account.userId : parseInt(account.userId, 10);
+                const isPermanentlyBanned = account.isPermanentlyBanned === true;
+                const permanentBanBadge = isPermanentlyBanned
+                    ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #8e2525; color: #fff; font-size: 12px; font-weight: 600; vertical-align: middle;">Permanently banned</span>'
+                    : '';
 
                 return `
                     <li style="margin: 8px 0; padding: 8px 10px; background: var(--menu-selected-item-bg-color); border-radius: 6px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                             <span>
-                                <strong>${username}</strong> (ID: ${altUserId}) - Shared IPs: ${sharedIpCount}
+                                <strong>${username}</strong> (ID: ${altUserId}) - Shared IPs: ${sharedIpCount}${permanentBanBadge}
                             </span>
                             <form method="POST" action="/account/admin/get-user" style="display: inline;">
                                 <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
