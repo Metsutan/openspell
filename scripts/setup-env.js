@@ -6,11 +6,9 @@ const args = process.argv.slice(2);
 const modeArg = args.find((arg) => arg.startsWith("--mode="));
 const mode = (modeArg ? modeArg.split("=")[1] : "dev").toLowerCase();
 const force = args.includes("--force");
-const writeDockerEnv = args.includes("--write-docker-env");
 
 const rootDir = process.cwd();
-const sharedEnvPath = path.join(rootDir, "apps", "shared-assets", "base", "shared.env");
-const sharedEnvDir = path.dirname(sharedEnvPath);
+const envPath = path.join(rootDir, ".env");
 const templatePath = path.join(rootDir, "config", "shared.env.template");
 
 if (!fs.existsSync(templatePath)) {
@@ -98,17 +96,13 @@ const secrets = {
   CHAT_JWT_SECRET: makeSecret()
 };
 
-const ensureDir = (dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-};
+
 
 const loadExistingSecrets = () => {
-  if (!fs.existsSync(sharedEnvPath)) {
+  if (!fs.existsSync(envPath)) {
     return;
   }
-  const data = fs.readFileSync(sharedEnvPath, "utf8");
+  const data = fs.readFileSync(envPath, "utf8");
   for (const key of Object.keys(secrets)) {
     const match = data.match(new RegExp(`^${key}=(.+)$`, "m"));
     if (!match || !match[1]) continue;
@@ -121,10 +115,15 @@ const loadExistingSecrets = () => {
 
 const renderTemplate = () => {
   let template = fs.readFileSync(templatePath, "utf8");
-  const replacements = { ...defaults, ...secrets };
-  for (const [key, value] of Object.entries(replacements)) {
+
+  for (const [key, value] of Object.entries(defaults)) {
     template = template.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
   }
+
+  for (const [key, value] of Object.entries(secrets)) {
+    template = template.replace(new RegExp(`^${key}=change-me`, "m"), `${key}=${value}`);
+  }
+
   return template;
 };
 
@@ -141,30 +140,14 @@ const updateEnvFile = (envPath, updates) => {
   fs.writeFileSync(envPath, content);
 };
 
-ensureDir(sharedEnvDir);
 loadExistingSecrets();
 
-if (fs.existsSync(sharedEnvPath) && !force) {
-  console.log(`[env] shared.env already exists at ${sharedEnvPath}`);
+if (fs.existsSync(envPath) && !force) {
+  console.log(`[env] .env already exists at ${envPath}`);
+  updateEnvFile(envPath, secrets);
+  console.log(`[env] updated secrets in .env`);
 } else {
   const content = renderTemplate();
-  fs.writeFileSync(sharedEnvPath, content);
-  console.log(`[env] wrote shared.env (${mode}) to ${sharedEnvPath}`);
-}
-
-if (writeDockerEnv) {
-  const sourceEnvPath = mode === "prod"
-    ? path.join(rootDir, "config", "docker.env.prod")
-    : path.join(rootDir, "config", "docker.env");
-  updateEnvFile(dockerEnvPath, {
-    API_WEB_SECRET: secrets.API_WEB_SECRET,
-    GAME_SERVER_SECRET: secrets.GAME_SERVER_SECRET,
-    API_JWT_SECRET: secrets.API_JWT_SECRET,
-    WEB_SESSION_SECRET: secrets.WEB_SESSION_SECRET,
-    GAME_JWT_SECRET: secrets.GAME_JWT_SECRET,
-    CHAT_JWT_SECRET: secrets.CHAT_JWT_SECRET,
-    WORLD_REGISTRATION_SECRET: secrets.WORLD_REGISTRATION_SECRET,
-    HISCORES_UPDATE_SECRET: secrets.HISCORES_UPDATE_SECRET
-  });
-  console.log(`[env] updated secrets in ${dockerEnvPath}`);
+  fs.writeFileSync(envPath, content);
+  console.log(`[env] wrote .env (${mode}) to ${envPath}`);
 }
