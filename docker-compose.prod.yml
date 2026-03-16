@@ -17,6 +17,12 @@ services:
     env_file:
       - .env
 
+  chat:
+    image: ${REGISTRY:-ghcr.io/openspell}/chat:${IMAGE_TAG:-latest}
+    build: null
+    env_file:
+      - .env
+
   migrate:
     image: ${REGISTRY:-ghcr.io/openspell}/api:${IMAGE_TAG:-latest}
     build: null

@@ -36,6 +36,14 @@
   - `STATIC_ASSETS_PATH` (or rely on default shared-assets path)
 - Depends on: api, Postgres, Redis
 
+### chat
+- Port: `CHAT_PORT` (default 8765); container listens on `PORT` if provided
+- Env (required in prod):
+  - `DATABASE_URL`
+  - `CHAT_JWT_SECRET`
+  - `USE_HTTPS`, `SSL_CERT_PATH`, `SSL_KEY_PATH`
+- Depends on: Postgres
+
 ## Shared assets
 - Expected at `apps/shared-assets` in container.
 - `apps/shared-assets/base/shared.env` provides shared configuration.
@@ -66,6 +74,7 @@
   - `https://your-domain.com` -> `http://localhost:8887` (web)
   - `https://api.your-domain.com` -> `http://localhost:3002` (api)
   - `https://game.your-domain.com` -> `http://localhost:8888` (game websocket/http)
+  - `https://chat.your-domain.com` -> `http://localhost:8765` (chat websocket/http)
 - Ensure `API_URL`, `WEB_URL`, `CDN_URL`, `CHAT_URL`, `CLIENT_API_URL` match these hostnames.
 
 ## Ops hardening
