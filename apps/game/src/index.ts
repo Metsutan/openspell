@@ -8,9 +8,13 @@ const sharedEnvPath = join(__dirname, "..", "..", "shared-assets", "base", "shar
 
 const result = config({ path: sharedEnvPath });
 if (result.error) {
-  console.error(`[env] Failed to load shared.env from ${resolve(sharedEnvPath)}`);
-  console.error(`[env] Make sure to run ./setup-env.ps1 first!`);
-  process.exit(1);
+  if (process.env.NODE_ENV !== "production") {
+    console.error(`[env] Failed to load shared.env from ${resolve(sharedEnvPath)}`);
+    console.error(`[env] Make sure to run ./setup-env.ps1 first!`);
+    process.exit(1);
+  } else {
+    console.warn(`[env] shared.env not found at ${resolve(sharedEnvPath)}, relying on external environment variables.`);
+  }
 }
 
 console.log(`[env] Loaded shared.env from ${resolve(sharedEnvPath)}`);
