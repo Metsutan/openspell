@@ -45,7 +45,7 @@ Thumbs.db
 dist/
 build/
 *.tsbuildinfo
-apps/shared-assets/base/js/client/*.js
+# apps/shared-assets/base/js/client/*.js
 
 # Local development TLS certs (mkcert)
 certs/*.pem

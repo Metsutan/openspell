@@ -1,0 +1,28 @@
+services:
+  env-init:
+    volumes:
+      - ./:/app
+
+  api:
+    volumes:
+      - ./apps/shared-assets:/app/apps/shared-assets:ro
+      - ./certs:/app/certs:ro
+
+  web:
+    volumes:
+      - ./apps/shared-assets:/app/apps/shared-assets:ro
+      - ./certs:/app/certs:ro
+
+  game:
+    volumes:
+      - ./apps/shared-assets:/app/apps/shared-assets:ro
+      - ./certs:/app/certs:ro
+
+  chat:
+    volumes:
+      - ./apps/shared-assets:/app/apps/shared-assets:ro
+      - ./certs:/app/certs:ro
+
+  migrate:
+    volumes:
+      - ./apps/shared-assets:/app/apps/shared-assets:ro
