@@ -28,3 +28,4 @@ services:
     build: null
     env_file:
       - .env
+    command: ["sh", "-c", "node scripts/validate-env.js migrate && pnpm -C packages/db prisma:migrate"]
