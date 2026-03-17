@@ -68,9 +68,12 @@ function buildCspHeaderValue(nonce) {
         `script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net 'unsafe-eval'${nonceValue}`,
         `script-src-attr 'none'`,
         `style-src 'self' https: 'unsafe-inline'`,
-        `upgrade-insecure-requests`,
         `worker-src 'self' blob:`
     ];
+
+    if (IS_CLIENT_HTTPS) {
+        directives.push(`upgrade-insecure-requests`);
+    }
 
     return directives.join(';');
 }
