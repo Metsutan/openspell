@@ -5,8 +5,6 @@ services:
     profiles:
       - init
     working_dir: /app
-    volumes:
-      - ./:/app
     environment:
       ENV_MODE: ${ENV_MODE:-dev}
     command: [ "sh", "-c", "node scripts/setup-env.js --mode=$ENV_MODE --write-docker-env --force" ]
@@ -35,9 +33,6 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DISABLED: ${REDIS_DISABLED:-false}
-    volumes:
-      - ./apps/shared-assets:/app/apps/shared-assets:ro
-      - ./certs:/app/certs:ro
     ports:
       - "${API_PORT:-3002}:3002"
     depends_on:
@@ -73,9 +68,6 @@ services:
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}
       ASSET_SET: ${ASSET_SET:-base}
       ASSETS_ROOT: /app/apps/shared-assets/${ASSET_SET:-base}
-    volumes:
-      - ./apps/shared-assets:/app/apps/shared-assets:ro
-      - ./certs:/app/certs:ro
     ports:
       - "${WEB_PORT:-8887}:8887"
     depends_on:
@@ -114,9 +106,7 @@ services:
       STATIC_ASSETS_PATH: /app/apps/shared-assets/${ASSET_SET:-base}/static
       PACKET_TRACE_PATH: /data/game-logs/packets
     volumes:
-      - ./apps/shared-assets:/app/apps/shared-assets:ro
-      - ./certs:/app/certs:ro
-      - ./data/game-logs:/data/game-logs
+      - openspell_game_logs:/data/game-logs
     ports:
       - "${GAME_PORT:-8888}:8888"
     depends_on:
@@ -146,9 +136,6 @@ services:
       USE_HTTPS: ${USE_HTTPS:-false}
       SSL_CERT_PATH: ${SSL_CERT_PATH:-/app/certs/localhost.pem}
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}
-    volumes:
-      - ./apps/shared-assets:/app/apps/shared-assets:ro
-      - ./certs:/app/certs:ro
     ports:
       - "${CHAT_PORT:-8765}:8765"
     depends_on:
@@ -173,8 +160,6 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: ${DATABASE_URL}
-    volumes:
-      - ./apps/shared-assets:/app/apps/shared-assets:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -230,5 +215,4 @@ services:
 volumes:
   openspell_pg_data:
   openspell_redis_data:
-
-
+  openspell_game_logs:

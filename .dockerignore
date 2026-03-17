@@ -13,6 +13,3 @@
 highspell-dumps
 vscode-profile-*.cpuprofile
 vscode-profile-*.heapsnapshot
-apps/shared-assets/base/static/*.carbon
-apps/shared-assets/base/static/*.json
-
