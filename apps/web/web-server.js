@@ -90,7 +90,9 @@ const SSL_KEY_PATH = process.env.SSL_KEY_PATH || DEFAULT_KEY_PATH;
 
 // Forwarded protocol headers are only trusted when running behind a reverse proxy.
 if (USING_REVERSE_PROXY) {
-    app.set('trust proxy', 1);
+    // With Cloudflare -> NPM -> App, we have 2+ proxies. 
+    // Setting to 'true' trusts all proxies, which is generally safe in this internal network setup.
+    app.set('trust proxy', true);
 }
 
 // Validate SESSION_SECRET on startup

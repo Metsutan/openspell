@@ -29,6 +29,7 @@ services:
       USE_HTTPS: ${USE_HTTPS:-false}
       SSL_CERT_PATH: ${SSL_CERT_PATH:-/app/certs/localhost.pem}
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}
+      USING_REVERSE_PROXY: ${USING_REVERSE_PROXY:-false}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -68,6 +69,7 @@ services:
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}
       ASSET_SET: ${ASSET_SET:-base}
       ASSETS_ROOT: /app/apps/shared-assets/${ASSET_SET:-base}
+      USING_REVERSE_PROXY: ${USING_REVERSE_PROXY:-false}
     ports:
       - "${WEB_PORT:-8887}:8887"
     depends_on:
