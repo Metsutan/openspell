@@ -126,11 +126,13 @@ app.use(express.urlencoded({ extended: true })); // Parse form data
 app.use(express.json()); // Parse JSON bodies
 app.use(session({
     secret: SESSION_SECRET,
+    proxy: USING_REVERSE_PROXY, // Trust reverse proxy headers for secure cookies
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: IS_CLIENT_HTTPS, // Secure when clients connect over HTTPS directly or via proxy TLS
         httpOnly: true, // Prevent XSS attacks
+        sameSite: 'lax' // Compatibility for proxied environments
         // No maxAge = session cookie (expires when browser is closed)
         // This means users must log in again when they close their browser
     }
