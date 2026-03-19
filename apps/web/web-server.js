@@ -140,8 +140,21 @@ app.use(session({
     }
 }));
 
-// Content Security Policy middleware
+// Content Security Policy and Debug middleware
 app.use((req, res, next) => {
+    // Debug proxy headers and protocol (only in dev or if troubleshooting)
+    if (process.env.DEBUG_PROXY === 'true' || USING_REVERSE_PROXY) {
+        console.log(`[DEBUG] ${req.method} ${req.path}`);
+        console.log(`[DEBUG] Protocol: ${req.protocol}, Secure: ${req.secure}`);
+        console.log(`[DEBUG] X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
+        console.log(`[DEBUG] X-Forwarded-For: ${req.headers['x-forwarded-for']}`);
+        console.log(`[DEBUG] Has Cookie: ${!!req.headers.cookie}`);
+        if (req.session) {
+            console.log(`[DEBUG] Session ID: ${req.sessionID}`);
+            console.log(`[DEBUG] Has CSRF in Session: ${!!req.session.csrfToken}`);
+        }
+    }
+    
     res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
     // Set Content Security Policy (enforced, not report-only)
     res.setHeader(
