@@ -114,6 +114,7 @@ export interface ItemDefinition {
   useItemOnItemActions: ItemOnItemAction[] | null;
   metalType: string | null;
   weight: number;
+  weaponSpeed?: number | null;
   isOnlyDiscardable?: boolean;
   hasUniqueData?: boolean;
 }
@@ -207,6 +208,7 @@ export class ItemCatalog {
         useItemOnItemActions: raw.useItemOnItemActions ?? null,
         metalType: raw.metalType ?? null,
         weight: raw.weight ?? 0,
+        weaponSpeed: raw.weaponSpeed ?? null,
         isOnlyDiscardable: raw.isOnlyDiscardable ?? false,
         hasUniqueData: raw.hasUniqueData ?? false
       };
@@ -320,6 +322,7 @@ interface RawItemDefinition {
   useItemOnItemActions?: ItemOnItemAction[] | null;
   metalType?: string | null;
   weight?: number;
+  weaponSpeed?: number | null;
   isOnlyDiscardable?: boolean;
   hasUniqueData?: boolean;
 }
