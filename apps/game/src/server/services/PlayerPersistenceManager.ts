@@ -3,7 +3,9 @@ import { MAP_LEVELS, type MapLevel } from "../../world/Location";
 import {
   PlayerState,
   createDefaultAppearance,
+  createDefaultAbilities,
   createDefaultEquipment,
+  createDefaultSettings,
   createDefaultSkills,
   createEmptyInventory,
   getLevelForExp,
@@ -30,6 +32,13 @@ import type { PersistedTreasureMapOwnership, TreasureMapService } from "./Treasu
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 const SAVE_DEBOUNCE_MS = 3_000;
+const STARTER_INVENTORY_ITEMS: Array<[slot: number, itemId: number, amount: number, isIOU: number]> = [
+  [0, 240, 1, 0],
+  [1, 52, 1, 0],
+  [2, 58, 1, 0],
+  [3, 7, 1, 0],
+  [4, 6, 25, 0]
+];
 
 export class PlayerPersistenceManager {
   private autosaveTimer: NodeJS.Timeout | null = null;
@@ -625,6 +634,7 @@ export class PlayerPersistenceManager {
     const persistenceKey = this.requirePersistenceId(persistenceId, "loadPlayerState");
 
     const prisma = getPrisma();
+    const isFirstSpawnForPersistence = await this.ensureInitialPlayerDataForWorld(userId, persistenceKey);
 
     // Load user's timePlayed and playerType
     const userRow = await prisma.user.findUnique({
@@ -643,10 +653,6 @@ export class PlayerPersistenceManager {
     const mutedUntil = muteRows[0]?.mutedUntil ?? null;
     const muteReason = muteRows[0]?.muteReason ?? null;
 
-    let mapLevel: MapLevel = MAP_LEVELS.Overworld;
-    let x = 0;
-    let y = 0;
-
     const locRow = await prisma.playerLocation.findUnique({
       where: {
         userId_persistenceId: {
@@ -655,16 +661,12 @@ export class PlayerPersistenceManager {
         }
       }
     });
-    const isFirstSpawnForPersistence = !locRow;
     if (!locRow) {
-      await prisma.playerLocation.create({
-        data: { userId, persistenceId: persistenceKey, mapLevel: MAP_LEVELS.Overworld, x: 78, y: -93 }
-      });
-    } else {
-      mapLevel = locRow.mapLevel as MapLevel;
-      x = locRow.x;
-      y = locRow.y;
+      throw new Error(`[db] Failed to load player location after initialization for user ${userId} (persistenceId=${persistenceKey})`);
     }
+    const mapLevel: MapLevel = locRow.mapLevel as MapLevel;
+    const x = locRow.x;
+    const y = locRow.y;
 
     const skills = createDefaultSkills();
     const skillRows = await prisma.playerSkill.findMany({
@@ -808,6 +810,144 @@ export class PlayerPersistenceManager {
     }
 
     return inventory;
+  }
+
+  /**
+   * Ensures that a player has the required persistence rows for a world.
+   * This is idempotent and safe to run at login.
+   *
+   * @returns true if this was the player's first spawn for the persistence ID
+   */
+  private async ensureInitialPlayerDataForWorld(userId: number, persistenceId: number): Promise<boolean> {
+    const prisma = getPrisma();
+
+    const existingLocation = await prisma.playerLocation.findUnique({
+      where: {
+        userId_persistenceId: {
+          userId,
+          persistenceId
+        }
+      }
+    });
+    const isFirstSpawnForPersistence = !existingLocation;
+
+    await prisma.playerLocation.upsert({
+      where: {
+        userId_persistenceId: {
+          userId,
+          persistenceId
+        }
+      },
+      update: {},
+      create: {
+        userId,
+        persistenceId,
+        mapLevel: MAP_LEVELS.Overworld,
+        x: 78,
+        y: -93
+      }
+    });
+
+    const skills = await prisma.skill.findMany({
+      select: { id: true, slug: true }
+    });
+
+    for (const skill of skills) {
+      if (skill.slug === "overall") continue;
+      const isHitpoints = skill.slug === "hitpoints";
+
+      await prisma.playerSkill.upsert({
+        where: {
+          userId_persistenceId_skillId: {
+            userId,
+            persistenceId,
+            skillId: skill.id
+          }
+        },
+        update: {},
+        create: {
+          userId,
+          persistenceId,
+          skillId: skill.id,
+          level: isHitpoints ? 10 : 1,
+          boostedLevel: isHitpoints ? 10 : 1,
+          experience: isHitpoints ? BigInt(getXpForLevel(10)) : BigInt(0)
+        }
+      });
+    }
+
+    for (const slot of Object.keys(createDefaultEquipment()) as EquipmentSlot[]) {
+      await prisma.playerEquipment.upsert({
+        where: {
+          userId_persistenceId_slot: {
+            userId,
+            persistenceId,
+            slot
+          }
+        },
+        update: {},
+        create: {
+          userId,
+          persistenceId,
+          slot,
+          itemDefId: null,
+          amount: null
+        }
+      });
+    }
+
+    for (const [slot, itemId, amount, isIOU] of STARTER_INVENTORY_ITEMS) {
+      await prisma.playerInventory.upsert({
+        where: {
+          userId_persistenceId_slot: {
+            userId,
+            persistenceId,
+            slot
+          }
+        },
+        update: {},
+        create: {
+          userId,
+          persistenceId,
+          slot,
+          itemId,
+          amount,
+          isIOU
+        }
+      });
+    }
+
+    await prisma.playerAbility.upsert({
+      where: {
+        userId_persistenceId: {
+          userId,
+          persistenceId
+        }
+      },
+      update: {},
+      create: {
+        userId,
+        persistenceId,
+        values: serializePlayerAbilities(createDefaultAbilities())
+      }
+    });
+
+    await prisma.playerSetting.upsert({
+      where: {
+        userId_persistenceId: {
+          userId,
+          persistenceId
+        }
+      },
+      update: {},
+      create: {
+        userId,
+        persistenceId,
+        data: Object.values(serializePlayerSettings(createDefaultSettings()))
+      }
+    });
+
+    return isFirstSpawnForPersistence;
   }
 
   private async loadPlayerAppearance(userId: number, persistenceId: number): Promise<PlayerAppearance> {

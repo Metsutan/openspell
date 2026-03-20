@@ -874,7 +874,7 @@ async function ensureInitialPlayerInventory(db, userId, persistenceId) {
   }
 }
 
-const DEFAULT_PLAYER_ABILITIES = [1000, 1000];
+const DEFAULT_PLAYER_ABILITIES = [10000, 10000];
 const DEFAULT_PLAYER_SETTINGS = [0, 1, 7, 1, 1];
 
 async function ensureInitialPlayerAbilitiesForUser(db, userId, persistenceId) {
