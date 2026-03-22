@@ -18117,7 +18117,7 @@
         "y": -433,
         "movementAreaMinX": 166,
         "movementAreaMaxX": 185,
-        "movementAreaMinY": -442,
+        "movementAreaMinY": -440,
         "movementAreaMaxY": -423,
         "wanderRadius": 7.5,
         "shopdef_id": null,

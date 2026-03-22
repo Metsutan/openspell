@@ -625,6 +625,7 @@ export class GameServer {
 
     this.connectionService = new ConnectionService({
       dbEnabled: this.dbEnabled,
+      serverId: this.serverId,
       world: this.world,
       eventBus: this.eventBus,
       loginService: this.loginService,
