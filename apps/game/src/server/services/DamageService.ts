@@ -12,7 +12,7 @@
 import { EntityType } from "../../protocol/enums/EntityType";
 import { GameAction } from "../../protocol/enums/GameAction";
 import { buildShowDamagePayload } from "../../protocol/packets/actions/ShowDamage";
-import type { ItemCatalog, ItemDefinition } from "../../world/items/ItemCatalog";
+import type { ItemCatalog } from "../../world/items/ItemCatalog";
 import type { SpellCatalog } from "../../world/spells/SpellCatalog";
 import type { EntityDefinition } from "../../world/entities/EntityCatalog";
 import type { PlayerState } from "../../world/PlayerState";
@@ -674,9 +674,7 @@ export class DamageService {
       return DEFAULT_ATTACK_SPEED;
     }
 
-    // Check for weaponSpeed property on item definition
-    // Note: weaponSpeed may not exist in current ItemDefinition - will use default if missing
-    const weaponSpeed = (itemDef as ItemDefinition & { weaponSpeed?: number }).weaponSpeed;
+    const weaponSpeed = itemDef.weaponSpeed;
     if (typeof weaponSpeed === "number" && Number.isFinite(weaponSpeed) && weaponSpeed > 0) {
       return weaponSpeed;
     }

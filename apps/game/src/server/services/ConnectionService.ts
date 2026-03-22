@@ -20,6 +20,7 @@ import type { TreasureMapService } from "./TreasureMapService";
 
 export interface ConnectionServiceDependencies {
   dbEnabled: boolean;
+  serverId: number;
   world: World;
   eventBus: EventBus;
   loginService: LoginService;
@@ -110,6 +111,14 @@ export class ConnectionService {
       // Verify login token
       const { userId, username, emailVerified, isFirstGameLogin, lastLogin, serverId, persistenceId } =
         await this.deps.loginService.verifyLogin(login.Token as string);
+
+      // Enforce shard affinity: a token minted for world A must not be accepted by world B.
+      if (serverId !== this.deps.serverId) {
+        throw new LoginFailedError(
+          -401,
+          `Invalid world session. Token is for server ${serverId}, but this server is ${this.deps.serverId}.`
+        );
+      }
 
       // Check user ban after verifying login token (so we have userId)
       if (this.deps.dbEnabled) {
