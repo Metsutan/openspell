@@ -1,3 +1,46 @@
+# --- Extension Fields (YAML Anchors) ---
+x-game-env: &game_base_env
+  NODE_ENV: ${NODE_ENV:-production}
+  DATABASE_URL: ${DATABASE_URL}
+  API_URL: ${API_URL}
+  HISCORES_UPDATE_SECRET: ${HISCORES_UPDATE_SECRET}
+  JWT_SECRET: ${GAME_JWT_SECRET}
+  CHAT_JWT_SECRET: ${CHAT_JWT_SECRET}
+  TICK_MS: ${TICK_MS:-600}
+  USE_HTTPS: ${USE_HTTPS:-false}
+  SSL_CERT_PATH: ${SSL_CERT_PATH:-/app/certs/localhost.pem}
+  SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  REDIS_DISABLED: ${REDIS_DISABLED:-false}
+  ASSET_SET: ${ASSET_SET:-base}
+  STATIC_ASSETS_PATH: /app/apps/shared-assets/${ASSET_SET:-base}/static
+  PACKET_TRACE_PATH: /data/game-logs/packets
+  PORT: ${GAME_PORT:-8888}
+
+x-game-base: &game_base
+  build:
+    context: .
+    dockerfile: apps/game/Dockerfile
+  restart: unless-stopped
+  environment:
+    <<: *game_base_env
+  volumes:
+    - openspell_game_logs:/data/game-logs
+  depends_on:
+    api:
+      condition: service_started
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
 services:
   env-init:
     image: node:20-slim
@@ -81,48 +124,25 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # World 1
   game:
-    build:
-      context: .
-      dockerfile: apps/game/Dockerfile
+    <<: *game_base
     container_name: openspell-game
-    restart: unless-stopped
     environment:
-      PORT: ${GAME_PORT:-8888}
-      NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: ${DATABASE_URL}
-      API_URL: ${API_URL}
-      HISCORES_UPDATE_SECRET: ${HISCORES_UPDATE_SECRET}
-      JWT_SECRET: ${GAME_JWT_SECRET}
-      CHAT_JWT_SECRET: ${CHAT_JWT_SECRET}
+      <<: *game_base_env
       SERVER_ID: ${SERVER_ID:-100}
-      TICK_MS: ${TICK_MS:-600}
-      USE_HTTPS: ${USE_HTTPS:-false}
-      SSL_CERT_PATH: ${SSL_CERT_PATH:-/app/certs/localhost.pem}
-      SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDIS_DISABLED: ${REDIS_DISABLED:-false}
-      ASSET_SET: ${ASSET_SET:-base}
-      STATIC_ASSETS_PATH: /app/apps/shared-assets/${ASSET_SET:-base}/static
-      PACKET_TRACE_PATH: /data/game-logs/packets
-    volumes:
-      - openspell_game_logs:/data/game-logs
     ports:
       - "${GAME_PORT:-8888}:8888"
-    depends_on:
-      api:
-        condition: service_started
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+
+  # World 2 (Example)
+  game-2:
+    <<: *game_base
+    container_name: openspell-game-2
+    environment:
+      <<: *game_base_env
+      SERVER_ID: 101
+    ports:
+      - "8889:8889"
 
   chat:
     build:
@@ -148,7 +168,6 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-
 
   migrate:
     build:
