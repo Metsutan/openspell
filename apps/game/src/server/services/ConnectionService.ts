@@ -58,10 +58,10 @@ export interface DisconnectLogContext {
  * Handles login flow, session setup, and disconnect cleanup.
  */
 export class ConnectionService {
-  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP = 2;
-  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP_MESSAGE = "Only 2 accounts are allowed per person.";
+  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP = process.env.MAX_CONNECTIONS || 2;
+  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP_MESSAGE = `Only ${ConnectionService.MAX_ACTIVE_ACCOUNTS_PER_IP} accounts are allowed per person.`;
 
-  constructor(private readonly deps: ConnectionServiceDependencies) {}
+  constructor(private readonly deps: ConnectionServiceDependencies) { }
 
   private rejectLoginAndCloseSocket(socket: Socket, payload: unknown): null {
     socket.emit(GameAction.LoginFailed.toString(), payload);
@@ -98,7 +98,7 @@ export class ConnectionService {
     try {
       const login = decodeLoginPayload(payload);
       const clientIP = this.extractClientIP(socket);
-      
+
       // Check IP ban first (before verifying login token)
       if (this.deps.dbEnabled && clientIP) {
         const ipBanResult = await checkIPBan(clientIP);
@@ -184,14 +184,14 @@ export class ConnectionService {
       // Update online presence and tracking
       if (this.deps.dbEnabled) {
         await upsertOnlinePresence({ userId, username, serverId });
-        
+
         // Track IP address for this user
         if (clientIP) {
           await trackUserIP(userId, clientIP).catch((err) => {
             console.warn("[db] trackUserIP failed (non-fatal):", (err as Error)?.message ?? err);
           });
         }
-        
+
         // Broadcast player count update
         this.deps.enqueueBroadcast(GameAction.PlayerCountChanged, buildPlayerCountChangedPayload({ CurrentPlayerCount: this.deps.world.playerCount }));
       }
@@ -247,15 +247,15 @@ export class ConnectionService {
 
     // Get player's last position before cleanup
     const playerState = this.deps.playerStatesByUserId.get(userId);
-    const lastPosition: Position = playerState 
+    const lastPosition: Position = playerState
       ? { mapLevel: playerState.mapLevel, x: playerState.x, y: playerState.y }
       : { mapLevel: 1 as MapLevel, x: 0, y: 0 };
 
     // Save player state (with timeout)
     // Note: Skills are saved directly to DB here, no need for separate hiscores API call
     // The "overall" skill and ranks will be recomputed on next autosave cycle (~30s delay is acceptable)
-    const savePromise = this.deps.dbEnabled 
-      ? this.deps.playerPersistence.trySavePlayerState(userId, { force: true }) 
+    const savePromise = this.deps.dbEnabled
+      ? this.deps.playerPersistence.trySavePlayerState(userId, { force: true })
       : null;
 
     // Clean up session state
@@ -283,7 +283,7 @@ export class ConnectionService {
       // Remove from online presence
       try {
         await removeOnlinePresence(userId);
-        
+
         // Broadcast player count update
         this.deps.enqueueBroadcast(GameAction.PlayerCountChanged, buildPlayerCountChangedPayload({ CurrentPlayerCount: this.deps.world.playerCount }));
       } catch (err) {
@@ -328,27 +328,27 @@ export class ConnectionService {
   private extractClientIP(socket: Socket): string | null {
     const req = socket.request;
     if (!req) return null;
-    
+
     // Check for forwarded IP (if behind proxy)
     const forwarded = req.headers['x-forwarded-for'];
     if (forwarded) {
       const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded;
       return ips.split(',')[0].trim();
     }
-    
+
     // Check socket connection
     const remoteAddress = socket.conn?.remoteAddress;
     if (remoteAddress) {
       // IPv6 addresses may be wrapped in ::ffff: for IPv4-mapped
       return remoteAddress.replace(/^::ffff:/, '');
     }
-    
+
     // Fallback to request socket
     const reqSocket = (req as any).socket;
     if (reqSocket?.remoteAddress) {
       return reqSocket.remoteAddress.replace(/^::ffff:/, '');
     }
-    
+
     return null;
   }
 
