@@ -1827,7 +1827,7 @@ app.post('/api/admin/delete-user', requireWebServerSecret, verifyToken, verifyAd
         throw err;
       }
 
-      const onlineUser = await tx.onlineUser.findUnique({
+      const onlineUser = await tx.onlineUser.findFirst({
         where: { userId: user.id },
         select: { id: true, serverId: true }
       });
@@ -3967,7 +3967,12 @@ app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
     // We must enforce this before issuing a login token so the client
     // does not proceed to open a socket only to fail later.
     const existingOnlineUser = await prisma.onlineUser.findUnique({
-      where: { userId: user.id },
+      where: { 
+        userId_persistenceId: {
+          userId: user.id,
+          persistenceId: world.persistenceId
+        }
+      },
       select: { id: true, serverId: true }
     });
     if (existingOnlineUser) {
@@ -3985,7 +3990,7 @@ app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
       } else {
         return sendGameError(
           -303,
-          'Your account is currently logged in, please try again in about a minute'
+          'Your account is currently logged in to this world, please try again in about a minute'
         );
       }
     }
