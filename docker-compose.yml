@@ -18,6 +18,8 @@ x-game-env: &game_base_env
   STATIC_ASSETS_PATH: /app/apps/shared-assets/${ASSET_SET:-base}/static
   PACKET_TRACE_PATH: /data/game-logs/packets
   PORT: ${GAME_PORT:-8888}
+  SERVER_URL: ${SERVER_URL:-http://localhost:${GAME_PORT:-8888}}
+  PERSISTENCE_ID: ${PERSISTENCE_ID:-1}
 
 x-game-base: &game_base
   build:
@@ -124,23 +126,29 @@ services:
         max-size: "10m"
         max-file: "5"
 
-  # World 1
+  # World 1 (Legacy)
   game:
     <<: *game_base
-    container_name: openspell-game
+    container_name: openspell-legacy
     environment:
       <<: *game_base_env
-      SERVER_ID: ${SERVER_ID:-100}
+      SERVER_ID: 1
+      SERVER_URL: http://localhost:8888
+      PERSISTENCE_ID: 1
+      MAX_CONNECTIONS: 2
     ports:
       - "${GAME_PORT:-8888}:8888"
 
-  # World 2 (Example)
+  # World 2 (Custom)
   game-2:
     <<: *game_base
-    container_name: openspell-game-2
+    container_name: openspell-custom
     environment:
       <<: *game_base_env
-      SERVER_ID: 101
+      SERVER_ID: 2
+      SERVER_URL: http://localhost:8889
+      PERSISTENCE_ID: 2
+      MAX_CONNECTIONS: 2
     ports:
       - "8889:8889"
 

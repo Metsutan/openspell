@@ -40,7 +40,7 @@ export interface LoginServiceDependencies {
  * Manages JWT token verification and database queries for authentication.
  */
 export class LoginService {
-  constructor(private readonly deps: LoginServiceDependencies) {}
+  constructor(private readonly deps: LoginServiceDependencies) { }
   private readonly persistenceIdCache = new Map<number, number>();
 
   /**
@@ -58,13 +58,20 @@ export class LoginService {
       where: { token },
       include: { user: true }
     });
-    
+
     if (!row) throw new Error("Invalid login token");
     if (row.usedAt) throw new Error("Login token already used");
     if (row.expiresAt.getTime() <= Date.now()) throw new Error("Login token expired");
 
+    const persistenceId = await this.resolvePersistenceId(row.serverId);
+
     const existingOnlineUser = await prisma.onlineUser.findUnique({
-      where: { userId: row.userId },
+      where: {
+        userId_persistenceId: {
+          userId: row.userId,
+          persistenceId
+        }
+      },
       select: { id: true }
     });
     if (existingOnlineUser) {
@@ -75,11 +82,11 @@ export class LoginService {
     }
 
     const nowMs = Date.now();
-    
+
     // Get the user's previous login time (before we update it)
     const previousLoginTimeMs = row.user.lastLoginAt ? row.user.lastLoginAt.getTime() : null;
     const isFirstGameLogin = previousLoginTimeMs === null;
-    
+
     // Calculate time offset: milliseconds since last login
     // If this is first login (null), send 0 as offset
     const timeSinceLastLoginMs = previousLoginTimeMs ? (nowMs - previousLoginTimeMs) : 0;
@@ -87,13 +94,11 @@ export class LoginService {
     // Mark token as used and update user's last login time
     await Promise.all([
       prisma.gameLoginToken.update({ where: { token }, data: { usedAt: new Date() } }),
-      prisma.user.update({ 
-        where: { id: row.userId }, 
-        data: { lastLoginAt: new Date(nowMs) } 
+      prisma.user.update({
+        where: { id: row.userId },
+        data: { lastLoginAt: new Date(nowMs) }
       })
     ]);
-
-    const persistenceId = await this.resolvePersistenceId(row.serverId);
 
     return {
       userId: row.userId,

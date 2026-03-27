@@ -119,16 +119,18 @@ model Session {
 }
 
 model OnlineUser {
-  id        Int      @id @default(autoincrement())
-  userId    Int      // authenticated user only
-  username  String?  // optional display
-  serverId  Int      @default(1)
-  lastSeen  DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  userId        Int      // authenticated user only
+  username      String?  // optional display
+  serverId      Int      @default(1)
+  persistenceId Int      @default(1)
+  lastSeen      DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("online_users")
-  @@unique([userId])        // at most one presence per user
+  @@unique([userId, persistenceId]) // one presence per user per world persistence environment
+  @@index([userId])                 // fast lookup of all online sessions for a user
   @@index([serverId])
   @@index([lastSeen])
 }

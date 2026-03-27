@@ -58,7 +58,7 @@ export interface DisconnectLogContext {
  * Handles login flow, session setup, and disconnect cleanup.
  */
 export class ConnectionService {
-  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP = process.env.MAX_CONNECTIONS || 2;
+  private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP = Number(process.env.MAX_CONNECTIONS) || 2;
   private static readonly MAX_ACTIVE_ACCOUNTS_PER_IP_MESSAGE = `Only ${ConnectionService.MAX_ACTIVE_ACCOUNTS_PER_IP} accounts are allowed per person.`;
 
   constructor(private readonly deps: ConnectionServiceDependencies) { }
@@ -183,7 +183,7 @@ export class ConnectionService {
 
       // Update online presence and tracking
       if (this.deps.dbEnabled) {
-        await upsertOnlinePresence({ userId, username, serverId });
+        await upsertOnlinePresence({ userId, username, serverId, persistenceId });
 
         // Track IP address for this user
         if (clientIP) {
@@ -247,6 +247,7 @@ export class ConnectionService {
 
     // Get player's last position before cleanup
     const playerState = this.deps.playerStatesByUserId.get(userId);
+    const persistenceId = playerState?.persistenceId;
     const lastPosition: Position = playerState
       ? { mapLevel: playerState.mapLevel, x: playerState.x, y: playerState.y }
       : { mapLevel: 1 as MapLevel, x: 0, y: 0 };
@@ -282,7 +283,7 @@ export class ConnectionService {
 
       // Remove from online presence
       try {
-        await removeOnlinePresence(userId);
+        await removeOnlinePresence(userId, persistenceId);
 
         // Broadcast player count update
         this.deps.enqueueBroadcast(GameAction.PlayerCountChanged, buildPlayerCountChangedPayload({ CurrentPlayerCount: this.deps.world.playerCount }));

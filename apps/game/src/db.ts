@@ -37,12 +37,19 @@ export async function upsertOnlinePresence(params: {
   userId: number;
   username?: string;
   serverId?: number;
+  persistenceId?: number;
 }): Promise<void> {
   const prisma = getPrisma();
   const serverId = parseServerId(params.serverId ?? process.env.SERVER_ID);
+  const persistenceId = params.persistenceId ?? 1;
 
   await prisma.onlineUser.upsert({
-    where: { userId: params.userId },
+    where: { 
+      userId_persistenceId: {
+        userId: params.userId,
+        persistenceId: persistenceId
+      }
+    },
     update: {
       lastSeen: new Date(),
       serverId,
@@ -52,14 +59,19 @@ export async function upsertOnlinePresence(params: {
       userId: params.userId,
       username: params.username ?? null,
       serverId,
+      persistenceId,
       lastSeen: new Date()
     }
   });
 }
 
-export async function removeOnlinePresence(userId: number): Promise<void> {
+export async function removeOnlinePresence(userId: number, persistenceId?: number): Promise<void> {
   const prisma = getPrisma();
-  await prisma.onlineUser.deleteMany({ where: { userId } });
+  if (persistenceId !== undefined) {
+    await prisma.onlineUser.deleteMany({ where: { userId, persistenceId } });
+  } else {
+    await prisma.onlineUser.deleteMany({ where: { userId } });
+  }
 }
 
 /**
@@ -126,6 +138,46 @@ export async function sendWorldHeartbeat(serverId: number): Promise<void> {
       return;
     }
     console.warn(`[heartbeat] Failed to update heartbeat for serverId ${serverId}:`, (err as Error)?.message ?? err);
+  }
+}
+
+/**
+ * Registers or updates the game server's information in the `worlds` table.
+ * Called during server startup to ensure the global world list is accurate.
+ */
+export async function upsertWorld(params: {
+  serverId: number;
+  serverUrl: string;
+  persistenceId: number;
+}): Promise<void> {
+  const prisma = getPrisma();
+  const now = new Date();
+
+  try {
+    const result = await prisma.world.upsert({
+      where: { serverId: params.serverId },
+      update: {
+        serverUrl: params.serverUrl,
+        persistenceId: params.persistenceId,
+        lastHeartbeat: now,
+        updatedAt: now,
+      },
+      create: {
+        serverId: params.serverId,
+        serverUrl: params.serverUrl,
+        persistenceId: params.persistenceId,
+        name: `World ${params.serverId}`, // Default name, can be changed via admin panel
+        locationName: "Unknown",
+        flagCode: "USA",
+        isActive: true,
+        isDevelopment: process.env.NODE_ENV !== "production",
+        lastHeartbeat: now,
+      },
+    });
+    console.log(`[db] World ${result.serverId} registered/updated (persistenceId=${result.persistenceId}, url=${result.serverUrl})`);
+  } catch (err) {
+    console.error(`[db] Failed to upsert world ${params.serverId}:`, (err as Error)?.message ?? err);
+    throw err; // Re-throw as this is critical for server discovery
   }
 }
 
