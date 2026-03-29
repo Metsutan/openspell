@@ -821,15 +821,62 @@ export class PlayerPersistenceManager {
   private async ensureInitialPlayerDataForWorld(userId: number, persistenceId: number): Promise<boolean> {
     const prisma = getPrisma();
 
-    const existingLocation = await prisma.playerLocation.findUnique({
-      where: {
-        userId_persistenceId: {
-          userId,
-          persistenceId
+    const [
+      existingLocation,
+      existingSkill,
+      existingEquipment,
+      existingInventory,
+      existingAbility,
+      existingSetting
+    ] = await Promise.all([
+      prisma.playerLocation.findUnique({
+        where: {
+          userId_persistenceId: {
+            userId,
+            persistenceId
+          }
         }
-      }
-    });
-    const isFirstSpawnForPersistence = !existingLocation;
+      }),
+      prisma.playerSkill.findFirst({
+        where: { userId, persistenceId },
+        select: { userId: true }
+      }),
+      prisma.playerEquipment.findFirst({
+        where: { userId, persistenceId },
+        select: { userId: true }
+      }),
+      prisma.playerInventory.findFirst({
+        where: { userId, persistenceId },
+        select: { userId: true }
+      }),
+      prisma.playerAbility.findUnique({
+        where: {
+          userId_persistenceId: {
+            userId,
+            persistenceId
+          }
+        },
+        select: { userId: true }
+      }),
+      prisma.playerSetting.findUnique({
+        where: {
+          userId_persistenceId: {
+            userId,
+            persistenceId
+          }
+        },
+        select: { userId: true }
+      })
+    ]);
+    const hasAnyExistingWorldData = Boolean(
+      existingLocation ||
+      existingSkill ||
+      existingEquipment ||
+      existingInventory ||
+      existingAbility ||
+      existingSetting
+    );
+    const isFirstSpawnForPersistence = !hasAnyExistingWorldData;
 
     await prisma.playerLocation.upsert({
       where: {
@@ -896,25 +943,27 @@ export class PlayerPersistenceManager {
       });
     }
 
-    for (const [slot, itemId, amount, isIOU] of STARTER_INVENTORY_ITEMS) {
-      await prisma.playerInventory.upsert({
-        where: {
-          userId_persistenceId_slot: {
+    if (isFirstSpawnForPersistence) {
+      for (const [slot, itemId, amount, isIOU] of STARTER_INVENTORY_ITEMS) {
+        await prisma.playerInventory.upsert({
+          where: {
+            userId_persistenceId_slot: {
+              userId,
+              persistenceId,
+              slot
+            }
+          },
+          update: {},
+          create: {
             userId,
             persistenceId,
-            slot
+            slot,
+            itemId,
+            amount,
+            isIOU
           }
-        },
-        update: {},
-        create: {
-          userId,
-          persistenceId,
-          slot,
-          itemId,
-          amount,
-          isIOU
-        }
-      });
+        });
+      }
     }
 
     await prisma.playerAbility.upsert({
