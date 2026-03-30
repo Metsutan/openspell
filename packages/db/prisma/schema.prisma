@@ -25,7 +25,7 @@ model User {
   lastPasswordChange DateTime? // Last time password was changed
   lastEmailChange   DateTime? // Last time email was changed
   lastLoginAt       DateTime? // Last time user was sent a LoggedIn packet (game login)
-  timePlayed        Int       @default(0) // Total time played in milliseconds
+  timePlayed        BigInt    @default(0) // Total time played in milliseconds
   bannedUntil       DateTime? // If set, user is banned until this time (null = permanent ban if banReason is set)
   banReason         String?   // Reason for the ban (null = not banned)
   mutedUntil        DateTime? // If set, user is muted until this time (null = permanent mute if muteReason is set)
