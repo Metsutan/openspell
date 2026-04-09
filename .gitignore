@@ -67,3 +67,6 @@ apps/shared-assets/custom/
 # Local packet analysis tooling (not for OSS)
 apps/game/src/tools/packet-analyzer/
 
+# Nomad vars backup
+**/nomad/vars/*
+!**/nomad/vars/*.example
