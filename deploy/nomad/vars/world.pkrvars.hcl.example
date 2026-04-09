@@ -1,0 +1,6 @@
+openspell_world = {
+  world_id       = 1
+  port           = 8888
+  persistence_id = 1
+  game_image     = "your-repo/openspell-game:latest"
+}
