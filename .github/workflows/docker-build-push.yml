@@ -3,7 +3,7 @@ name: Build and Push Docker Images
 on:
   push:
     branches:
-      - main
+      - legacy
     tags:
       - 'v*'
   workflow_dispatch: # Allows manual trigger from the GitHub Actions UI
