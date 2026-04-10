@@ -1,4 +1,11 @@
 packages:
-  - "."
-  - "apps/*"
-  - "packages/*"
+  - .
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - better-sqlite3
+  - prisma
+  - sharp
