@@ -33,7 +33,7 @@ job "openspell-infra" {
         name     = "postgres-check"
         type     = "script"
         command  = "/usr/bin/pg_isready"
-        args     = ["-U", "postgres"]
+        args     = ["-U", "openspell"]
         interval = "10s"
         timeout  = "2s"
         task     = "postgres"
@@ -51,6 +51,10 @@ job "openspell-infra" {
       config {
         image = "docker.io/library/postgres:16"
         ports = ["postgres"]
+
+        volumes = [
+          "/opt/openspell/data/init-db:/docker-entrypoint-initdb.d:ro"
+        ]
       }
 
       # Pulling from the unified Job-Level path

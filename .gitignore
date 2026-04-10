@@ -70,3 +70,6 @@ apps/game/src/tools/packet-analyzer/
 # Nomad vars backup
 **/nomad/vars/*
 !**/nomad/vars/*.example
+
+# Database init files
+init/*
