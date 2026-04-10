@@ -71,5 +71,5 @@ apps/game/src/tools/packet-analyzer/
 **/nomad/vars/*
 !**/nomad/vars/*.example
 
-# Database init files
-init/*
+# Database production backup init
+init/01*.sql
