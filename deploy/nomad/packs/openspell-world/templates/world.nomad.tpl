@@ -1,12 +1,15 @@
-job "openspell-world-[[ (var "openspell_world" .).world_id ]]" {
+job "openspell-worlds" {
   datacenters = ["dc1"]
   type        = "service"
 
-  group "game-server" {
+  # Loop through every world defined in the pkrvars file
+  [[- range $world_id, $world := var "worlds" . ]]
+
+  group "game-server-[[ $world_id ]]" {
     network {
       mode = "bridge"
       port "game" {
-        static = [[ (var "openspell_world" .).port ]]
+        static = [[ $world.port ]]
       }
     }
 
@@ -17,7 +20,7 @@ job "openspell-world-[[ (var "openspell_world" .).world_id ]]" {
     }
 
     service {
-      name     = "openspell-game-[[ (var "openspell_world" .).world_id ]]"
+      name     = "openspell-game-[[ $world_id ]]"
       port     = "game"
       provider = "consul"
 
@@ -62,14 +65,14 @@ job "openspell-world-[[ (var "openspell_world" .).world_id ]]" {
       driver = "exec"
       config {
         command = "mkdir"
-        args    = ["-p", "/opt/openspell/data/logs/world-[[ (var "openspell_world" .).world_id ]]"]
+        args    = ["-p", "/opt/openspell/data/logs/world-[[ $world_id ]]"]
       }
     }
 
     task "game" {
       driver = "podman"
       config {
-        image = "[[ (var "openspell_world" .).game_image ]]"
+        image = "[[ $world.game_image ]]"
         ports = ["game"]
       }
 
@@ -83,12 +86,13 @@ job "openspell-world-[[ (var "openspell_world" .).world_id ]]" {
         data = <<EOH
 {{- with nomadVar "nomad/jobs/openspell-core" -}}
 NODE_ENV="production"
-SERVER_ID="[[ (var "openspell_world" .).world_id ]]"
-PERSISTENCE_ID="[[ (var "openspell_world" .).persistence_id ]]"
-MAX_CONNECTIONS="[[ (var "openspell_world" .).max_connections ]]"
+SERVER_ID="[[ $world_id ]]"
+PERSISTENCE_ID="[[ $world.persistence_id ]]"
+MAX_CONNECTIONS="[[ $world.max_connections ]]"
+TICK_MS="[[ $world.tick_ms ]]"
 
 API_URL="http://127.0.0.1:3002"
-SERVER_URL="http://localhost:[[ (var "openspell_world" .).port ]]"
+SERVER_URL="https://[[ $world.domain ]]"
 
 DATABASE_URL="postgresql://{{ .POSTGRES_USER }}:{{ .POSTGRES_PASSWORD }}@127.0.0.1:5432/{{ .POSTGRES_DB }}"
 REDIS_HOST="127.0.0.1"
@@ -99,8 +103,10 @@ JWT_SECRET="{{ .API_JWT_SECRET }}"
 CHAT_JWT_SECRET="{{ .CHAT_JWT_SECRET }}"
 HISCORES_UPDATE_SECRET="{{ .HISCORES_UPDATE_SECRET }}"
 
-PACKET_TRACE_PATH="/data/game-logs/world-[[ (var "openspell_world" .).world_id ]]/packets"
-LOG_FILE_PATH="/data/game-logs/world-[[ (var "openspell_world" .).world_id ]]/game.log"
+PACKET_TRACE_PATH="/data/game-logs/world-[[ $world_id ]]/packets"
+LOG_FILE_PATH="/data/game-logs/world-[[ $world_id ]]/game.log"
+ANTI_CHEAT_REALTIME_ENABLED="false"
+PACKET_LOG_INVALID_ENABLED="false"
 {{- end -}}
 EOH
         destination = "local/env"
@@ -108,4 +114,5 @@ EOH
       }
     }
   }
+  [[- end ]]
 }

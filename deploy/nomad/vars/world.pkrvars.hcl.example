@@ -1,6 +1,9 @@
-openspell_world = {
-  world_id       = 1
-  port           = 8888
-  persistence_id = 1
-  game_image     = "your-repo/openspell-game:latest"
+worlds = {
+  "1" = {
+    domain         = "domain.tld"
+    port           = 8888
+    persistence_id = 1
+    tick_ms        = 600
+    game_image     = "your-repo/openspell-game:latest"
+  }
 }
