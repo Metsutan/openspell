@@ -74,6 +74,7 @@ job "openspell-worlds" {
       config {
         image = "[[ $world.game_image ]]"
         ports = ["game"]
+        force_pull = true
       }
 
       volume_mount { # 
