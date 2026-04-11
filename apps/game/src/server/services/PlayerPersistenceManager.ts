@@ -261,6 +261,7 @@ export class PlayerPersistenceManager {
     // Calculate session time since last save or connection
     const sessionTimeMs = nowMs - playerState.connectedAt;
     const newTimePlayed = playerState.timePlayed + sessionTimeMs;
+    const newTimePlayedBigInt = BigInt(Math.max(0, Math.floor(newTimePlayed)));
 
     // Load skill ID mappings if not cached
     if (!this.skillIdCache) {
@@ -273,7 +274,7 @@ export class PlayerPersistenceManager {
           // Update user's total time played
           await tx.user.update({
             where: { id: playerState.userId },
-            data: { timePlayed: newTimePlayed }
+            data: { timePlayed: newTimePlayedBigInt as any }
           });
         } catch (err) {
           console.error(`[db] ERROR updating user timePlayed:`, err);
@@ -641,7 +642,7 @@ export class PlayerPersistenceManager {
       where: { id: userId },
       select: { timePlayed: true, playerType: true, displayName: true }
     });
-    const timePlayed = userRow?.timePlayed ?? 0;
+    const timePlayed = this.normalizeTimePlayed(userRow?.timePlayed);
     const playerType = userRow?.playerType ?? 0;
     const displayName = userRow?.displayName ?? username;
     const muteRows = await prisma.$queryRaw<Array<{ mutedUntil: Date | null; muteReason: string | null }>>`
@@ -821,15 +822,62 @@ export class PlayerPersistenceManager {
   private async ensureInitialPlayerDataForWorld(userId: number, persistenceId: number): Promise<boolean> {
     const prisma = getPrisma();
 
-    const existingLocation = await prisma.playerLocation.findUnique({
-      where: {
-        userId_persistenceId: {
-          userId,
-          persistenceId
+    const [
+      existingLocation,
+      existingSkill,
+      existingEquipment,
+      existingInventory,
+      existingAbility,
+      existingSetting
+    ] = await Promise.all([
+      prisma.playerLocation.findUnique({
+        where: {
+          userId_persistenceId: {
+            userId,
+            persistenceId
+          }
         }
-      }
-    });
-    const isFirstSpawnForPersistence = !existingLocation;
+      }),
+      prisma.playerSkill.findFirst({
+        where: { userId, persistenceId },
+        select: { userId: true }
+      }),
+      prisma.playerEquipment.findFirst({
+        where: { userId, persistenceId },
+        select: { userId: true }
+      }),
+      prisma.playerInventory.findFirst({
+        where: { userId, persistenceId },
+        select: { userId: true }
+      }),
+      prisma.playerAbility.findUnique({
+        where: {
+          userId_persistenceId: {
+            userId,
+            persistenceId
+          }
+        },
+        select: { userId: true }
+      }),
+      prisma.playerSetting.findUnique({
+        where: {
+          userId_persistenceId: {
+            userId,
+            persistenceId
+          }
+        },
+        select: { userId: true }
+      })
+    ]);
+    const hasAnyExistingWorldData = Boolean(
+      existingLocation ||
+      existingSkill ||
+      existingEquipment ||
+      existingInventory ||
+      existingAbility ||
+      existingSetting
+    );
+    const isFirstSpawnForPersistence = !hasAnyExistingWorldData;
 
     await prisma.playerLocation.upsert({
       where: {
@@ -896,25 +944,27 @@ export class PlayerPersistenceManager {
       });
     }
 
-    for (const [slot, itemId, amount, isIOU] of STARTER_INVENTORY_ITEMS) {
-      await prisma.playerInventory.upsert({
-        where: {
-          userId_persistenceId_slot: {
+    if (isFirstSpawnForPersistence) {
+      for (const [slot, itemId, amount, isIOU] of STARTER_INVENTORY_ITEMS) {
+        await prisma.playerInventory.upsert({
+          where: {
+            userId_persistenceId_slot: {
+              userId,
+              persistenceId,
+              slot
+            }
+          },
+          update: {},
+          create: {
             userId,
             persistenceId,
-            slot
+            slot,
+            itemId,
+            amount,
+            isIOU
           }
-        },
-        update: {},
-        create: {
-          userId,
-          persistenceId,
-          slot,
-          itemId,
-          amount,
-          isIOU
-        }
-      });
+        });
+      }
     }
 
     await prisma.playerAbility.upsert({
@@ -1007,5 +1057,17 @@ export class PlayerPersistenceManager {
       return persistenceId;
     }
     throw new Error(`[db] Missing persistenceId in ${context}`);
+  }
+
+  private normalizeTimePlayed(value: unknown): number {
+    if (typeof value === "bigint") {
+      if (value <= BigInt(0)) return 0;
+      const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+      return Number(value > maxSafe ? maxSafe : value);
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return Math.max(0, Math.floor(value));
+    }
+    return 0;
   }
 }
