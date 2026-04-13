@@ -46,6 +46,55 @@ async function requireAdmin(req, res, next) {
     }
 }
 
+function normalizeAdminRedirectTarget(candidate) {
+    if (typeof candidate !== 'string' || candidate.trim().length === 0) {
+        return null;
+    }
+
+    try {
+        const parsed = new URL(candidate, 'http://localhost');
+        if (parsed.origin !== 'http://localhost' || !parsed.pathname.startsWith('/account/admin')) {
+            return null;
+        }
+
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch (error) {
+        return null;
+    }
+}
+
+function buildAdminRedirectUrl(req, options = {}) {
+    const {
+        userId = null,
+        messageType = null,
+        message = null
+    } = options;
+
+    const bodyReturnTo = normalizeAdminRedirectTarget(req.body?.returnTo);
+    const refererReturnTo = normalizeAdminRedirectTarget(req.get('referer'));
+    const fallbackUrl = Number.isInteger(userId) && userId > 0
+        ? `/account/admin?userId=${encodeURIComponent(String(userId))}`
+        : '/account/admin';
+    const target = bodyReturnTo || refererReturnTo || fallbackUrl;
+    const parsed = new URL(target, 'http://localhost');
+
+    if (Number.isInteger(userId) && userId > 0 && !parsed.searchParams.get('userId')) {
+        parsed.searchParams.set('userId', String(userId));
+    }
+
+    if (messageType && message) {
+        parsed.searchParams.delete('success');
+        parsed.searchParams.delete('error');
+        parsed.searchParams.set(messageType, message);
+    }
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+}
+
+function redirectToAdmin(req, res, options = {}) {
+    return res.redirect(buildAdminRedirectUrl(req, options));
+}
+
 // Route: Account page (requires authentication)
 router.get('/', async (req, res) => {
     // Try to get fresh user data from API
@@ -539,6 +588,10 @@ router.get('/admin', requireAdmin, async (req, res) => {
     
     const errorMessage = req.query.error ? escapeHtml(req.query.error) : '';
     const successMessage = req.query.success ? escapeHtml(req.query.success) : '';
+    const requestedAdminUserId = Number.parseInt(String(req.query.userId || ''), 10);
+    const initialAdminUserId = Number.isInteger(requestedAdminUserId) && requestedAdminUserId > 0
+        ? requestedAdminUserId
+        : null;
     const cspNonce = res.locals.cspNonce || '';
     const scriptNonceAttr = cspNonce ? ` nonce="${cspNonce}"` : '';
     
@@ -570,7 +623,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
                 <h3>Search User</h3>
                 <form id="user-search-form" method="POST" action="/account/admin/search-user" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                     <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
-                    <input type="text" name="query" placeholder="Username or Display Name" required style="flex: 1; min-width: 200px; padding: 8px;" />
+                    <input type="text" name="query" placeholder="Username, Display Name, or IP" required style="flex: 1; min-width: 200px; padding: 8px;" />
                     <button type="submit" class="btn-submit">Search</button>
                 </form>
             </div>
@@ -641,7 +694,34 @@ router.get('/admin', requireAdmin, async (req, res) => {
                 .replace(/'/g, '&#39;');
         }
 
+        const initialAdminUserId = ${initialAdminUserId ?? 'null'};
         const chartRegistry = {};
+
+        function updateAdminLocation(userId) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('success');
+            url.searchParams.delete('error');
+            if (userId) {
+                url.searchParams.set('userId', String(userId));
+            } else {
+                url.searchParams.delete('userId');
+            }
+            window.history.replaceState({}, '', url.pathname + url.search);
+        }
+
+        function setFormReturnTo(form) {
+            if (!form) return;
+
+            let returnToInput = form.querySelector('input[name="returnTo"]');
+            if (!returnToInput) {
+                returnToInput = document.createElement('input');
+                returnToInput.type = 'hidden';
+                returnToInput.name = 'returnTo';
+                form.appendChild(returnToInput);
+            }
+
+            returnToInput.value = window.location.pathname + window.location.search;
+        }
 
         function formatJsonPreview(value, maxLength = 220) {
             if (value === null || value === undefined) return '';
@@ -719,6 +799,12 @@ router.get('/admin', requireAdmin, async (req, res) => {
             reasonInput.name = 'reason';
             reasonInput.value = reason.trim();
             form.appendChild(reasonInput);
+
+            const returnToInput = document.createElement('input');
+            returnToInput.type = 'hidden';
+            returnToInput.name = 'returnTo';
+            returnToInput.value = window.location.pathname + window.location.search;
+            form.appendChild(returnToInput);
             
             document.body.appendChild(form);
             form.submit();
@@ -752,6 +838,11 @@ router.get('/admin', requireAdmin, async (req, res) => {
 
                     if (detailsContent && detailsContentDiv) {
                         detailsContentDiv.innerHTML = detailsContent.innerHTML;
+                        if (endpoint === '/account/admin/get-user' && detailsContent.dataset.userId) {
+                            updateAdminLocation(detailsContent.dataset.userId);
+                        } else if (endpoint === '/account/admin/search-user') {
+                            updateAdminLocation(null);
+                        }
                         detailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
                         // Re-attach event handlers to any forms in the new content
@@ -1147,6 +1238,23 @@ router.get('/admin', requireAdmin, async (req, res) => {
         
         // Attach event handlers to forms
         function attachFormHandlers() {
+            document.querySelectorAll('form[action^="/account/admin/"]').forEach(form => {
+                if (form.dataset.returnToAttached) return;
+                form.dataset.returnToAttached = 'true';
+                form.addEventListener('submit', function() {
+                    const actionPath = this.getAttribute('action') || '';
+                    if (
+                        actionPath === '/account/admin/search-user' ||
+                        actionPath === '/account/admin/get-user' ||
+                        actionPath.startsWith('/account/admin/anti-cheat/')
+                    ) {
+                        return;
+                    }
+
+                    setFormReturnTo(this);
+                });
+            });
+
             // Handle user search form
             const searchForm = document.getElementById('user-search-form');
             if (searchForm && !searchForm.dataset.handlerAttached) {
@@ -1304,6 +1412,12 @@ router.get('/admin', requireAdmin, async (req, res) => {
         
         // Initial attachment
         attachFormHandlers();
+        if (initialAdminUserId) {
+            const csrfInput = document.querySelector('#user-search-form input[name="_csrf"]');
+            if (csrfInput) {
+                loadUserDetailsById(initialAdminUserId, csrfInput.value);
+            }
+        }
     </script>
     
 </section>`;
@@ -1337,7 +1451,7 @@ router.post('/admin/search-user', requireAdmin, csrfProtection, async (req, res)
                         <div class="notification warning">
                             No users found matching "${escapeHtml(query)}"
                         </div>
-                        <p style="margin-top: 16px;">Or search by User ID:</p>
+                        <p style="margin-top: 16px;">Try a username, display name, IP address, or search by User ID:</p>
                         <form method="POST" action="/account/admin/get-user" style="margin-top: 8px;">
                             <input type="hidden" name="_csrf" value="${getCsrfToken(req)}" />
                             <input type="number" name="userId" placeholder="User ID" required style="margin: 8px 0; padding: 8px; width: 200px;" />
@@ -1359,12 +1473,21 @@ router.post('/admin/search-user', requireAdmin, csrfProtection, async (req, res)
                 const adminBadge = user.isAdmin 
                     ? '<span style="color: var(--warning-color); margin-left: 8px; font-weight: 600;">ADMIN</span>' 
                     : '';
+                const matchedIps = Array.isArray(user.userIPs)
+                    ? user.userIPs
+                        .map((entry) => entry && entry.ip ? escapeHtml(entry.ip) : '')
+                        .filter(Boolean)
+                    : [];
+                const matchedIpsHtml = matchedIps.length > 0
+                    ? `<div style="margin-top: 4px; font-size: 12px; color: var(--body-text-color-secondary);">Matched IPs: ${matchedIps.join(', ')}</div>`
+                    : '';
                 
                 return `
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                         <td style="padding: 8px;">${user.id}</td>
                         <td style="padding: 8px;">
                             ${escapeHtml(user.username)}${adminBadge}${banStatusBadge}${muteStatusBadge}
+                            ${matchedIpsHtml}
                         </td>
                         <td style="padding: 8px;">${escapeHtml(user.displayName || user.username)}</td>
                         <td style="padding: 8px;">
@@ -1828,7 +1951,7 @@ router.post('/admin/get-user', requireAdmin, csrfProtection, async (req, res) =>
                         `;
 
         res.send(`
-            <div id="user-details-content">
+            <div id="user-details-content" data-user-id="${userId}">
                 <div style="margin-bottom: 16px;">
                     <a href="/account/admin" class="anchor-submit-button">← Back to Search</a>
                 </div>
@@ -1882,11 +2005,11 @@ router.post('/admin/ban-user', requireAdmin, csrfProtection, async (req, res) =>
         const reason = sanitizeString(req.body.reason);
         
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
         
         if (!reason || reason.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Ban reason is required'));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: 'Ban reason is required' });
         }
         
         try {
@@ -1902,18 +2025,18 @@ router.post('/admin/ban-user', requireAdmin, csrfProtection, async (req, res) =>
             });
             
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} banned successfully`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: `User ${userId} banned successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to ban user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to ban user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Ban user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -1925,15 +2048,15 @@ router.post('/admin/ban-user-temp', requireAdmin, csrfProtection, async (req, re
         const bannedUntil = req.body.bannedUntil;
         
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
         
         if (!reason || reason.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Ban reason is required'));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: 'Ban reason is required' });
         }
         
         if (!bannedUntil) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Ban expiration date is required'));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: 'Ban expiration date is required' });
         }
         
         try {
@@ -1951,18 +2074,18 @@ router.post('/admin/ban-user-temp', requireAdmin, csrfProtection, async (req, re
             
             const banUntilStr = new Date(bannedUntil).toLocaleString();
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} temporarily banned until ${banUntilStr}`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: `User ${userId} temporarily banned until ${banUntilStr}` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to ban user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to ban user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Ban user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -1972,7 +2095,7 @@ router.post('/admin/unban-user', requireAdmin, csrfProtection, async (req, res) 
         const userId = parseInt(req.body.userId, 10);
         
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
         
         try {
@@ -1987,18 +2110,18 @@ router.post('/admin/unban-user', requireAdmin, csrfProtection, async (req, res) 
             });
             
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} unbanned successfully`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: `User ${userId} unbanned successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to unban user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to unban user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Unban user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -2009,11 +2132,11 @@ router.post('/admin/mute-user', requireAdmin, csrfProtection, async (req, res) =
         const reason = sanitizeString(req.body.reason);
         
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
         
         if (!reason || reason.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Mute reason is required'));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: 'Mute reason is required' });
         }
         
         try {
@@ -2029,18 +2152,18 @@ router.post('/admin/mute-user', requireAdmin, csrfProtection, async (req, res) =
             });
             
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} muted successfully`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: `User ${userId} muted successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to mute user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to mute user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Mute user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -2052,15 +2175,15 @@ router.post('/admin/mute-user-temp', requireAdmin, csrfProtection, async (req, r
         const mutedUntil = req.body.mutedUntil;
         
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
         
         if (!reason || reason.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Mute reason is required'));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: 'Mute reason is required' });
         }
         
         if (!mutedUntil) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Mute expiration date is required'));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: 'Mute expiration date is required' });
         }
         
         try {
@@ -2078,18 +2201,18 @@ router.post('/admin/mute-user-temp', requireAdmin, csrfProtection, async (req, r
             
             const muteUntilStr = new Date(mutedUntil).toLocaleString();
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} temporarily muted until ${muteUntilStr}`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: `User ${userId} temporarily muted until ${muteUntilStr}` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to mute user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to mute user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Mute user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -2099,7 +2222,7 @@ router.post('/admin/unmute-user', requireAdmin, csrfProtection, async (req, res)
         const userId = parseInt(req.body.userId, 10);
         
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
         
         try {
@@ -2114,18 +2237,18 @@ router.post('/admin/unmute-user', requireAdmin, csrfProtection, async (req, res)
             });
             
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`User ${userId} unmuted successfully`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: `User ${userId} unmuted successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to unmute user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to unmute user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Unmute user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -2136,11 +2259,11 @@ router.post('/admin/delete-user', requireAdmin, csrfProtection, async (req, res)
         const confirmation = sanitizeString(req.body.confirmation);
 
         if (!userId || isNaN(userId)) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Invalid user ID'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Invalid user ID' });
         }
 
         if (!confirmation || confirmation !== `DELETE USER ${userId}`) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent(`Confirmation must match exactly: DELETE USER ${userId}`));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: `Confirmation must match exactly: DELETE USER ${userId}` });
         }
 
         try {
@@ -2156,18 +2279,18 @@ router.post('/admin/delete-user', requireAdmin, csrfProtection, async (req, res)
             });
 
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(apiResponse.message || `User ${userId} deleted successfully`));
+                return redirectToAdmin(req, res, { userId, messageType: 'success', message: apiResponse.message || `User ${userId} deleted successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to delete user'));
+                return redirectToAdmin(req, res, { userId, messageType: 'error', message: apiResponse.error || 'Failed to delete user' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { userId, messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Delete user error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -2180,11 +2303,11 @@ router.post('/admin/ban-ip', requireAdmin, csrfProtection, async (req, res) => {
         const bannedUntil = req.body.bannedUntil ? new Date(req.body.bannedUntil).toISOString() : null;
         
         if (!ip || ip.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('IP address is required'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'IP address is required' });
         }
         
         if (!reason || reason.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('Ban reason is required'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'Ban reason is required' });
         }
         
         try {
@@ -2205,18 +2328,18 @@ router.post('/admin/ban-ip', requireAdmin, csrfProtection, async (req, res) => {
             });
             
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`IP ${ip.trim()} banned successfully`));
+                return redirectToAdmin(req, res, { messageType: 'success', message: `IP ${ip.trim()} banned successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to ban IP'));
+                return redirectToAdmin(req, res, { messageType: 'error', message: apiResponse.error || 'Failed to ban IP' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Ban IP error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 
@@ -2226,7 +2349,7 @@ router.post('/admin/unban-ip', requireAdmin, csrfProtection, async (req, res) =>
         const ip = sanitizeString(req.body.ip);
         
         if (!ip || ip.trim().length === 0) {
-            return res.redirect('/account/admin?error=' + encodeURIComponent('IP address is required'));
+            return redirectToAdmin(req, res, { messageType: 'error', message: 'IP address is required' });
         }
         
         try {
@@ -2241,18 +2364,18 @@ router.post('/admin/unban-ip', requireAdmin, csrfProtection, async (req, res) =>
             });
             
             if (apiResponse.success) {
-                return res.redirect('/account/admin?success=' + encodeURIComponent(`IP ${ip.trim()} unbanned successfully`));
+                return redirectToAdmin(req, res, { messageType: 'success', message: `IP ${ip.trim()} unbanned successfully` });
             } else {
-                return res.redirect('/account/admin?error=' + encodeURIComponent(apiResponse.error || 'Failed to unban IP'));
+                return redirectToAdmin(req, res, { messageType: 'error', message: apiResponse.error || 'Failed to unban IP' });
             }
         } catch (error) {
             console.error('API request error:', error);
             const errorMessage = extractApiErrorMessage(error);
-            return res.redirect('/account/admin?error=' + encodeURIComponent(errorMessage));
+            return redirectToAdmin(req, res, { messageType: 'error', message: errorMessage });
         }
     } catch (error) {
         console.error('Unban IP error:', error);
-        return res.redirect('/account/admin?error=' + encodeURIComponent('Internal server error'));
+        return redirectToAdmin(req, res, { messageType: 'error', message: 'Internal server error' });
     }
 });
 

@@ -159,6 +159,18 @@ function postDiscordWebhook(payload) {
   });
 }
 
+function serializeUserForApi(user) {
+  if (!user) {
+    return user;
+  }
+
+  return {
+    ...user,
+    // Prisma returns BIGINT columns as JS bigint values, but Express JSON cannot serialize them.
+    timePlayed: typeof user.timePlayed === 'bigint' ? Number(user.timePlayed) : user.timePlayed
+  };
+}
+
 async function sendAntiCheatNotifications() {
   try {
     const pending = await prisma.anomalyAlert.findMany({
@@ -1451,7 +1463,7 @@ app.get('/api/auth/me', requireWebServerSecret, verifyToken, async (req, res) =>
       return res.status(404).json({ error: 'User not found' });
     }
     
-    res.json({ user });
+    res.json({ user: serializeUserForApi(user) });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1549,7 +1561,7 @@ app.get('/api/account/export', requireWebServerSecret, verifyToken, async (req, 
       source: {
         serverId: Number.parseInt(process.env.SERVER_ID || '0', 10) || null
       },
-      user,
+      user: serializeUserForApi(user),
       gameData: {
         playerLocations,
         playerSkills: playerSkills.map((row) => ({
@@ -2427,7 +2439,7 @@ app.get('/api/admin/banned-ips', requireWebServerSecret, verifyToken, verifyAdmi
   }
 });
 
-// Search users by username (admin only)
+// Search users by username, display name, or associated IP (admin only)
 app.get('/api/admin/search-users', requireWebServerSecret, verifyToken, verifyAdmin, async (req, res) => {
   try {
     const { query, limit = 50, offset = 0 } = req.query;
@@ -2449,15 +2461,24 @@ app.get('/api/admin/search-users', requireWebServerSecret, verifyToken, verifyAd
     
     const searchQuery = query.trim();
     
-    // Search for users where username or displayName contains the query (case-insensitive)
+    const searchWhere = {
+      OR: [
+        { username: { contains: searchQuery, mode: 'insensitive' } },
+        { displayName: { contains: searchQuery, mode: 'insensitive' } },
+        {
+          userIPs: {
+            some: {
+              ip: { contains: searchQuery, mode: 'insensitive' }
+            }
+          }
+        }
+      ]
+    };
+
+    // Search for users where username, displayName, or an associated IP contains the query.
     const [users, total] = await Promise.all([
       prisma.user.findMany({
-        where: {
-          OR: [
-            { username: { contains: searchQuery, mode: 'insensitive' } },
-            { displayName: { contains: searchQuery, mode: 'insensitive' } }
-          ]
-        },
+        where: searchWhere,
         select: {
           id: true,
           username: true,
@@ -2468,7 +2489,20 @@ app.get('/api/admin/search-users', requireWebServerSecret, verifyToken, verifyAd
           banReason: true,
           mutedUntil: true,
           muteReason: true,
-          createdAt: true
+          createdAt: true,
+          userIPs: {
+            where: {
+              ip: { contains: searchQuery, mode: 'insensitive' }
+            },
+            select: {
+              ip: true,
+              lastSeen: true
+            },
+            orderBy: {
+              lastSeen: 'desc'
+            },
+            take: 5
+          }
         },
         orderBy: [
           { username: 'asc' }
@@ -2477,12 +2511,7 @@ app.get('/api/admin/search-users', requireWebServerSecret, verifyToken, verifyAd
         skip: offsetNum
       }),
       prisma.user.count({
-        where: {
-          OR: [
-            { username: { contains: searchQuery, mode: 'insensitive' } },
-            { displayName: { contains: searchQuery, mode: 'insensitive' } }
-          ]
-        }
+        where: searchWhere
       })
     ]);
     
