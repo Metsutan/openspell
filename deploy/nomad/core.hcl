@@ -61,12 +61,10 @@ job "openspell-core" {
       driver = "podman"
 
       config {
-        # UPDATE THIS: Point to your pre-built image
         image = var.api_image
-        // ports = ["api"]
         
-        # Security Hardening: Drop all Linux capabilities
         cap_drop = ["ALL"]
+        force_pull = true
       }
 
       template {
@@ -148,10 +146,10 @@ EOH
       driver = "podman"
 
       config {
-        # UPDATE THIS: Point to your pre-built image
         image = var.web_image
         ports = ["web"]
         cap_drop = ["ALL"]
+        force_pull = true
       }
 
       template {
@@ -217,10 +215,10 @@ EOH
       driver = "podman"
 
       config {
-        # UPDATE THIS: Point to your pre-built image
         image = var.chat_image
         ports = ["chat"]
         cap_drop = ["ALL"]
+        force_pull = true
       }
 
       template {

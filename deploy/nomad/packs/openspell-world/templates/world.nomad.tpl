@@ -108,6 +108,22 @@ PACKET_TRACE_PATH="/data/game-logs/world-[[ $world_id ]]/packets"
 LOG_FILE_PATH="/data/game-logs/world-[[ $world_id ]]/game.log"
 ANTI_CHEAT_REALTIME_ENABLED="false"
 PACKET_LOG_INVALID_ENABLED="false"
+
+WORLD_ENTITIES_FILE=worldentities.26.carbon
+WORLD_ENTITY_DEFS_FILE=worldentitydefs.13.carbon
+WORLD_ENTITY_ACTIONS_FILE=worldentityactions.5.carbon
+NPC_ENTITY_DEFS_FILE=npcentitydefs.22.carbon
+NPC_ENTITIES_FILE=npcentities.17.carbon
+ITEM_DEFS_FILE=itemdefs.33.carbon
+GROUND_ITEMS_FILE=grounditems.12.carbon
+NPC_CONVERSATION_DEFS_FILE=npcconversationdefs.2.carbon
+SHOP_DEFS_FILE=shopdefs.11.carbon
+NPC_LOOT_FILE=npcloot.18.carbon
+
+DISABLE_STAMINA=true
+
+GLOBAL_CHAT_DISCORD_WEBHOOK_ENABLED=false
+GLOBAL_CHAT_DISCORD_WEBHOOK_URL="[[ $world.global_chat_webhook ]]"
 {{- end -}}
 EOH
         destination = "local/env"
