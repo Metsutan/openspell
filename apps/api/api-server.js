@@ -21,6 +21,7 @@ const { RegExpMatcher, englishDataset, englishRecommendedTransformers } = requir
 const emailService = require('./services/email');
 
 const app = express();
+app.set('trust proxy', 2); // Trust Cloudflare -> Nginx Proxy Manager
 const prisma = getPrisma();
 const PORT = process.env.PORT || process.env.API_PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_JWT_SECRET || 'default-secret-change-in-production';
@@ -370,8 +371,22 @@ const getLoginLimiter = rateLimiter.createMiddleware({
   keyPrefix: 'api:login',
   message: 'Too many login attempts, please try again later.',
   statusCode: 429,
-  keyGenerator: (req) => req.ip || req.connection?.remoteAddress || 'unknown',
+  keyGenerator: (req) => {
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    // Use x-forwarded-for or cf-connecting-ip if available for logging purposes
+    const xff = req.headers['x-forwarded-for'];
+    const cfIp = req.headers['cf-connecting-ip'];
+    if (NODE_ENV !== 'production' || process.env.DEBUG_LOGIN_IP === 'true') {
+      console.log(`[getLoginLimiter] Identifying key for request: ip=${ip}, cf-ip=${cfIp}, xff=${xff}`);
+    }
+    return ip;
+  },
   handler: (req, res, result) => {
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const xff = req.headers['x-forwarded-for'];
+    const cfIp = req.headers['cf-connecting-ip'];
+    console.warn(`[getLoginLimiter] RATE LIMIT HIT: ip=${ip}, cf-ip=${cfIp}, xff=${xff}, resetAt=${result.resetAt}`);
+    
     return res.status(429).json({ 
       error: 'Too many login attempts, please try again later.',
       retryAfter: result.resetAt
@@ -3926,6 +3941,14 @@ app.post('/api/worlds/heartbeat', requireGameServerSecret, async (req, res) => {
 
 
 app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const username = req.body?.username ? String(req.body.username) : 'unknown';
+  const serverId = req.body?.serverId;
+  
+  if (NODE_ENV !== 'production' || process.env.DEBUG_LOGIN_IP === 'true') {
+    console.log(`[getLoginToken] Request from ip=${ip}, user=${username}, serverId=${serverId}`);
+  }
+
   const sendGameError = (code, msg, httpStatus = 200) => {
     // For game clients, we typically keep HTTP 200 and communicate failure via {code,msg}.
     // This matches the expected client shape and avoids CORS/fetch error-path divergence.

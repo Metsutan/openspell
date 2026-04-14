@@ -1676,12 +1676,12 @@ export class GameServer {
           await this.playerPersistence.trySavePlayerState(userId, { force: true });
           const elapsed = Date.now() - startTime;
           console.log(`[shutdown] ✓ Saved player ${userId} in ${elapsed}ms`);
-          
+
           // Send LoggedOut packet to notify the player they're being disconnected
           console.log(`[shutdown] >> Sending LoggedOut packet to player ${userId}`);
           const loggedOutPayload = buildLoggedOutPayload({ EntityID: userId });
           this.enqueueUserMessage(userId, GameAction.LoggedOut, loggedOutPayload);
-          
+
           return { userId, success: true, elapsed };
         } catch (err) {
           const elapsed = Date.now() - startTime;
@@ -1736,7 +1736,7 @@ export class GameServer {
       if (this.antiCheatAnalyzer) {
         await this.antiCheatAnalyzer.shutdown();
       }
-      
+
       // Flush any queued packets (including LoggedOut packets) before closing connections
       console.log('[shutdown] Flushing queued packets...');
       if (this.outgoingNext.length > 0) {
@@ -1747,11 +1747,11 @@ export class GameServer {
       } else {
         console.log('[shutdown] No packets to flush');
       }
-      
+
       // Give sockets a moment to send the packets
       await new Promise(resolve => setTimeout(resolve, 100));
       console.log('[shutdown] Packets sent, disconnecting clients...');
-      
+
       // Disconnect all client sockets
       for (const [userId, socket] of this.socketsByUserId.entries()) {
         try {
@@ -1823,40 +1823,46 @@ export class GameServer {
     process.once('SIGINT', async () => {
       await this.handleShutdownSignal('SIGINT', 0);
     });
-    
+
     // SIGTERM (kill/docker stop)
     process.once('SIGTERM', async () => {
       await this.handleShutdownSignal('SIGTERM', 0);
     });
-    
+
+    // SIGUSR1 (Planned deployment shutdown with warning)
+    process.on('SIGUSR1', async () => {
+      console.log('[shutdown] Received SIGUSR1, scheduling 5m graceful shutdown...');
+      this.scheduleServerShutdown(5);
+    });
+
     // Crashes - can't safely do async work
     process.once('uncaughtException', (err: Error) => {
       console.error('[crash] Uncaught exception:', err);
       this.handleCrash(err);
     });
-    
+
     process.once('unhandledRejection', (reason: unknown) => {
       console.error('[crash] Unhandled rejection:', reason);
       this.handleCrash(new Error(String(reason)));
     });
-    
+
     console.log('[server] Crash handlers registered');
   }
-  
+
   private async handleShutdownSignal(signal: string, exitCode: number): Promise<never> {
     if (this.shutdownInProgress) {
       console.log('[shutdown] Already shutting down, forcing immediate exit');
       process.exit(1);
     }
-    
+
     console.log(`[shutdown] ${signal} received, starting graceful shutdown...`);
-    
+
     // Timeout to force exit
     const killer = setTimeout(() => {
       console.error('[shutdown] FORCE EXIT after 60s timeout');
       process.exit(1);
     }, 60000);
-    
+
     try {
       await this.gracefulShutdown(signal, exitCode);
       clearTimeout(killer);
@@ -1868,15 +1874,15 @@ export class GameServer {
       process.exit(1);
     }
   }
-  
+
   private handleCrash(error: Error): void {
     console.error('[crash] Attempting emergency save (5s timeout)...');
-    
+
     const killer = setTimeout(() => {
       console.error('[crash] Emergency save timeout, forcing exit');
       process.exit(1);
     }, 5000);
-    
+
     this.gracefulShutdown(`Crash: ${error.message}`, 1)
       .finally(() => {
         clearTimeout(killer);
@@ -1979,81 +1985,81 @@ export class GameServer {
    * Uses the unified tick processor from environmentActions.
    */
   private processEnvironmentActions(): void {
-  // Import dynamically to avoid circular dependency
-  const { processPendingEnvironmentActions } = require("./actions/entity-actions/environmentActions");
+    // Import dynamically to avoid circular dependency
+    const { processPendingEnvironmentActions } = require("./actions/entity-actions/environmentActions");
 
-  // Build a minimal context for the processor
-  // Note: socket/userId not needed since processor handles all players
-  const ctx = {
-    playerStatesByUserId: this.playerStatesByUserId,
-    currentTick: this.tick,
-    groundItemStates: this.groundItemStates,
-    worldEntityStates: this.worldEntityStates,
-    spatialIndex: this.spatialIndex,
-    delaySystem: this.delaySystem,
-    pathfindingSystem: this.pathfindingSystem,
-    worldEntityActionService: this.worldEntityActionService,
-    instancedNpcService: this.instancedNpcService,
-    messageService: this.messageService,
-    teleportService: this.teleportService,
-    eventBus: this.eventBus,
-    resourceExhaustionTracker: this.resourceExhaustionTracker,
-    targetingService: this.targetingService,
-    bankingService: this.bankingService,
-    worldEntityLootService: this.worldEntityLootService,
-    inventoryService: this.inventoryService,
+    // Build a minimal context for the processor
+    // Note: socket/userId not needed since processor handles all players
+    const ctx = {
+      playerStatesByUserId: this.playerStatesByUserId,
+      currentTick: this.tick,
+      groundItemStates: this.groundItemStates,
+      worldEntityStates: this.worldEntityStates,
+      spatialIndex: this.spatialIndex,
+      delaySystem: this.delaySystem,
+      pathfindingSystem: this.pathfindingSystem,
+      worldEntityActionService: this.worldEntityActionService,
+      instancedNpcService: this.instancedNpcService,
+      messageService: this.messageService,
+      teleportService: this.teleportService,
+      eventBus: this.eventBus,
+      resourceExhaustionTracker: this.resourceExhaustionTracker,
+      targetingService: this.targetingService,
+      bankingService: this.bankingService,
+      worldEntityLootService: this.worldEntityLootService,
+      inventoryService: this.inventoryService,
       treasureMapService: this.treasureMapService,
-    equipmentService: this.equipmentService,
-    itemCatalog: this.itemCatalog,
-    experienceService: this.experienceService,
-    woodcuttingService: this.woodcuttingService,
-    fishingService: this.fishingService,
-    harvestingService: this.harvestingService,
-    miningService: this.miningService,
-    shakingService: this.shakingService,
-    skillingMenuService: this.skillingMenuService,
-    enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => {
-      this.enqueueUserMessage(userId, action, payload);
-    },
-    enqueueBroadcast: (action: number, payload: unknown[]) => {
-      this.enqueueBroadcast(action, payload);
-    }
-  };
+      equipmentService: this.equipmentService,
+      itemCatalog: this.itemCatalog,
+      experienceService: this.experienceService,
+      woodcuttingService: this.woodcuttingService,
+      fishingService: this.fishingService,
+      harvestingService: this.harvestingService,
+      miningService: this.miningService,
+      shakingService: this.shakingService,
+      skillingMenuService: this.skillingMenuService,
+      enqueueUserMessage: (userId: number, action: number, payload: unknown[]) => {
+        this.enqueueUserMessage(userId, action, payload);
+      },
+      enqueueBroadcast: (action: number, payload: unknown[]) => {
+        this.enqueueBroadcast(action, payload);
+      }
+    };
 
-  processPendingEnvironmentActions(ctx);
-}
+    processPendingEnvironmentActions(ctx);
+  }
 
   private checkIdlePlayers(): void {
-  for(const [userId, lastActivityTick] of this.lastActivityTickByUserId.entries()) {
-  const idleTicks = this.tick - lastActivityTick;
+    for (const [userId, lastActivityTick] of this.lastActivityTickByUserId.entries()) {
+      const idleTicks = this.tick - lastActivityTick;
 
-  // Disconnect after 15 minutes of inactivity
-  if (idleTicks >= GameServer.IDLE_DISCONNECT_TICKS) {
-    const socket = this.socketsByUserId.get(userId);
-    if (socket) {
-      this.markIntentionalDisconnect(socket, "idle_timeout", "Idle timeout");
-      try {
-        socket.emit(
-          GameAction.LoggedOut.toString(),
-          buildLoggedOutPayload({ EntityID: userId })
-        );
-      } catch {
-        // best effort
+      // Disconnect after 15 minutes of inactivity
+      if (idleTicks >= GameServer.IDLE_DISCONNECT_TICKS) {
+        const socket = this.socketsByUserId.get(userId);
+        if (socket) {
+          this.markIntentionalDisconnect(socket, "idle_timeout", "Idle timeout");
+          try {
+            socket.emit(
+              GameAction.LoggedOut.toString(),
+              buildLoggedOutPayload({ EntityID: userId })
+            );
+          } catch {
+            // best effort
+          }
+          // Give the packet a moment to flush before disconnecting.
+          setTimeout(() => {
+            socket.disconnect(true);
+          }, 1000);
+        }
+        continue;
       }
-      // Give the packet a moment to flush before disconnecting.
-      setTimeout(() => {
-        socket.disconnect(true);
-      }, 1000);
-    }
-    continue;
-  }
 
-  // Warn at 14 minutes (only once)
-  if (idleTicks >= GameServer.IDLE_WARNING_TICKS && !this.idleWarningsSentToUserId.has(userId)) {
-    this.messageService.sendServerInfo(userId, "WARNING - You will be logged out for inactivity in one minute.");
-    this.idleWarningsSentToUserId.add(userId);
-  }
-}
+      // Warn at 14 minutes (only once)
+      if (idleTicks >= GameServer.IDLE_WARNING_TICKS && !this.idleWarningsSentToUserId.has(userId)) {
+        this.messageService.sendServerInfo(userId, "WARNING - You will be logged out for inactivity in one minute.");
+        this.idleWarningsSentToUserId.add(userId);
+      }
+    }
   }
 
   // ============================================================================
@@ -2065,7 +2071,7 @@ export class GameServer {
    * Used by movement plans and state machine.
    */
   private makeEntityKey(entityRef: EntityRef): string {
-  return `${entityRef.type}:${entityRef.id}`;
-}
+    return `${entityRef.type}:${entityRef.id}`;
+  }
 }
 
