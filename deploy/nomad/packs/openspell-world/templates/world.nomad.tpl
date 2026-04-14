@@ -71,6 +71,8 @@ job "openspell-worlds" {
 
     task "game" {
       driver = "podman"
+      kill_signal = "SIGUSR1"
+      kill_timeout = "7m"
       config {
         image = "[[ $world.game_image ]]"
         ports = ["game"]
