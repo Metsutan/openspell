@@ -85,6 +85,7 @@ HISCORES_UPDATE_SECRET="{{ .HISCORES_UPDATE_SECRET }}"
 API_URL="http://127.0.0.1:3002"
 WEB_URL="{{ .WEB_URL }}"
 USING_REVERSE_PROXY="{{ .USING_REVERSE_PROXY }}"
+DEBUG_LOGIN_IP="true"
 {{- end -}}
 EOH
         destination = "local/env"
