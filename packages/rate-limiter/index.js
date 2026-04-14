@@ -70,6 +70,33 @@ class MemoryRateLimiter {
     };
   }
 
+  /**
+   * @param {string} identifier
+   * @param {RateLimitConfig} config
+   * @returns {Promise<RateLimitResult>}
+   */
+  async peekLimit(identifier, config) {
+    const key = `${config.keyPrefix}:${identifier}`;
+    const now = Date.now();
+    const windowStart = now - config.windowMs;
+
+    // Get or create entry
+    let timestamps = this.store.get(key) || [];
+    
+    // Remove old entries
+    timestamps = timestamps.filter(ts => ts > windowStart);
+    
+    const count = timestamps.length;
+    const allowed = count < config.max;
+
+    return {
+      allowed,
+      remaining: Math.max(0, config.max - count),
+      resetAt: new Date(now + config.windowMs),
+      current: count
+    };
+  }
+
   cleanup() {
     const now = Date.now();
     const maxAge = 30 * 60 * 1000; // 30 minutes
@@ -162,6 +189,47 @@ class RedisRateLimiter {
       throw error;
     }
   }
+
+  /**
+   * @param {string} identifier
+   * @param {RateLimitConfig} config
+   * @returns {Promise<RateLimitResult>}
+   */
+  async peekLimit(identifier, config) {
+    const key = `ratelimit:${config.keyPrefix}:${identifier}`;
+    const now = Date.now();
+    const windowStart = now - config.windowMs;
+
+    try {
+      const multi = this.redis.multi();
+      
+      // Remove old entries outside the window
+      multi.zremrangebyscore(key, 0, windowStart);
+      
+      // Count current requests in window
+      multi.zcard(key);
+      
+      const results = await multi.exec();
+      
+      if (!results || results.some(([err]) => err)) {
+        throw new Error('Redis multi command failed');
+      }
+      
+      const count = results[1][1];
+      const allowed = count < config.max;
+
+      return {
+        allowed,
+        remaining: Math.max(0, config.max - count),
+        resetAt: new Date(now + config.windowMs),
+        current: count
+      };
+    } catch (error) {
+      console.error('[rate-limiter] Redis error during peekLimit:', error.message);
+      this.isHealthy = false;
+      throw error;
+    }
+  }
 }
 
 /**
@@ -228,6 +296,26 @@ class RateLimiter {
 
     // Fallback to in-memory
     return await this.memoryLimiter.checkLimit(identifier, config);
+  }
+
+  /**
+   * @param {string} identifier
+   * @param {RateLimitConfig} config
+   * @returns {Promise<RateLimitResult>}
+   */
+  async peekLimit(identifier, config) {
+    // Try Redis first if available
+    if (this.redisLimiter && !this.usingFallback) {
+      try {
+        return await this.redisLimiter.peekLimit(identifier, config);
+      } catch (error) {
+        console.warn('[rate-limiter] Redis failed, falling back to memory:', error.message);
+        this.usingFallback = true;
+      }
+    }
+
+    // Fallback to in-memory
+    return await this.memoryLimiter.peekLimit(identifier, config);
   }
 
   /**

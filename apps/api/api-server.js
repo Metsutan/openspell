@@ -364,36 +364,6 @@ const rateLimiter = createRateLimiter({
   disabled: process.env.REDIS_DISABLED === 'true'
 });
 
-// Rate limiter for /getLoginToken
-const getLoginLimiter = rateLimiter.createMiddleware({
-  windowMs: GET_LOGIN_WINDOW_MS,
-  max: GET_LOGIN_MAX,
-  keyPrefix: 'api:login',
-  message: 'Too many login attempts, please try again later.',
-  statusCode: 429,
-  keyGenerator: (req) => {
-    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    // Use x-forwarded-for or cf-connecting-ip if available for logging purposes
-    const xff = req.headers['x-forwarded-for'];
-    const cfIp = req.headers['cf-connecting-ip'];
-    if (NODE_ENV !== 'production' || process.env.DEBUG_LOGIN_IP === 'true') {
-      console.log(`[getLoginLimiter] Identifying key for request: ip=${ip}, cf-ip=${cfIp}, xff=${xff}`);
-    }
-    return ip;
-  },
-  handler: (req, res, result) => {
-    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    const xff = req.headers['x-forwarded-for'];
-    const cfIp = req.headers['cf-connecting-ip'];
-    console.warn(`[getLoginLimiter] RATE LIMIT HIT: ip=${ip}, cf-ip=${cfIp}, xff=${xff}, resetAt=${result.resetAt}`);
-    
-    return res.status(429).json({ 
-      error: 'Too many login attempts, please try again later.',
-      retryAfter: result.resetAt
-    });
-  }
-});
-
 // ==================== ASSETS CLIENT (STATIC JSON) ====================
 
 function resolveAssetsClientPath() {
@@ -3940,13 +3910,32 @@ app.post('/api/worlds/heartbeat', requireGameServerSecret, async (req, res) => {
 // Body: { username, password, serverId, currentClientVersion }
 
 
-app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
+app.post('/getLoginToken', async (req, res) => {
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   const username = req.body?.username ? String(req.body.username) : 'unknown';
-  const serverId = req.body?.serverId;
+  const password = req.body?.password ? String(req.body.password) : '';
+  const serverId = Number(req.body?.serverId);
+  const currentClientVersion = Number(req.body?.currentClientVersion);
   
+  // Rate limit configuration for failures
+  const failureConfig = {
+    windowMs: GET_LOGIN_WINDOW_MS,
+    max: GET_LOGIN_MAX,
+    keyPrefix: 'api:login:fail'
+  };
+
   if (NODE_ENV !== 'production' || process.env.DEBUG_LOGIN_IP === 'true') {
-    console.log(`[getLoginToken] Request from ip=${ip}, user=${username}, serverId=${serverId}`);
+    console.log(`[getLoginToken] Request: ip=${ip}, user=${username}, serverId=${serverId}`);
+  }
+
+  // Check if IP is already blocked due to too many prior failures
+  const blockCheck = await rateLimiter.peekLimit(ip, failureConfig);
+  if (!blockCheck.allowed) {
+    console.warn(`[getLoginLimiter] BLOCKED (pre-check): ip=${ip}, user=${username}`);
+    return res.status(429).json({ 
+      error: 'Too many failed login attempts, please try again later.',
+      retryAfter: blockCheck.resetAt
+    });
   }
 
   const sendGameError = (code, msg, httpStatus = 200) => {
@@ -3956,11 +3945,6 @@ app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
   };
 
   try {
-    const username = req.body?.username ? String(req.body.username) : '';
-    const password = req.body?.password ? String(req.body.password) : '';
-    const serverId = Number(req.body?.serverId);
-    const currentClientVersion = Number(req.body?.currentClientVersion);
-
     if (!username || !password) {
       return sendGameError(-400, 'Username and password are required');
     }
@@ -4004,14 +3988,29 @@ app.post('/getLoginToken', getLoginLimiter, async (req, res) => {
 
     // Authenticate user
     const user = await prisma.user.findUnique({ where: { username: lowercaseUsername } });
-    if (!user) {
-      // Client expects this exact shape/codes.
-      return sendGameError(-301, 'Username not found');
+    let authOk = false;
+    if (user) {
+      authOk = await bcrypt.compare(password, user.password);
     }
 
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) {
-      // Client expects this exact shape/codes.
+    if (!authOk) {
+      // Record failure and check if now blocked
+      const failureResult = await rateLimiter.checkLimit(ip, failureConfig);
+      
+      const xff = req.headers['x-forwarded-for'];
+      const cfIp = req.headers['cf-connecting-ip'];
+      console.warn(`[getLoginLimiter] LOGIN FAILURE: ip=${ip}, cf-ip=${cfIp}, user=${username}, remaining=${failureResult.remaining}`);
+
+      if (!failureResult.allowed) {
+        return res.status(429).json({ 
+          error: 'Too many failed login attempts, please try again later.',
+          retryAfter: failureResult.resetAt
+        });
+      }
+
+      if (!user) {
+        return sendGameError(-301, 'Username not found');
+      }
       return sendGameError(-302, 'Password incorrect');
     }
 
