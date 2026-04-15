@@ -156,7 +156,7 @@ PACKET_TRACE_SAMPLE_RATE=1.0
 
 WORLD_ENTITIES_FILE=worldentities.26.carbon
 WORLD_ENTITY_DEFS_FILE=worldentitydefs.13.carbon
-WORLD_ENTITY_ACTIONS_FILE=worldentityactions.6.carbon
+WORLD_ENTITY_ACTIONS_FILE=worldentityactions.7.carbon
 NPC_ENTITY_DEFS_FILE=npcentitydefs.22.carbon
 NPC_ENTITIES_FILE=npcentities.17.carbon
 ITEM_DEFS_FILE=itemdefs.33.carbon
