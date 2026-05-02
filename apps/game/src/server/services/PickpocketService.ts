@@ -55,7 +55,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const PICKPOCKET_DEFS_FILENAME = "pickpocketdefs.5.carbon";
+const PICKPOCKET_DEFS_FILENAME = "pickpocketdefs.carbon";
 const PICKPOCKET_DEFS_FILE = path.join(STATIC_ASSETS_DIR, PICKPOCKET_DEFS_FILENAME);
 
 /** Number of ticks delay before pickpocket attempt */

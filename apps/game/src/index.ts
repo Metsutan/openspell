@@ -45,6 +45,8 @@ const persistenceId = persistenceIdRaw ? Number(persistenceIdRaw) : 1;
 
 import { upsertWorld } from "./db";
 
+import { AssetDownloader } from "./server/AssetDownloader";
+
 async function boot() {
   // Register/update world info in DB before accepting connections
   try {
@@ -58,6 +60,9 @@ async function boot() {
     console.error("[boot] Failed to register world in database. Check DATABASE_URL and connectivity.");
     process.exit(1);
   }
+
+  // Fetch the latest assets from R2/CDN before anything else initializes the files into memory
+  await AssetDownloader.downloadAssets();
 
   const gameServer = new GameServer({
     port: requestedPort,

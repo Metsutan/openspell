@@ -109,7 +109,7 @@ export class WorldEntityActionService {
       ? path.resolve(process.env.STATIC_ASSETS_PATH)
       : defaultStaticDir;
     
-    const worldEntityActionsFilename = process.env.WORLD_ENTITY_ACTIONS_FILE || "worldentityactions.4.carbon";
+    const worldEntityActionsFilename = process.env.WORLD_ENTITY_ACTIONS_FILE || "worldentityactions.carbon";
     const defaultPath = path.join(staticDir, worldEntityActionsFilename);
     const actualPath = filePath ?? defaultPath;
 

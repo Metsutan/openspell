@@ -16,7 +16,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const WORLD_ENTITY_LOOT_DEFS_FILENAME = process.env.WORLD_ENTITY_LOOT_FILE || "worldentitylootdefs.12.carbon";
+const WORLD_ENTITY_LOOT_DEFS_FILENAME = process.env.WORLD_ENTITY_LOOT_FILE || "worldentitylootdefs.carbon";
 const WORLD_ENTITY_LOOT_DEFS_FILE = path.join(STATIC_ASSETS_DIR, WORLD_ENTITY_LOOT_DEFS_FILENAME);
 
 export interface WorldEntityLootItem {

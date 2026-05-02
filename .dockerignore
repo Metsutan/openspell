@@ -13,3 +13,9 @@
 highspell-dumps
 vscode-profile-*.cpuprofile
 vscode-profile-*.heapsnapshot
+
+# Exclude static assets that are uploaded to R2 bucket
+apps/shared-assets/*/static
+apps/shared-assets/*/js/client/client.*.js
+apps/shared-assets/*/js/client/development.client.*.js
+apps/shared-assets/*/shared.env

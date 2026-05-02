@@ -17,8 +17,8 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   : DEFAULT_STATIC_ASSETS_DIR;
 
 // Uses same env variables as WorldModel.ts for consistency
-const WORLD_ENTITY_DEFS_FILENAME = process.env.WORLD_ENTITY_DEFS_FILE || "worldentitydefs.13.carbon";
-const WORLD_ENTITIES_FILENAME = process.env.WORLD_ENTITIES_FILE || "worldentities.26.carbon";
+const WORLD_ENTITY_DEFS_FILENAME = process.env.WORLD_ENTITY_DEFS_FILE || "worldentitydefs.carbon";
+const WORLD_ENTITIES_FILENAME = process.env.WORLD_ENTITIES_FILE || "worldentities.carbon";
 
 const WORLD_ENTITY_DEFS_FILE = path.join(STATIC_ASSETS_DIR, WORLD_ENTITY_DEFS_FILENAME);
 const WORLD_ENTITIES_FILE = path.join(STATIC_ASSETS_DIR, WORLD_ENTITIES_FILENAME);

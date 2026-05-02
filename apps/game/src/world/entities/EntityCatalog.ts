@@ -15,8 +15,8 @@ const STATIC_ENTITIES_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ENTITIES_DIR;
 
-const ENTITY_DEFS_FILENAME = process.env.NPC_ENTITY_DEFS_FILE || "npcentitydefs.22.carbon";
-const ENTITIES_FILENAME = process.env.NPC_ENTITIES_FILE || "npcentities.16.carbon";
+const ENTITY_DEFS_FILENAME = process.env.NPC_ENTITY_DEFS_FILE || "npcentitydefs.carbon";
+const ENTITIES_FILENAME = process.env.NPC_ENTITIES_FILE || "npcentities.carbon";
 
 const ENTITY_DEFS_FILE = path.join(STATIC_ENTITIES_DIR, ENTITY_DEFS_FILENAME);
 const ENTITIES_FILE = path.join(STATIC_ENTITIES_DIR, ENTITIES_FILENAME);

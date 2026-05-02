@@ -59,8 +59,8 @@ const STATIC_ASSETS_ROOT = process.env.STATIC_ASSETS_PATH
     ? path.resolve(process.env.STATIC_ASSETS_PATH)
     : DEFAULT_STATIC_ASSETS_ROOT;
 
-const DEFAULT_ENTITIES_FILE = process.env.WORLD_ENTITIES_FILE || "worldentities.26.carbon";
-const DEFAULT_ENTITY_DEFS_FILE = process.env.WORLD_ENTITY_DEFS_FILE || "worldentitydefs.13.carbon";
+const DEFAULT_ENTITIES_FILE = process.env.WORLD_ENTITIES_FILE || "worldentities.carbon";
+const DEFAULT_ENTITY_DEFS_FILE = process.env.WORLD_ENTITY_DEFS_FILE || "worldentitydefs.carbon";
 
 export interface WorldEntityDefinition {
     _id: number;

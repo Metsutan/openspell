@@ -22,7 +22,7 @@ const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
 const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
-const QUEST_DEFS_FILENAME = process.env.QUEST_DEFS_FILE || "questdefs.3.carbon";
+const QUEST_DEFS_FILENAME = process.env.QUEST_DEFS_FILE || "questdefs.carbon";
 const QUEST_DEFS_FILE = path.join(STATIC_ASSETS_DIR, QUEST_DEFS_FILENAME);
 
 interface QuestRewardExp {

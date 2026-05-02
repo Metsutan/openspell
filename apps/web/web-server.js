@@ -32,6 +32,14 @@ const WEB_HOSTNAME = (() => {
         return 'localhost';
     }
 })();
+const CDN_URL = process.env.CDN_URL || `${IS_CLIENT_HTTPS ? 'https' : 'http'}://localhost:${PORT}`;
+const CDN_HOSTNAME = (() => {
+    try {
+        return new URL(CDN_URL).hostname;
+    } catch (error) {
+        return 'localhost';
+    }
+})();
 function buildCspHeaderValue(nonce) {
     const nonceValue = nonce ? ` 'nonce-${nonce}'` : '';
     // Keep CSP protocol rules aligned with client-facing HTTPS mode to avoid
@@ -48,6 +56,8 @@ function buildCspHeaderValue(nonce) {
         `${wsScheme}://*.${WEB_HOSTNAME}:*`,
         `${httpScheme}://${WEB_HOSTNAME}:${CHAT_PORT}`,
         `${wsScheme}://${WEB_HOSTNAME}:${CHAT_PORT}`,
+        `${httpScheme}://${CDN_HOSTNAME}:*`,
+        `${httpScheme}://*.${CDN_HOSTNAME}:*`,
         'https://www.google.com',
         'https://www.gstatic.com',
         'https://recaptcha.google.com',
@@ -63,9 +73,9 @@ function buildCspHeaderValue(nonce) {
         `font-src 'self' https: data:`,
         `frame-src www.google.com imgur.com https://recaptcha.google.com`,
         `frame-ancestors 'self'`,
-        `img-src 'self' data: blob: *.imgur.com ${httpScheme}://${WEB_HOSTNAME}:${PORT} https://www.gstatic.com`,
+        `img-src 'self' data: blob: *.imgur.com ${httpScheme}://${WEB_HOSTNAME}:${PORT} https://www.gstatic.com ${httpScheme}://${CDN_HOSTNAME}`,
         `object-src 'none'`,
-        `script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net 'unsafe-eval'${nonceValue}`,
+        `script-src 'self' www.google.com www.gstatic.com *.imgur.com https://cdn.jsdelivr.net *.openspell.dev 'unsafe-eval'${nonceValue}`,
         `script-src-attr 'none'`,
         `style-src 'self' https: 'unsafe-inline'`,
         `worker-src 'self' blob:`
@@ -154,20 +164,20 @@ app.use((req, res, next) => {
             console.log(`[DEBUG] Has CSRF in Session: ${!!req.session.csrfToken}`);
         }
     }
-    
+
     res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
     // Set Content Security Policy (enforced, not report-only)
     res.setHeader(
         'Content-Security-Policy',
         buildCspHeaderValue(res.locals.cspNonce)
     );
-    
+
     // Additional security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    
+
     next();
 });
 
@@ -181,7 +191,7 @@ const ASSET_SET = process.env.ASSET_SET || 'base';
 // In development: apps/shared-assets/base
 // In Docker: /app/shared-assets/base (mounted volume)
 const DEFAULT_ASSETS_ROOT = path.join(__dirname, '..', 'shared-assets', ASSET_SET);
-const assetsDir = process.env.ASSETS_ROOT 
+const assetsDir = process.env.ASSETS_ROOT
     ? path.resolve(process.env.ASSETS_ROOT)
     : DEFAULT_ASSETS_ROOT;
 
@@ -240,16 +250,33 @@ const imagesPath = path.join(assetsDir, 'images');
 const staticPath = path.join(assetsDir, 'static');
 
 if (process.env.NODE_ENV !== 'production') {
-  console.log(`Serving CSS from: ${cssPath}`);
-  console.log(`Serving JS from: ${jsPath}`);
-  console.log(`Serving images from: ${imagesPath}`);
-  console.log(`Serving static from: ${staticPath}`);
+    console.log(`Serving CSS from: ${cssPath}`);
+    console.log(`Serving JS from: ${jsPath}`);
+    console.log(`Serving images from: ${imagesPath}`);
+    console.log(`Serving static from: ${staticPath}`);
 }
 
 app.use('/css', express.static(cssPath));
 app.use('/js', express.static(jsPath));
 app.use('/images', express.static(imagesPath));
-app.use('/static', express.static(staticPath));
+
+// Local development fallback for hashed or versioned static files
+app.use('/static', (req, res, next) => {
+    if (process.env.NODE_ENV !== 'production') {
+        // Match formats like filename.123ab.ext or filename.7.ext
+        const match = req.path.match(/^(.*?)\.[a-fA-F0-9]+\.([^.]+)$/);
+        if (match) {
+            const originalPath = path.join(staticPath, req.path);
+            if (!fs.existsSync(originalPath)) {
+                const strippedPath = `${match[1]}.${match[2]}`;
+                if (fs.existsSync(path.join(staticPath, strippedPath))) {
+                    req.url = req.url.replace(req.path, strippedPath);
+                }
+            }
+        }
+    }
+    next();
+}, express.static(staticPath));
 
 // Import routes
 const newsRoutes = require('./routes/news');
@@ -328,8 +355,8 @@ function renderGamePage(serverId, serverUrl, worldTitle = null, { isDevelopmentW
     const title = worldTitle || `World ${serverId}`;
     const version = Number.isFinite(Number(clientVersion)) ? Number(clientVersion) : 61;
     const clientBundleSrc = isDevelopmentWorld
-        ? `/js/client/development.client.${version}.js`
-        : `/js/client/client.${version}.js`;
+        ? `${CLIENT_CDN_URL}/js/client/development.client.${version}.js`
+        : `${CLIENT_CDN_URL}/js/client/client.${version}.js`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -384,10 +411,10 @@ function setGameClientCsp(res) {
 app.get('/', async (req, res) => {
     // Get user info for header (use session data, don't fetch fresh for performance)
     const user = await getUserInfo(req, false);
-    
+
     const newsData = await loadNews();
     const newsItems = newsData.items || [];
-    
+
     // Get latest 5 news items
     const latestNews = newsItems
         .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -620,9 +647,9 @@ app.get('/game', async (req, res) => {
 app.get('/worldmap', async (req, res) => {
     // Get user info for header
     const user = await getUserInfo(req, false);
-    
+
     const additionalHead = `        <link href="/css/worldmap.css" rel="stylesheet" type="text/css">`;
-    
+
     const bodyContent = `
 <section id="world-map">
     <div class="flex-center">
@@ -650,7 +677,7 @@ app.get('/worldmap', async (req, res) => {
 app.get('/rules', async (req, res) => {
     // Get user info for header
     const user = await getUserInfo(req, false);
-    
+
     const rulesContent = `
         <div class="rules-cont">
             
@@ -695,7 +722,7 @@ app.get('/rules', async (req, res) => {
             </ol>
         </div>
     `;
-    
+
     const bodyContent = `<section id="rules-page">
     <div>
         <h1 class="rules-h">RULES</h1>
@@ -861,7 +888,7 @@ app.get('/hiscores/:skill', async (req, res) => {
     const { skill } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = 25; // 25 players per page
-    
+
     // Get user info for header
     const user = await getUserInfo(req, false);
     const csrfToken = getCsrfToken(req);
@@ -872,19 +899,19 @@ app.get('/hiscores/:skill', async (req, res) => {
     }
     const selectedServerId = resolveSelectedServerId(worlds, req.query.serverId);
     const serverQuery = `serverId=${selectedServerId}`;
-    
+
     // Fetch skills from API
     const skills = await fetchSkills();
     if (skills.length === 0) {
         return res.status(500).send('Unable to load skills. Please try again later.');
     }
-    
+
     // Find skill info
     const skillInfo = skills.find(s => s.slug === skill);
     if (!skillInfo) {
         return res.status(404).send('Skill not found');
     }
-    
+
     // Display rules:
     // - Hide username "admin" from all hiscore tables.
     // - For overall only, hide accounts at total level 26 or below.
@@ -898,14 +925,14 @@ app.get('/hiscores/:skill', async (req, res) => {
     const players = hiscoresData.items || [];
     const total = hiscoresData.total || 0;
     const totalPages = Math.ceil(total / limit);
-    
+
     // Build skills menu
     const skillsMenu = skills.map(s => {
         const isSelected = s.slug === skill;
         const className = isSelected ? 'sel' : '';
         return `<li class="${className}"><a href="/hiscores/${s.slug}?${serverQuery}" title="${escapeHtml(s.title)}" class="sk-link">${escapeHtml(s.title)}<span class="sk-ico" style="background-position: ${s.iconPosition};"></span></a></li>`;
     }).join('\n    ');
-    
+
     // Build player rows
     const playerRows = players.map((player, index) => {
         // Prefer API-provided rank (precomputed), fallback to offset-based rank.
@@ -915,7 +942,7 @@ app.get('/hiscores/:skill', async (req, res) => {
         const displayName = player.displayName || player.username || 'Unknown';
         const level = player.level !== null && player.level !== undefined ? player.level : '-';
         const exp = player.experience !== null && player.experience !== undefined ? formatNumber(player.experience) : '-';
-        
+
         return `<li class="hs-row sel">
                 <div class="hs-rank">${rank}</div>
                 <div class="hs-name"><a href="/hiscores/player/${encodeURIComponent(displayName)}?${serverQuery}" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</a></div>
@@ -923,30 +950,30 @@ app.get('/hiscores/:skill', async (req, res) => {
                 <div class="hs-exp">${exp}</div>
             </li>`;
     }).join('\n        ');
-    
+
     // Build pagination
     let paginationHtml = '';
     if (totalPages > 1) {
         const paginationItems = [];
-        
+
         // Previous button
         if (page > 1) {
             paginationItems.push(`<a href="/hiscores/${skill}?${serverQuery}&page=${page - 1}" class="pg-link">Previous</a>`);
         } else {
             paginationItems.push(`<span class="pg-link disabled">Previous</span>`);
         }
-        
+
         // Page numbers (show up to 5 pages around current)
         const startPage = Math.max(1, page - 2);
         const endPage = Math.min(totalPages, page + 2);
-        
+
         if (startPage > 1) {
             paginationItems.push(`<a href="/hiscores/${skill}?${serverQuery}&page=1" class="pg-link">1</a>`);
             if (startPage > 2) {
                 paginationItems.push(`<span class="pg-ellipsis">...</span>`);
             }
         }
-        
+
         for (let i = startPage; i <= endPage; i++) {
             if (i === page) {
                 paginationItems.push(`<span class="pg-link active">${i}</span>`);
@@ -954,21 +981,21 @@ app.get('/hiscores/:skill', async (req, res) => {
                 paginationItems.push(`<a href="/hiscores/${skill}?${serverQuery}&page=${i}" class="pg-link">${i}</a>`);
             }
         }
-        
+
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
                 paginationItems.push(`<span class="pg-ellipsis">...</span>`);
             }
             paginationItems.push(`<a href="/hiscores/${skill}?${serverQuery}&page=${totalPages}" class="pg-link">${totalPages}</a>`);
         }
-        
+
         // Next button
         if (page < totalPages) {
             paginationItems.push(`<a href="/hiscores/${skill}?${serverQuery}&page=${page + 1}" class="pg-link">Next</a>`);
         } else {
             paginationItems.push(`<span class="pg-link disabled">Next</span>`);
         }
-        
+
         paginationHtml = `<div class="card pg-box">
             <div class="pg-links">
                 ${paginationItems.join('\n                ')}
@@ -978,7 +1005,7 @@ app.get('/hiscores/:skill', async (req, res) => {
             </div>
         </div>`;
     }
-    
+
     const bodyContent = `
 <section id="hs-page">
 
@@ -1047,11 +1074,11 @@ app.post('/hiscores/player', csrfProtection, async (req, res) => {
     const { serverId } = req.body ?? {};
     const rawUsername = req.body?.username;
     const username = typeof rawUsername === 'string' ? rawUsername.trim() : '';
-    
+
     if (!username) {
         return res.redirect('/hiscores?error=' + encodeURIComponent('Username is required'));
     }
-    
+
     // Redirect to player page
     const serverIdValue = parseServerId(serverId) || 1;
     return res.redirect(`/hiscores/player/${encodeURIComponent(username)}?serverId=${serverIdValue}`);
@@ -1062,7 +1089,7 @@ app.get('/hiscores/player/:displayName', async (req, res) => {
     const { displayName } = req.params;
     const normalizedDisplayName = String(displayName || '').trim().toLowerCase();
     const isHiddenHiscoresUser = normalizedDisplayName === 'admin';
-    
+
     // Get user info for header
     const user = await getUserInfo(req, false);
     const csrfToken = getCsrfToken(req);
@@ -1073,18 +1100,18 @@ app.get('/hiscores/player/:displayName', async (req, res) => {
     }
     const selectedServerId = resolveSelectedServerId(worlds, req.query.serverId);
     const serverQuery = `serverId=${selectedServerId}`;
-    
+
     // Fetch skills from API
     const skills = await fetchSkills();
     if (skills.length === 0) {
         return res.status(500).send('Unable to load skills. Please try again later.');
     }
-    
+
     // Fetch player stats from API (except hidden hiscores users).
     const playerStats = isHiddenHiscoresUser
         ? null
         : await fetchPlayerStats(displayName, selectedServerId);
-    
+
     if (!playerStats || !playerStats.player) {
         const skillsMenu = skills.map(s => {
             return `<li><a href="/hiscores/${s.slug}?${serverQuery}" title="${escapeHtml(s.title)}" class="sk-link">${escapeHtml(s.title)}<span class="sk-ico" style="background-position: ${s.iconPosition};"></span></a></li>`;
@@ -1160,27 +1187,27 @@ app.get('/hiscores/player/:displayName', async (req, res) => {
 
         return res.status(404).send(html);
     }
-    
+
     const player = playerStats.player;
     const stats = playerStats.stats || [];
-    
+
     // Build skills menu (same as hiscores page)
     const skillsMenu = skills.map(s => {
         return `<li><a href="/hiscores/${s.slug}?${serverQuery}" title="${escapeHtml(s.title)}" class="sk-link">${escapeHtml(s.title)}<span class="sk-ico" style="background-position: ${s.iconPosition};"></span></a></li>`;
     }).join('\n    ');
-    
+
     // Build player stats rows - use stats from API which includes all skills
     const statsRows = stats.map(stat => {
         // Find skill info for icon
         const skill = skills.find(s => s.slug === stat.skill);
         if (!skill) return ''; // Skip if skill not found
-        
+
         const rank = stat.rank !== null && stat.rank !== undefined ? formatNumber(stat.rank) : 'No Rank';
         const level = stat.level !== null && stat.level !== undefined ? stat.level : '-';
         const exp = stat.experience !== null && stat.experience !== undefined ? formatNumber(stat.experience) : '-';
-        
+
         const rankClass = rank === 'No Rank' ? '' : 'sel';
-        
+
         return `<li class="hs-row sel">
                     <div class="hs-rank">${rank}</div>
                     <div class="hs-name">
@@ -1195,7 +1222,7 @@ app.get('/hiscores/player/:displayName', async (req, res) => {
                     <div class="hs-exp">${exp}</div>
                 </li>`;
     }).filter(row => row !== '').join('\n            ');
-    
+
     const bodyContent = `
 <section id="hs-page">
 
@@ -1265,18 +1292,18 @@ app.use('/', authRoutes); // Auth routes (login, register, logout, etc.)
 app.use('/account', accountRoutes); // Account management routes
 
 // Route: Resend Verification Email (POST at root level, not under /account)
-const {extractApiErrorMessage } = require('./services/api');
+const { extractApiErrorMessage } = require('./services/api');
 const { SHOW_RESEND_VERIFICATION, EMAIL_ENABLED, EMAIL_VERIFICATION_REQUIRED } = require('./services/html');
 
 app.post('/resend-verification', emailLimiter, csrfProtection, async (req, res) => {
     if (!req.session.userId || !req.session.token) {
         return res.redirect('/login');
     }
-    
+
     if (!SHOW_RESEND_VERIFICATION || !EMAIL_ENABLED || !EMAIL_VERIFICATION_REQUIRED) {
         return res.redirect('/account');
     }
-    
+
     try {
         const response = await makeApiRequest('/api/auth/resend-verification', {
             method: 'POST',
@@ -1284,7 +1311,7 @@ app.post('/resend-verification', emailLimiter, csrfProtection, async (req, res) 
                 'Authorization': `Bearer ${req.session.token}`
             }
         });
-        
+
         if (response.success) {
             return res.redirect('/account?success=' + encodeURIComponent('Verification email sent successfully. Please check your inbox.'));
         } else {

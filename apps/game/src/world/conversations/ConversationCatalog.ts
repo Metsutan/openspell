@@ -19,7 +19,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const CONVERSATION_DEFS_FILENAME = process.env.NPC_CONVERSATION_DEFS_FILE || "npcconversationdefs.2.carbon";
+const CONVERSATION_DEFS_FILENAME = process.env.NPC_CONVERSATION_DEFS_FILE || "npcconversationdefs.carbon";
 const CONVERSATION_DEFS_FILE = path.join(STATIC_ASSETS_DIR, CONVERSATION_DEFS_FILENAME);
 
 export interface ConversationRequirement {

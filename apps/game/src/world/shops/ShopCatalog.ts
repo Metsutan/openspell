@@ -19,7 +19,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const SHOP_DEFS_FILENAME = process.env.SHOP_DEFS_FILE || "shopdefs.11.carbon";
+const SHOP_DEFS_FILENAME = process.env.SHOP_DEFS_FILE || "shopdefs.carbon";
 const SHOP_DEFS_FILE = path.join(STATIC_ASSETS_DIR, SHOP_DEFS_FILENAME);
 
 /**
