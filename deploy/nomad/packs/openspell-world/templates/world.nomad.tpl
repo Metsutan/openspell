@@ -154,17 +154,6 @@ PACKET_TRACE_FLUSH_MS=1000
 PACKET_TRACE_RETENTION_DAYS=30
 PACKET_TRACE_SAMPLE_RATE=1.0
 
-WORLD_ENTITIES_FILE=worldentities.26.carbon
-WORLD_ENTITY_DEFS_FILE=worldentitydefs.13.carbon
-WORLD_ENTITY_ACTIONS_FILE=worldentityactions.7.carbon
-NPC_ENTITY_DEFS_FILE=npcentitydefs.22.carbon
-NPC_ENTITIES_FILE=npcentities.17.carbon
-ITEM_DEFS_FILE=itemdefs.33.carbon
-GROUND_ITEMS_FILE=grounditems.12.carbon
-NPC_CONVERSATION_DEFS_FILE=npcconversationdefs.2.carbon
-SHOP_DEFS_FILE=shopdefs.11.carbon
-NPC_LOOT_FILE=npcloot.18.carbon
-
 DISABLE_STAMINA=true
 
 GLOBAL_CHAT_DISCORD_WEBHOOK_ENABLED="[[ $world.global_chat_webhook_enabled ]]"

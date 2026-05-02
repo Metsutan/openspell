@@ -3,6 +3,7 @@ x-game-env: &game_base_env
   NODE_ENV: ${NODE_ENV:-production}
   DATABASE_URL: ${DATABASE_URL}
   API_URL: ${API_URL}
+  CDN_URL: ${CDN_URL}
   HISCORES_UPDATE_SECRET: ${HISCORES_UPDATE_SECRET}
   JWT_SECRET: ${GAME_JWT_SECRET}
   CHAT_JWT_SECRET: ${CHAT_JWT_SECRET}
@@ -210,6 +211,7 @@ services:
       - "5432:5432"
     volumes:
       - openspell_pg_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U openspell -d openspell" ]
       interval: 5s

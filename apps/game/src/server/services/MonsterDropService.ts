@@ -40,7 +40,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const LOOT_TABLE_FILENAME = process.env.NPC_LOOT_FILE || "npcloot.18.carbon";
+const LOOT_TABLE_FILENAME = process.env.NPC_LOOT_FILE || "npcloot.carbon";
 const LOOT_TABLE_FILE = path.join(STATIC_ASSETS_DIR, LOOT_TABLE_FILENAME);
 
 /**

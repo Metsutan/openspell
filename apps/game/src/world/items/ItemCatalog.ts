@@ -16,8 +16,8 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const ITEM_DEFS_FILENAME = process.env.ITEM_DEFS_FILE || "itemdefs.33.carbon";
-const GROUND_ITEMS_FILENAME = process.env.GROUND_ITEMS_FILE || "grounditems.12.carbon";
+const ITEM_DEFS_FILENAME = process.env.ITEM_DEFS_FILE || "itemdefs.carbon";
+const GROUND_ITEMS_FILENAME = process.env.GROUND_ITEMS_FILE || "grounditems.carbon";
 
 const ITEM_DEFS_FILE = path.join(STATIC_ASSETS_DIR, ITEM_DEFS_FILENAME);
 const GROUND_ITEMS_FILE = path.join(STATIC_ASSETS_DIR, GROUND_ITEMS_FILENAME);

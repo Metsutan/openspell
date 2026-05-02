@@ -29,7 +29,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const INSTANCED_NPCS_FILENAME = process.env.INSTANCED_NPC_ENTITIES_FILE || "instancednpcentities.5.carbon";
+const INSTANCED_NPCS_FILENAME = process.env.INSTANCED_NPC_ENTITIES_FILE || "instancednpcentities.carbon";
 const INSTANCED_NPCS_FILE = path.join(STATIC_ASSETS_DIR, INSTANCED_NPCS_FILENAME);
 
 interface RawInstancedNpcDefinition {

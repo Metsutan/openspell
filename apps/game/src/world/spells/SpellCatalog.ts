@@ -15,7 +15,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const SPELL_DEFS_FILENAME = process.env.SPELL_DEFS_FILE || "spelldefs.10.carbon";
+const SPELL_DEFS_FILENAME = process.env.SPELL_DEFS_FILE || "spelldefs.carbon";
 const SPELL_DEFS_FILE = path.join(STATIC_ASSETS_DIR, SPELL_DEFS_FILENAME);
 
 export type SpellRecipeEntry = {

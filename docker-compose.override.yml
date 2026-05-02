@@ -13,10 +13,10 @@ services:
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
-  game:
-    volumes:
-      - ./apps/shared-assets:/app/apps/shared-assets:ro
-      - ./certs:/app/certs:ro
+  # game:
+  #   volumes:
+  #     - ./apps/shared-assets:/app/apps/shared-assets:ro
+  #     - ./certs:/app/certs:ro
 
   chat:
     volumes:

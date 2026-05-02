@@ -17,7 +17,7 @@ const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
   ? path.resolve(process.env.STATIC_ASSETS_PATH)
   : DEFAULT_STATIC_ASSETS_DIR;
 
-const SPECIAL_COORDS_FILENAME = process.env.SPECIAL_COORDS_FILE || "specialcoordinatesdefs.3.carbon";
+const SPECIAL_COORDS_FILENAME = process.env.SPECIAL_COORDS_FILE || "specialcoordinatesdefs.carbon";
 const SPECIAL_COORDS_FILE = path.join(STATIC_ASSETS_DIR, SPECIAL_COORDS_FILENAME);
 
 type TreasureMapTier = 1 | 2 | 3;
