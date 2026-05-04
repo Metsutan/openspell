@@ -6,7 +6,7 @@ import { buildOpenedSkillingMenuPayload } from "../../protocol/packets/actions/O
 import { buildStoppedSkillingPayload } from "../../protocol/packets/actions/StoppedSkilling";
 import { buildCreatedItemPayload } from "../../protocol/packets/actions/CreatedItem";
 import type { CreateItemPayload } from "../../protocol/packets/actions/CreateItem";
-import { SkillClientReference, isSkillSlug } from "../../world/PlayerState";
+import { SkillClientReference, isSkillSlug, clientRefToSkill } from "../../world/PlayerState";
 import type { FullInventory, InventoryItem, PlayerState } from "../../world/PlayerState";
 import type { ItemCatalog, ItemDefinition } from "../../world/items/ItemCatalog";
 import type { ExperienceService } from "./ExperienceService";
@@ -87,154 +87,156 @@ const SKILLING_MENU_TYPES = [
   MenuType.PotionMaking
 ] as const;
 
-const MENU_ITEM_IDS: Partial<Record<MenuType, number[]>> = {
+export type MenuItemConfig = { itemId: number; level: number };
+
+const MENU_ITEM_IDS: Partial<Record<MenuType, MenuItemConfig[]>> = {
   [MenuType.Smelting]: [
-    70, // bronze bar
-    148, // iron bar
-    383, // pig iron bar
-    143, // steel bar
-    71, // silver bar
-    144, // palladium bar
-    72, // gold bar
-    145, // coronium bar
-    253 // celadium bar
+    { itemId: 70, level: 1 }, // bronze bar
+    { itemId: 148, level: 14 }, // iron bar
+    { itemId: 383, level: 14 }, // pig iron bar
+    { itemId: 143, level: 28 }, // steel bar
+    { itemId: 71, level: 42 }, // silver bar
+    { itemId: 144, level: 50 }, // palladium bar
+    { itemId: 72, level: 70 }, // gold bar
+    { itemId: 145, level: 75 }, // coronium bar
+    { itemId: 253, level: 94 }, // celadium bar
   ],
   [MenuType.Smithing]: [
-    92, // bronze gloves
-    328, // bronze arrowheads
-    73, // bronze pickaxe
-    314, // bronze hatchet
-    52, // bronze helm
-    364, // bronze scimitar
-    58, // bronze longsword
-    122, // bronze full helm
-    56, // bronze battleaxe
-    41, // bronze platelegs
-    185, // bronze shield
-    370, // bronze chainmail body
-    97, // bronze great sword
-    40, // bronze chestplate
-    121, // iron gloves
-    329, // iron arrowheads
-    74, // iron pickaxe
-    315, // iron hatchet
-    120, // iron helm
-    365, // iron scimitar
-    59, // iron longsword
-    128, // iron full helm
-    57, // iron battleaxe
-    119, // iron platelegs
-    191, // iron shield
-    371, // iron chainmail body
-    126, // iron great sword
-    118, // iron chestplate
-    93, // steel gloves
-    330, // steel arrowheads
-    75, // steel pickaxe
-    316, // steel hatchet
-    53, // steel helm
-    366, // steel scimitar
-    60, // steel longsword
-    123, // steel full helm
-    63, // steel battleaxe
-    43, // steel platelegs
-    186, // steel shield
-    372, // steel chainmail body
-    127, // steel great sword
-    42, // steel chestplate
-    255, // silver warrior helm
-    254, // gold warrior helm
-    94, // palladium gloves
-    331, // palladium arrowheads
-    76, // palladium pickaxe
-    317, // palladium hatchet
-    54, // palladium helm
-    367, // palladium scimitar
-    61, // palladium longsword
-    124, // palladium full helm
-    78, // palladium battleaxe
-    45, // palladium platelegs
-    187, // palladium shield
-    373, // palladium chainmail body
-    146, // palladium great sword
-    44, // palladium chestplate
-    95, // coronium gloves
-    332, // coronium arrowheads
-    77, // coronium pickaxe
-    318, // coronium hatchet
-    55, // coronium helm
-    368, // coronium scimitar
-    62, // coronium longsword
-    125, // coronium full helm
-    96, // coronium battleaxe
-    47, // coronium platelegs
-    188, // coronium shield
-    374, // coronium chainmail body
-    147, // coronium great sword
-    46, // coronium chestplate
-    246, // celadon gloves
-    333, // celadon arrowheads
-    245, // celadon pickaxe
-    319, // celadon hatchet
-    258, // celadon helm
-    369, // celadon scimitar
-    249, // celadon longsword
-    247, // celadon full helm
-    250, // celadon battleaxe
-    244, // celadon platelegs
-    248, // celadon shield
-    377, // celadon chainmail body
-    251, // celadon great sword
-    243 // celadon chestplate
+    { itemId: 92, level: 1 }, // bronze gloves
+    { itemId: 328, level: 2 }, // bronze arrowheads
+    { itemId: 73, level: 3 }, // bronze pickaxe
+    { itemId: 314, level: 4 }, // bronze hatchet
+    { itemId: 52, level: 5 }, // bronze helm
+    { itemId: 364, level: 6 }, // bronze scimitar
+    { itemId: 58, level: 7 }, // bronze longsword
+    { itemId: 122, level: 8 }, // bronze full helm
+    { itemId: 56, level: 9 }, // bronze battleaxe
+    { itemId: 41, level: 11 }, // bronze platelegs
+    { itemId: 185, level: 12 }, // bronze shield
+    { itemId: 370, level: 13 }, // bronze chainmail body
+    { itemId: 97, level: 14 }, // bronze great sword
+    { itemId: 40, level: 16 }, // bronze chestplate
+    { itemId: 121, level: 17 }, // iron gloves
+    { itemId: 329, level: 18 }, // iron arrowheads
+    { itemId: 74, level: 19 }, // iron pickaxe
+    { itemId: 315, level: 20 }, // iron hatchet
+    { itemId: 120, level: 21 }, // iron helm
+    { itemId: 365, level: 22 }, // iron scimitar
+    { itemId: 59, level: 23 }, // iron longsword
+    { itemId: 128, level: 24 }, // iron full helm
+    { itemId: 57, level: 25 }, // iron battleaxe
+    { itemId: 119, level: 27 }, // iron platelegs
+    { itemId: 191, level: 28 }, // iron shield
+    { itemId: 371, level: 29 }, // iron chainmail body
+    { itemId: 126, level: 30 }, // iron great sword
+    { itemId: 118, level: 32 }, // iron chestplate
+    { itemId: 93, level: 33 }, // steel gloves
+    { itemId: 330, level: 34 }, // steel arrowheads
+    { itemId: 75, level: 35 }, // steel pickaxe
+    { itemId: 316, level: 36 }, // steel hatchet
+    { itemId: 53, level: 37 }, // steel helm
+    { itemId: 366, level: 38 }, // steel scimitar
+    { itemId: 60, level: 39 }, // steel longsword
+    { itemId: 123, level: 40 }, // steel full helm
+    { itemId: 63, level: 41 }, // steel battleaxe
+    { itemId: 43, level: 43 }, // steel platelegs
+    { itemId: 186, level: 44 }, // steel shield
+    { itemId: 372, level: 45 }, // steel chainmail body
+    { itemId: 127, level: 46 }, // steel great sword
+    { itemId: 42, level: 48 }, // steel chestplate
+    { itemId: 255, level: 50 }, // silver warrior helm
+    { itemId: 254, level: 75 }, // gold warrior helm
+    { itemId: 94, level: 52 }, // palladium gloves
+    { itemId: 331, level: 53 }, // palladium arrowheads
+    { itemId: 76, level: 54 }, // palladium pickaxe
+    { itemId: 317, level: 55 }, // palladium hatchet
+    { itemId: 54, level: 56 }, // palladium helm
+    { itemId: 367, level: 57 }, // palladium scimitar
+    { itemId: 61, level: 58 }, // palladium longsword
+    { itemId: 124, level: 60 }, // palladium full helm
+    { itemId: 78, level: 62 }, // palladium battleaxe
+    { itemId: 45, level: 64 }, // palladium platelegs
+    { itemId: 187, level: 66 }, // palladium shield
+    { itemId: 373, level: 68 }, // palladium chainmail body
+    { itemId: 146, level: 70 }, // palladium great sword
+    { itemId: 44, level: 72 }, // palladium chestplate
+    { itemId: 95, level: 76 }, // coronium gloves
+    { itemId: 332, level: 77 }, // coronium arrowheads
+    { itemId: 77, level: 78 }, // coronium pickaxe
+    { itemId: 318, level: 79 }, // coronium hatchet
+    { itemId: 55, level: 80 }, // coronium helm
+    { itemId: 368, level: 81 }, // coronium scimitar
+    { itemId: 62, level: 82 }, // coronium longsword
+    { itemId: 125, level: 84 }, // coronium full helm
+    { itemId: 96, level: 86 }, // coronium battleaxe
+    { itemId: 47, level: 88 }, // coronium platelegs
+    { itemId: 188, level: 90 }, // coronium shield
+    { itemId: 374, level: 92 }, // coronium chainmail body
+    { itemId: 147, level: 94 }, // coronium great sword
+    { itemId: 46, level: 96 }, // coronium chestplate
+    { itemId: 246, level: 96 }, // celadon gloves
+    { itemId: 333, level: 96 }, // celadon arrowheads
+    { itemId: 245, level: 96 }, // celadon pickaxe
+    { itemId: 319, level: 96 }, // celadon hatchet
+    { itemId: 258, level: 96 }, // celadon helm
+    { itemId: 369, level: 97 }, // celadon scimitar
+    { itemId: 249, level: 97 }, // celadon longsword
+    { itemId: 247, level: 97 }, // celadon full helm
+    { itemId: 250, level: 97 }, // celadon battleaxe
+    { itemId: 244, level: 98 }, // celadon platelegs
+    { itemId: 248, level: 98 }, // celadon shield
+    { itemId: 377, level: 98 }, // celadon chainmail body
+    { itemId: 251, level: 99 }, // celadon great sword
+    { itemId: 243, level: 100 }, // celadon chestplate
   ],
   [MenuType.SmeltingKiln]: [
-    380, // monk's necklace
-    194, // amethyst necklace
-    195, // sapphire necklace
-    196, // emerald necklace
-    197, // topaz necklace
-    198, // citrine necklace
-    199, // ruby necklace
-    200, // diamond necklace
-    426, // carbonado necklace
-    427, // gold amethyst necklace
-    428, // gold sapphire necklace
-    429, // gold emerald necklace
-    430, // gold topaz necklace
-    431, // gold citrine necklace
-    432, // gold ruby necklace
-    433, // gold diamond necklace
-    434 // gold carbonado necklace
+    { itemId: 380, level: 8 }, // monk's necklace
+    { itemId: 194, level: 13 }, // amethyst necklace
+    { itemId: 195, level: 24 }, // sapphire necklace
+    { itemId: 196, level: 35 }, // emerald necklace
+    { itemId: 197, level: 46 }, // topaz necklace
+    { itemId: 198, level: 57 }, // citrine necklace
+    { itemId: 199, level: 68 }, // ruby necklace
+    { itemId: 200, level: 79 }, // diamond necklace
+    { itemId: 426, level: 90 }, // carbonado necklace
+    { itemId: 427, level: 79 }, // gold amethyst necklace
+    { itemId: 428, level: 82 }, // gold sapphire necklace
+    { itemId: 429, level: 85 }, // gold emerald necklace
+    { itemId: 430, level: 88 }, // gold topaz necklace
+    { itemId: 431, level: 91 }, // gold citrine necklace
+    { itemId: 432, level: 94 }, // gold ruby necklace
+    { itemId: 433, level: 97 }, // gold diamond necklace
+    { itemId: 434, level: 100 }, // gold carbonado necklace
   ],
   [MenuType.CraftingTable]: [
-    503, // leather gloves
-    493, // leather bracers
-    498, // leather boots
-    507, // leather chaps
-    492, // leather body armour
-    494, // plains dragonleather bracers
-    504, // plains dragonleather chaps
-    495, // water dragonleather bracers
-    505, // water dragonleather chaps
-    496, // fire dragonleather bracers
-    506, // fire dragonleather chaps
-    552, // shadow dragonleather bracers
-    554, // sky dragonleather bracers
-    551, // shadow dragonleather chaps
-    553 // sky dragonleather chaps
+    { itemId: 503, level: 5 }, // leather gloves
+    { itemId: 493, level: 5 }, // leather bracers
+    { itemId: 498, level: 10 }, // leather boots
+    { itemId: 507, level: 15 }, // leather chaps
+    { itemId: 492, level: 20 }, // leather body armour
+    { itemId: 494, level: 30 }, // plains dragonleather bracers
+    { itemId: 504, level: 35 }, // plains dragonleather chaps
+    { itemId: 495, level: 45 }, // water dragonleather bracers
+    { itemId: 505, level: 50 }, // water dragonleather chaps
+    { itemId: 496, level: 60 }, // fire dragonleather bracers
+    { itemId: 506, level: 65 }, // fire dragonleather chaps
+    { itemId: 552, level: 80 }, // shadow dragonleather bracers
+    { itemId: 554, level: 80 }, // sky dragonleather bracers
+    { itemId: 551, level: 85 }, // shadow dragonleather chaps
+    { itemId: 553, level: 85 }, // sky dragonleather chaps
   ],
   [MenuType.PotionMaking]: [
-    261, // potion of accuracy (2)
-    275, // potion of forestry (2)
-    267, // potion of fishing (2)
-    271, // potion of mining (2)
-    263, // potion of defense (2)
-    269, // potion of smithing (2)
-    511, // potion of stamina (2)
-    273, // potion of restoration (2)
-    265, // potion of strength (2)
-    285, // potion of mischief (2)
-    291 // potion of magic (2)
+    { itemId: 261, level: 1 }, // potion of accuracy (2)
+    { itemId: 275, level: 8 }, // potion of forestry (2)
+    { itemId: 267, level: 14 }, // potion of fishing (2)
+    { itemId: 271, level: 20 }, // potion of mining (2)
+    { itemId: 263, level: 28 }, // potion of defense (2)
+    { itemId: 269, level: 36 }, // potion of smithing (2)
+    { itemId: 511, level: 40 }, // potion of stamina (2)
+    { itemId: 273, level: 42 }, // potion of restoration (2)
+    { itemId: 265, level: 50 }, // potion of strength (2)
+    { itemId: 285, level: 56 }, // potion of mischief (2)
+    { itemId: 291, level: 62 }, // potion of magic (2)
   ]
 };
 
@@ -442,14 +444,15 @@ export class SkillingMenuService {
       });
     }
 
-    for (const [menuTypeKey, itemIds] of Object.entries(MENU_ITEM_IDS)) {
+    for (const [menuTypeKey, items] of Object.entries(MENU_ITEM_IDS)) {
       const menuType = Number(menuTypeKey) as MenuType;
       const menuDefinition = this.menuDefinitions.get(menuType);
       if (!menuDefinition) {
         continue;
       }
 
-      for (const itemId of itemIds ?? []) {
+      for (const item of items ?? []) {
+        const itemId = item.itemId;
         const definition = this.config.itemCatalog.getDefinitionById(itemId);
         if (!definition) {
           console.warn(`[SkillingMenu] Missing item definition ${itemId} for menu ${menuType}`);
@@ -705,6 +708,7 @@ type MenuRequirementContext = {
 
 type MenuRequirementRule = (context: MenuRequirementContext) => string | null;
 
+
 const MENU_REQUIREMENT_RULES: Partial<Record<MenuType, MenuRequirementRule[]>> = {
   [MenuType.Smithing]: [
     ({ playerState, itemName }) =>
@@ -720,6 +724,18 @@ const MENU_REQUIREMENT_RULES: Partial<Record<MenuType, MenuRequirementRule[]>> =
 };
 
 function getMenuRequirementFailure(context: MenuRequirementContext): string | null {
+  const items = MENU_ITEM_IDS[context.menuType] ?? [];
+  const itemConfig = items.find((i) => i.itemId === context.itemId);
+  const requiredLevel = itemConfig?.level ?? 1;
+  const skillRef = getSkillReferenceForMenu(context.menuType);
+  const skillSlug = clientRefToSkill(skillRef);
+  const playerLevel = context.playerState.getSkillBoostedLevel(skillSlug);
+
+  if (playerLevel < requiredLevel) {
+    const skillName = skillSlug.charAt(0).toUpperCase() + skillSlug.slice(1);
+    return `You need level ${requiredLevel} ${skillName} to make this.`;
+  }
+
   const rules = MENU_REQUIREMENT_RULES[context.menuType] ?? [];
   for (const rule of rules) {
     const failureMessage = rule(context);
