@@ -19,4 +19,4 @@ COPY --from=deps /app /app
 COPY --from=build /app/apps/game/dist /app/apps/game/dist
 
 EXPOSE 8888
-CMD ["sh", "-c", "node scripts/validate-env.js game && node apps/game/dist/index.js"]
+CMD ["sh", "-c", "node scripts/validate-env.js game && exec node apps/game/dist/index.js"]
