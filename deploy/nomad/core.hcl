@@ -60,6 +60,11 @@ job "openspell-core" {
     task "api" {
       driver = "podman"
 
+      identity {
+        env  = true
+        file = true
+      }
+
       template {
         data = <<EOH
 {{ with nomadVar "nomad/jobs/shared/registry" }}
@@ -161,6 +166,11 @@ EOH
     task "web" {
       driver = "podman"
 
+      identity {
+        env  = true
+        file = true
+      }
+
       template {
         data = <<EOH
 {{ with nomadVar "nomad/jobs/shared/registry" }}
@@ -244,6 +254,11 @@ EOH
 
     task "chat" {
       driver = "podman"
+
+      identity {
+        env  = true
+        file = true
+      }
 
       template {
         data = <<EOH

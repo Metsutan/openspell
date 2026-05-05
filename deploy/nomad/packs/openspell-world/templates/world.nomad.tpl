@@ -72,6 +72,11 @@ job "openspell-worlds" {
     task "game" {
       driver = "podman"
 
+      identity {
+        env  = true
+        file = true
+      }
+
       template {
         data = <<EOH
 {{ with nomadVar "nomad/jobs/shared/registry" }}
