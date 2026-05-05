@@ -71,12 +71,28 @@ job "openspell-worlds" {
 
     task "game" {
       driver = "podman"
+
+      template {
+        data = <<EOH
+{{ with nomadVar "nomad/jobs/shared/registry" }}
+REGISTRY_USERNAME="{{ .GHCR_USERNAME }}"
+REGISTRY_PASSWORD="{{ .GHCR_PASSWORD }}"
+{{ end }}
+EOH
+        destination = "secrets/registry.env"
+        env         = true
+      }
+
       kill_signal = "SIGUSR1"
       kill_timeout = "7m"
       config {
         image = "[[ $world.game_image ]]"
         ports = ["game"]
         force_pull = true
+        auth {
+          username = "${REGISTRY_USERNAME}"
+          password = "${REGISTRY_PASSWORD}"
+        }
       }
 
       volume_mount { # 
@@ -105,6 +121,8 @@ REDIS_PASSWORD="{{ .REDIS_PASSWORD }}"
 JWT_SECRET="{{ .API_JWT_SECRET }}"
 CHAT_JWT_SECRET="{{ .CHAT_JWT_SECRET }}"
 HISCORES_UPDATE_SECRET="{{ .HISCORES_UPDATE_SECRET }}"
+
+STATIC_ASSETS_PATH="/app/shared-assets/base/static"
 
 LOG_FILE_PATH="/data/game-logs/world-[[ $world_id ]]/game.log"
 
