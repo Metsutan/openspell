@@ -60,11 +60,26 @@ job "openspell-core" {
     task "api" {
       driver = "podman"
 
+      template {
+        data = <<EOH
+{{ with nomadVar "nomad/jobs/shared/registry" }}
+REGISTRY_USERNAME="{{ .GHCR_USERNAME }}"
+REGISTRY_PASSWORD="{{ .GHCR_PASSWORD }}"
+{{ end }}
+EOH
+        destination = "secrets/registry.env"
+        env         = true
+      }
+
       config {
         image = var.api_image
         
         cap_drop = ["ALL"]
         force_pull = true
+        auth {
+          username = "${REGISTRY_USERNAME}"
+          password = "${REGISTRY_PASSWORD}"
+        }
       }
 
       template {
@@ -146,11 +161,26 @@ EOH
     task "web" {
       driver = "podman"
 
+      template {
+        data = <<EOH
+{{ with nomadVar "nomad/jobs/shared/registry" }}
+REGISTRY_USERNAME="{{ .GHCR_USERNAME }}"
+REGISTRY_PASSWORD="{{ .GHCR_PASSWORD }}"
+{{ end }}
+EOH
+        destination = "secrets/registry.env"
+        env         = true
+      }
+
       config {
         image = var.web_image
         ports = ["web"]
         cap_drop = ["ALL"]
         force_pull = true
+        auth {
+          username = "${REGISTRY_USERNAME}"
+          password = "${REGISTRY_PASSWORD}"
+        }
       }
 
       template {
@@ -215,11 +245,26 @@ EOH
     task "chat" {
       driver = "podman"
 
+      template {
+        data = <<EOH
+{{ with nomadVar "nomad/jobs/shared/registry" }}
+REGISTRY_USERNAME="{{ .GHCR_USERNAME }}"
+REGISTRY_PASSWORD="{{ .GHCR_PASSWORD }}"
+{{ end }}
+EOH
+        destination = "secrets/registry.env"
+        env         = true
+      }
+
       config {
         image = var.chat_image
         ports = ["chat"]
         cap_drop = ["ALL"]
         force_pull = true
+        auth {
+          username = "${REGISTRY_USERNAME}"
+          password = "${REGISTRY_PASSWORD}"
+        }
       }
 
       template {
