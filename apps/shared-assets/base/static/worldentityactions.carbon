@@ -10163,6 +10163,54 @@
         ]
     },
     {
+        "worldEntityTypeId": 12396,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -297,
+                            "y": -284,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -296,
+                            "y": -284,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12397,
+        "onActions": [
+            {
+                "targetAction": "open",
+                "requirements": [],
+                "playerEventActions": [
+                    {
+                        "type": "GoThroughDoor",
+                        "insideLocation": {
+                            "x": -297,
+                            "y": -285,
+                            "lvl": 0
+                        },
+                        "outsideLocation": {
+                            "x": -296,
+                            "y": -285,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "worldEntityTypeId": 12647,
         "onActions": [
             {

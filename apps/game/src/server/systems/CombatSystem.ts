@@ -219,6 +219,22 @@ export class CombatSystem {
         continue;
       }
 
+      // Prevent safe-spotting the King Goblin Jockey from outside its arena
+      if (targetNpc.definitionId === 169 && targetNpc.movementArea) {
+        const pX = player.x;
+        const pY = player.y;
+        const area = targetNpc.movementArea;
+        if (pX < area.minX || pX > area.maxX || pY < area.minY || pY > area.maxY) {
+          this.config.messageService.sendServerInfo(player.userId, "You must enter the goblin's area to attack it!");
+          this.config.targetingService.clearPlayerTarget(player.userId);
+          this.config.stateMachine.setState(
+            { type: EntityType.Player, id: player.userId },
+            States.IdleState
+          );
+          continue;
+        }
+      }
+
       // Check if player has a ranged weapon equipped
       const combatMode = getPlayerCombatMode(player);
       const attackRange = getPlayerAttackRange(player, this.config.spellCatalog);

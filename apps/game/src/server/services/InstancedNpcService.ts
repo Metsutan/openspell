@@ -269,6 +269,79 @@ export class InstancedNpcService {
     return { ok: true, npc };
   }
 
+  public spawnSummonedNpc(
+    npcdefId: number,
+    x: number,
+    y: number,
+    mapLevel: MapLevel,
+    movementArea: EntityMovementArea
+  ): SpawnInstancedNpcResult {
+    const baseDefinition = this.config.entityCatalog.getDefinitionById(npcdefId);
+    if (!baseDefinition) {
+      return { ok: false, reason: "missing_definition" };
+    }
+
+    const runtimeNpcId = this.allocateRuntimeNpcId();
+    const aggroRadius = baseDefinition.combat?.aggroRadius ?? 0;
+
+    const npc: NPCState = {
+      id: runtimeNpcId,
+      definitionId: baseDefinition.id,
+      definition: baseDefinition,
+      mapLevel,
+      x,
+      y,
+      respawnX: x,
+      respawnY: y,
+      movementArea,
+      conversationId: null,
+      shopId: null,
+      hitpointsLevel: baseDefinition.combat?.hitpoints ?? 1,
+      accuracyLevel: baseDefinition.combat?.accuracy ?? 1,
+      strengthLevel: baseDefinition.combat?.strength ?? 1,
+      defenseLevel: baseDefinition.combat?.defense ?? 1,
+      magicLevel: baseDefinition.combat?.magic ?? 1,
+      rangeLevel: baseDefinition.combat?.range ?? 1,
+      boostedStats: new Set<NPCCombatStat>(),
+      nextWanderAtMs: this.computeInitialNextWanderAtMs(baseDefinition),
+      currentState: States.IdleState,
+      aggroRadius,
+      aggroTarget: null,
+      aggroDroppedTargetId: null,
+      combatDelay: 0,
+      lastPlayerAttackAtMs: null,
+      instanced: null, // Public NPC
+      summoned: true // Does not naturally respawn
+    };
+
+    this.config.npcStates.set(npc.id, npc);
+    this.config.spatialIndex.addNPC({
+      id: npc.id,
+      definitionId: npc.definitionId,
+      mapLevel: npc.mapLevel,
+      x: npc.x,
+      y: npc.y,
+      hitpointsLevel: npc.hitpointsLevel,
+      currentState: npc.currentState,
+      aggroRadius: npc.aggroRadius
+    });
+
+    this.config.eventBus.emit(createNPCAddedEvent(
+      npc.id,
+      npc.definitionId,
+      { mapLevel: npc.mapLevel, x: npc.x, y: npc.y },
+      {
+        npcId: npc.id,
+        definitionId: npc.definitionId,
+        hitpointsLevel: npc.hitpointsLevel,
+        currentState: npc.currentState,
+        aggroRadius: npc.aggroRadius
+      }
+    ));
+
+    return { ok: true, npc };
+  }
+
   public update(): void {
     for (const npc of this.config.npcStates.values()) {
       if (!npc.instanced) {
