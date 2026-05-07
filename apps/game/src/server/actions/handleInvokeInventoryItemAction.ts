@@ -586,111 +586,111 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
   };
 
   const handleDropAction = (isDropX: boolean) => {
-      const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
-      if (!inventoryPayloadItem) {
+    const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
+    if (!inventoryPayloadItem) {
+      sendActionResponse(false);
+      return false;
+    }
+
+    const dropItemDef = ctx.itemCatalog?.getDefinitionById(inventoryPayloadItem.itemId);
+    if (dropItemDef?.isOnlyDiscardable) {
+      logInvalid("drop_only_discardable", { itemId: inventoryPayloadItem.itemId });
+      sendActionResponse(false);
+      return false;
+    }
+
+    let amountToDrop = inventoryPayloadItem.amount;
+    if (isDropX) {
+      const isStackableItem = dropItemDef?.isStackable ?? false;
+      const isIOUItem = inventoryPayloadItem.isIOU === 1;
+      if (!isStackableItem && !isIOUItem) {
+        logInvalid("dropx_unstackable_non_iou_item", {
+          itemId: inventoryPayloadItem.itemId,
+          isStackable: isStackableItem,
+          isIOU: inventoryPayloadItem.isIOU
+        });
         sendActionResponse(false);
         return false;
       }
 
-      const dropItemDef = ctx.itemCatalog?.getDefinitionById(inventoryPayloadItem.itemId);
-      if (dropItemDef?.isOnlyDiscardable) {
-        logInvalid("drop_only_discardable", { itemId: inventoryPayloadItem.itemId });
+      const requestedAmount = Number(payload.Amount);
+      if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
+        logInvalid("dropx_invalid_amount", { requestedAmount, itemId: inventoryPayloadItem.itemId });
         sendActionResponse(false);
         return false;
       }
 
-      let amountToDrop = inventoryPayloadItem.amount;
-      if (isDropX) {
-        const isStackableItem = dropItemDef?.isStackable ?? false;
-        const isIOUItem = inventoryPayloadItem.isIOU === 1;
-        if (!isStackableItem && !isIOUItem) {
-          logInvalid("dropx_unstackable_non_iou_item", {
-            itemId: inventoryPayloadItem.itemId,
-            isStackable: isStackableItem,
-            isIOU: inventoryPayloadItem.isIOU
-          });
-          sendActionResponse(false);
-          return false;
-        }
-
-        const requestedAmount = Number(payload.Amount);
-        if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
-          logInvalid("dropx_invalid_amount", { requestedAmount, itemId: inventoryPayloadItem.itemId });
-          sendActionResponse(false);
-          return false;
-        }
-
-        amountToDrop = Math.min(requestedAmount, inventoryPayloadItem.amount);
-        if (amountToDrop <= 0) {
-          logInvalid("dropx_clamped_to_zero", { requestedAmount, amountAtSlot: inventoryPayloadItem.amount });
-          sendActionResponse(false);
-          return false;
-        }
+      amountToDrop = Math.min(requestedAmount, inventoryPayloadItem.amount);
+      if (amountToDrop <= 0) {
+        logInvalid("dropx_clamped_to_zero", { requestedAmount, amountAtSlot: inventoryPayloadItem.amount });
+        sendActionResponse(false);
+        return false;
       }
+    }
 
-      const dropPayload: InvokeInventoryItemActionPayload = {
-        ...payload,
-        Amount: amountToDrop
-      };
+    const dropPayload: InvokeInventoryItemActionPayload = {
+      ...payload,
+      Amount: amountToDrop
+    };
 
-      // Step 1: Remove item from inventory
-      const removedItem = ctx.world.inventorySystem.removeItemFromInventoryAtSlot(
-        { enqueueUserMessage: ctx.enqueueUserMessage, itemCatalog: ctx.itemCatalog! },
-        playerState,
-        dropPayload
+    // Step 1: Remove item from inventory
+    const removedItem = ctx.world.inventorySystem.removeItemFromInventoryAtSlot(
+      { enqueueUserMessage: ctx.enqueueUserMessage, itemCatalog: ctx.itemCatalog! },
+      playerState,
+      dropPayload
+    );
+
+    if (!removedItem) {
+      sendActionResponse(false);
+      return false;
+    }
+
+    // Step 2: Spawn item at player's current location
+    if (ctx.itemManager) {
+      const spawned = ctx.itemManager.spawnGroundItem(
+        removedItem[0], // itemId
+        removedItem[1], // amount
+        removedItem[2] === 1, // isIOU
+        playerState.mapLevel,
+        playerState.x,
+        playerState.y,
+        undefined, // Use default despawn time
+        ctx.userId ?? undefined // Visible to this player initially
       );
-
-      if (!removedItem) {
-        sendActionResponse(false);
-        return false;
+      if (spawned && ctx.itemAudit) {
+        ctx.itemAudit.logItemDrop({
+          dropperUserId: ctx.userId!,
+          itemId: removedItem[0],
+          amount: removedItem[1],
+          isIOU: removedItem[2],
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y,
+          groundItemId: spawned.id
+        });
       }
+    } else {
+      console.error("[handleInvokeInventoryItemAction] ItemManager not available");
+    }
 
-      // Step 2: Spawn item at player's current location
-      if (ctx.itemManager) {
-        const spawned = ctx.itemManager.spawnGroundItem(
-          removedItem[0], // itemId
-          removedItem[1], // amount
-          removedItem[2] === 1, // isIOU
-          playerState.mapLevel,
-          playerState.x,
-          playerState.y,
-          undefined, // Use default despawn time
-          ctx.userId ?? undefined // Visible to this player initially
-        );
-        if (spawned && ctx.itemAudit) {
-          ctx.itemAudit.logItemDrop({
-            dropperUserId: ctx.userId!,
-            itemId: removedItem[0],
-            amount: removedItem[1],
-            isIOU: removedItem[2],
-            mapLevel: playerState.mapLevel,
-            x: playerState.x,
-            y: playerState.y,
-            groundItemId: spawned.id
-          });
-        }
-      } else {
-        console.error("[handleInvokeInventoryItemAction] ItemManager not available");
-      }
+    // Step 3: Send success confirmation
+    const successPayload = buildInvokedInventoryItemActionPayload({
+      Action: payload.Action,
+      MenuType: payload.MenuType,
+      Slot: payload.Slot,
+      ItemID: payload.ItemID,
+      Amount: removedItem[1],
+      IsIOU: payload.IsIOU,
+      Success: true,
+      Data: null
+    });
 
-      // Step 3: Send success confirmation
-      const successPayload = buildInvokedInventoryItemActionPayload({
-        Action: payload.Action,
-        MenuType: payload.MenuType,
-        Slot: payload.Slot,
-        ItemID: payload.ItemID,
-        Amount: removedItem[1],
-        IsIOU: payload.IsIOU,
-        Success: true,
-        Data: null
-      });
-      
-      ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, successPayload);
-      ctx.inventoryService.sendWeightUpdate(ctx.userId!, playerState);
-      
-      
-      // TODO: implement PlayerWeightChanged
-      return true;
+    ctx.enqueueUserMessage(ctx.userId!, GameAction.InvokedInventoryItemAction, successPayload);
+    ctx.inventoryService.sendWeightUpdate(ctx.userId!, playerState);
+
+
+    // TODO: implement PlayerWeightChanged
+    return true;
   };
 
   // Switch on the item action type
@@ -775,7 +775,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
           Data: null
         });
         ctx.enqueueUserMessage(ctx.userId, GameAction.InvokedInventoryItemAction, failurePayload);
-          return;
+        return;
       }
 
       // Send success response
@@ -977,12 +977,12 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         }
 
         message = `The shop is selling their ${capitalizedName} for ${price} coins.`;
-        
+
       } else if (payload.MenuType === MenuType.Inventory) {
         // Player is checking how much the shop will BUY their item for
         const itemId = payload.ItemID as number;
         const priceCheckAmount = 1;
-        
+
         // Get item definition
         const itemDef = ctx.itemCatalog?.getDefinitionById(itemId);
         if (!itemDef) {
@@ -1034,7 +1034,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         // Simple capitalization for first letter
         const capitalizedName = itemName.charAt(0).toUpperCase() + itemName.slice(1);
         message = `The shop will buy your ${capitalizedName} for ${price} coins.`;
-        
+
       } else {
         logInvalid("check_price_invalid_menu", { menuType: payload.MenuType });
         sendActionResponse(false);
@@ -1198,7 +1198,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       }
       if (itemId === COIN_ITEM_ID || !sellItemDef.isTradeable) {
         ctx.messageService.sendServerInfo(ctx.userId, "You cannot sell this item.");
-        
+
         const failurePayload = buildInvokedInventoryItemActionPayload({
           Action: payload.Action,
           MenuType: payload.MenuType,
@@ -1237,7 +1237,7 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
         const hasEmptySlot = shopState.slots.some(s => s === null);
         if (!hasEmptySlot) {
           ctx.messageService.sendServerInfo(ctx.userId, "The shop is full");
-          
+
           const failurePayload = buildInvokedInventoryItemActionPayload({
             Action: payload.Action,
             MenuType: payload.MenuType,
@@ -1378,7 +1378,79 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
       break;
 
     case ItemAction.blow:
-      handleNotImplementedAction("blow");
+      {
+        const inventoryPayloadItem = readValidatedInventoryItemAtPayloadSlot();
+        if (!inventoryPayloadItem) {
+          sendActionResponse(false);
+          return;
+        }
+
+        if (inventoryPayloadItem.itemId === 509) {
+          ctx.messageService.sendServerInfo(ctx.userId, "You blow the goblin whistle...");
+
+          if (
+            playerState.mapLevel === 0 &&
+            playerState.x >= -310 && playerState.x <= -297 &&
+            playerState.y >= -294 && playerState.y <= -283
+          ) {
+            if (!ctx.instancedNpcService) {
+              sendActionResponse(false);
+              return;
+            }
+
+            // Check if a King Goblin Jockey is already alive
+            let isAlive = false;
+            for (const npc of ctx.npcStates.values()) {
+              if (npc.definitionId === 169) {
+                isAlive = true;
+                break;
+              }
+            }
+
+            if (isAlive) {
+              ctx.messageService.sendServerInfo(ctx.userId, "You blow the whistle, but a goblin is already here!");
+              sendActionResponse(true);
+              return;
+            }
+
+            const spawnResult = ctx.instancedNpcService.spawnSummonedNpc(
+              169, // npcdef_id for King Goblin Jockey
+              -305, // x
+              -289, // y
+              0, // mapLevel
+              { minX: -310, maxX: -297, minY: -294, maxY: -283 } // movementArea
+            );
+
+            if (!spawnResult.ok) {
+              ctx.messageService.sendServerInfo(ctx.userId, "The whistle fails to summon anything.");
+              console.warn(`[Whistle] Failed to spawn npc: ${spawnResult.reason}`);
+              sendActionResponse(true);
+              return;
+            }
+
+            const decrementResult = ctx.inventoryService.decrementItemAtSlot(
+              ctx.userId,
+              inventoryPayloadItem.slot,
+              inventoryPayloadItem.itemId,
+              1,
+              inventoryPayloadItem.isIOU
+            );
+
+            if (!decrementResult || decrementResult.removed <= 0) {
+              sendActionResponse(false);
+              return;
+            }
+
+            ctx.messageService.sendServerInfo(ctx.userId, "You summoned the King Goblin Jockey", MessageStyle.Red);
+            ctx.messageService.sendServerInfo(ctx.userId, "Your Goblin Whistle breaks and falls to the ground!");
+            sendActionResponse(true);
+          } else {
+            sendActionResponse(true);
+          }
+        } else {
+          handleNotImplementedAction("blow");
+        }
+      }
       break;
 
     case ItemAction.disassemble:
@@ -1658,14 +1730,14 @@ function handleBankWithdraw(
     });
     ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, failurePayload);
   };
-  
+
   // Security check: Player must be in banking state
   if (playerState.currentState !== States.BankingState) {
     // Player not in banking state
     sendWithdrawFailure();
     return;
   }
-  
+
   // Validate menu type is Bank
   const menuType = Number(payload.MenuType);
   if (menuType !== InventoryMenuType.Bank) {
@@ -1673,26 +1745,26 @@ function handleBankWithdraw(
     sendWithdrawFailure();
     return;
   }
-  
+
   const slot = Number(payload.Slot);
   const requestedAmount = Number(payload.Amount);
-  
+
   // Validate amount
   if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
     // Invalid amount
     sendWithdrawFailure();
     return;
   }
-  
+
   // Withdraw from bank via BankingService
   const result = ctx.bankingService.withdrawItem(userId, slot, requestedAmount);
-  
+
   if (!result.success) {
     // Failed to withdraw (invalid slot, empty slot, etc.)
     sendWithdrawFailure();
     return;
   }
-  
+
   // Stackable items always use non-IOU representation in inventory so they condense into one stack.
   const itemDef = ctx.itemCatalog?.getDefinitionById(result.itemId);
   const effectiveIsIOU = itemDef?.isStackable ? 0 : (asIOU ? 1 : 0);
@@ -1708,10 +1780,10 @@ function handleBankWithdraw(
     result.itemId,
     effectiveIsIOU
   );
-  
+
   // Calculate how much we can actually withdraw based on inventory space
   const amountToWithdraw = Math.min(result.amountWithdrawn, availableCapacity);
-  
+
   if (amountToWithdraw === 0) {
     // No inventory space - return item to bank
     ctx.bankingService.depositItem(userId, result.itemId, result.amountWithdrawn, slot);
@@ -1729,23 +1801,23 @@ function handleBankWithdraw(
     ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, failurePayload);
     return;
   }
-  
+
   // If we can't withdraw the full amount, return the excess to bank
   if (amountToWithdraw < result.amountWithdrawn) {
     const excess = result.amountWithdrawn - amountToWithdraw;
     ctx.bankingService.depositItem(userId, result.itemId, excess, slot);
   }
-  
+
   // Create inventory manager and add items
   const inventoryManager = new InventoryManager(
     playerState.inventory,
     ctx.itemCatalog,
     (changes) => applyWeightChange(playerState, changes, ctx.itemCatalog!)
   );
-  
+
   // Add to inventory (stackables always non-IOU for proper stack condensation)
   const addResult = inventoryManager.addItems(result.itemId, amountToWithdraw, effectiveIsIOU);
-  
+
   if (addResult.added === 0) {
     // Shouldn't happen after capacity check, but handle gracefully
     ctx.bankingService.depositItem(userId, result.itemId, amountToWithdraw, slot);
@@ -1763,9 +1835,9 @@ function handleBankWithdraw(
     ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, failurePayload);
     return;
   }
-  
+
   // Send RemovedItemFromInventoryAtSlot for Bank
-  ctx.enqueueUserMessage(userId, GameAction.RemovedItemFromInventoryAtSlot, 
+  ctx.enqueueUserMessage(userId, GameAction.RemovedItemFromInventoryAtSlot,
     buildRemovedItemFromInventoryAtSlotPayload({
       MenuType: InventoryMenuType.Bank,
       Slot: slot,
@@ -1775,7 +1847,7 @@ function handleBankWithdraw(
       RemainingAmountAtSlot: result.amountRemaining + (result.amountWithdrawn - amountToWithdraw)
     })
   );
-  
+
   // Send AddedItemAtInventorySlot for each modified inventory slot
   for (const change of addResult.slotsModified) {
     const previousAmount = change.previousItem ? change.previousItem[1] : 0;
@@ -1803,13 +1875,13 @@ function handleBankWithdraw(
   ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, successPayload);
 
 
-  
+
   // Mark inventory as dirty for autosave
   playerState.markInventoryDirty();
-  
+
   // Send weight update if item has weight
   ctx.inventoryService.sendWeightUpdate(userId, playerState);
-  
+
 }
 
 /**
@@ -1836,14 +1908,14 @@ function handleBankDeposit(
       details
     });
   };
-  
+
   // Security check: Player must be in banking state
   if (playerState.currentState !== States.BankingState) {
     // Player not in banking state, silently ignore
     logInvalidBank("bank_deposit_not_in_state");
     return;
   }
-  
+
   // Validate menu type is Inventory (depositing FROM inventory TO bank)
   const menuType = Number(payload.MenuType);
   if (menuType !== InventoryMenuType.PlayerInventory) {
@@ -1851,25 +1923,25 @@ function handleBankDeposit(
     logInvalidBank("bank_deposit_invalid_menu", { menuType });
     return;
   }
-  
+
   const itemId = Number(payload.ItemID);
   const requestedAmount = Number(payload.Amount);
   const isIOU = payload.IsIOU ? 1 : 0;
-  
+
   // Validate itemId
   if (!Number.isInteger(itemId) || itemId <= 0) {
     // Invalid itemId, silently ignore
     logInvalidBank("bank_deposit_invalid_item", { itemId });
     return;
   }
-  
+
   // Validate amount
   if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
     // Invalid amount, silently ignore
     logInvalidBank("bank_deposit_invalid_amount", { requestedAmount });
     return;
   }
-  
+
   // Check if player has the item in inventory
   const playerHasAmount = playerState.countItem(itemId, isIOU);
   if (playerHasAmount <= 0) {
@@ -1877,10 +1949,10 @@ function handleBankDeposit(
     sendDepositFailure(ctx, userId, payload);
     return;
   }
-  
+
   // Use min(requested, available)
   const amountToDeposit = Math.min(requestedAmount, playerHasAmount);
-  
+
   // Remove from inventory
   if (!ctx.itemCatalog) {
     sendDepositFailure(ctx, userId, payload);
@@ -1892,16 +1964,16 @@ function handleBankDeposit(
     (changes) => applyWeightChange(playerState, changes, ctx.itemCatalog!)
   );
   const removeResult = inventoryManager.removeItems(itemId, amountToDeposit, isIOU);
-  
+
   if (removeResult.removed === 0) {
     // Failed to remove from inventory
     sendDepositFailure(ctx, userId, payload);
     return;
   }
-  
+
   // Add to bank (bank items are never IOUs)
   const depositResult = ctx.bankingService.depositItem(userId, itemId, removeResult.removed);
-  
+
   if (!depositResult.success) {
     // Bank is full - return items to inventory
     inventoryManager.addItems(itemId, removeResult.removed, isIOU);
@@ -1909,7 +1981,7 @@ function handleBankDeposit(
     sendDepositFailure(ctx, userId, payload);
     return;
   }
-  
+
   // Send RemovedItemFromInventoryAtSlot for each modified inventory slot
   for (const change of removeResult.slotsModified) {
     const remaining = change.newItem ? change.newItem[1] : 0;
@@ -1924,7 +1996,7 @@ function handleBankDeposit(
       })
     );
   }
-  
+
   // Send AddedItemAtInventorySlot for Bank
   ctx.enqueueUserMessage(userId, GameAction.AddedItemAtInventorySlot,
     buildAddedItemAtInventorySlotPayload({
@@ -1936,7 +2008,7 @@ function handleBankDeposit(
       PreviousAmountAtSlot: depositResult.previousAmount
     })
   );
-  
+
   // Send InvokedInventoryItemAction success
   const successPayload = buildInvokedInventoryItemActionPayload({
     Action: payload.Action,
@@ -1949,13 +2021,13 @@ function handleBankDeposit(
     Data: null
   });
   ctx.enqueueUserMessage(userId, GameAction.InvokedInventoryItemAction, successPayload);
-  
+
   // Mark inventory as dirty for autosave
   playerState.markInventoryDirty();
-  
+
   // Send weight update if item has weight
   ctx.inventoryService.sendWeightUpdate(userId, playerState);
-  
+
 }
 
 /**

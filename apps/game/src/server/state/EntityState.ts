@@ -73,6 +73,8 @@ export interface NPCState extends SpatialEntity {
   lastPlayerAttackAtMs: number | null;
   /** Runtime metadata for per-player instanced NPCs. Null for world NPCs. */
   instanced: InstancedNpcRuntimeState | null;
+  /** True if this is a publicly spawned mob that should NOT naturally respawn after death */
+  summoned?: boolean;
 }
 
 export function getNpcBaseCombatStat(npc: NPCState, stat: NPCCombatStat): number {

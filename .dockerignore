@@ -19,3 +19,7 @@ apps/shared-assets/*/static
 apps/shared-assets/*/js/client/client.*.js
 apps/shared-assets/*/js/client/development.client.*.js
 apps/shared-assets/*/shared.env
+
+# ChunkHound
+.chunkhound
+.chunkhound.json

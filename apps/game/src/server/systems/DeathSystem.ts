@@ -283,7 +283,7 @@ export class DeathSystem {
         killerUserId,
         lootDropped: false,
         lootOverrideId: npc.instanced?.lootOverrideId ?? null,
-        shouldRespawn: npc.instanced === null
+        shouldRespawn: npc.instanced === null && !npc.summoned
       });
 
       // Don't emit NPCRemovedEvent yet - wait for death animation delay
