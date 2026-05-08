@@ -1398,51 +1398,67 @@ export const handleInvokeInventoryItemAction: ActionHandler = (ctx, actionData) 
               return;
             }
 
-            // Check if a King Goblin Jockey is already alive
-            let isAlive = false;
-            for (const npc of ctx.npcStates.values()) {
-              if (npc.definitionId === 169) {
-                isAlive = true;
-                break;
+            // Start a 2-tick delay before resolving the spawn
+            ctx.delaySystem.startDelay({
+              userId: ctx.userId,
+              type: DelayType.NonBlocking,
+              ticks: 2,
+              onComplete: (uid) => {
+                // Check if a King Goblin Jockey is already alive
+                let isAlive = false;
+                for (const npc of ctx.npcStates.values()) {
+                  if (npc.definitionId === 169) {
+                    isAlive = true;
+                    break;
+                  }
+                }
+
+                if (isAlive) {
+                  ctx.messageService.sendServerInfo(uid, "You blow the whistle, but a goblin is already here!");
+                  return;
+                }
+
+                // Verify the item is still in their inventory after the delay
+                const player = ctx.playerStatesByUserId.get(uid);
+                if (!player) return;
+                const currentInv = player.inventory;
+                if (!currentInv) return;
+                const currentItem = currentInv[inventoryPayloadItem.slot];
+                if (!currentItem || currentItem[0] !== 509) {
+                  return; // Player moved or dropped the whistle during the delay
+                }
+
+                const spawnResult = ctx.instancedNpcService!.spawnSummonedNpc(
+                  169, // npcdef_id for King Goblin Jockey
+                  -305, // x
+                  -289, // y
+                  0, // mapLevel
+                  { minX: -310, maxX: -297, minY: -294, maxY: -283 } // movementArea
+                );
+
+                if (!spawnResult.ok) {
+                  ctx.messageService.sendServerInfo(uid, "The whistle fails to summon anything.");
+                  console.warn(`[Whistle] Failed to spawn npc: ${spawnResult.reason}`);
+                  return;
+                }
+
+                const decrementResult = ctx.inventoryService.decrementItemAtSlot(
+                  uid,
+                  inventoryPayloadItem.slot,
+                  inventoryPayloadItem.itemId,
+                  1,
+                  inventoryPayloadItem.isIOU
+                );
+
+                if (!decrementResult || decrementResult.removed <= 0) {
+                  return;
+                }
+
+                ctx.messageService.sendServerInfo(uid, "You summoned the King Goblin Jockey", MessageStyle.Red);
+                ctx.messageService.sendServerInfo(uid, "Your Goblin Whistle breaks and falls to the ground!");
               }
-            }
+            });
 
-            if (isAlive) {
-              ctx.messageService.sendServerInfo(ctx.userId, "You blow the whistle, but a goblin is already here!");
-              sendActionResponse(true);
-              return;
-            }
-
-            const spawnResult = ctx.instancedNpcService.spawnSummonedNpc(
-              169, // npcdef_id for King Goblin Jockey
-              -305, // x
-              -289, // y
-              0, // mapLevel
-              { minX: -310, maxX: -297, minY: -294, maxY: -283 } // movementArea
-            );
-
-            if (!spawnResult.ok) {
-              ctx.messageService.sendServerInfo(ctx.userId, "The whistle fails to summon anything.");
-              console.warn(`[Whistle] Failed to spawn npc: ${spawnResult.reason}`);
-              sendActionResponse(true);
-              return;
-            }
-
-            const decrementResult = ctx.inventoryService.decrementItemAtSlot(
-              ctx.userId,
-              inventoryPayloadItem.slot,
-              inventoryPayloadItem.itemId,
-              1,
-              inventoryPayloadItem.isIOU
-            );
-
-            if (!decrementResult || decrementResult.removed <= 0) {
-              sendActionResponse(false);
-              return;
-            }
-
-            ctx.messageService.sendServerInfo(ctx.userId, "You summoned the King Goblin Jockey", MessageStyle.Red);
-            ctx.messageService.sendServerInfo(ctx.userId, "Your Goblin Whistle breaks and falls to the ground!");
             sendActionResponse(true);
           } else {
             sendActionResponse(true);
