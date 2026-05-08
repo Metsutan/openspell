@@ -1,4 +1,4 @@
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
 RUN corepack enable
 ENV CI=true
@@ -11,7 +11,7 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 RUN pnpm -C apps/game build
 
-FROM node:20-slim AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
