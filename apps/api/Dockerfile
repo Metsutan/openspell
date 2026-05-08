@@ -1,4 +1,4 @@
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
 RUN corepack enable
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
@@ -13,7 +13,7 @@ WORKDIR /app
 # Run migrations only - seeding is done separately via: docker compose run --rm api node packages/db/prisma/seed.js
 CMD ["sh", "-c", "node scripts/validate-env.js migrate && pnpm -C packages/db prisma:migrate"]
 
-FROM node:20-slim AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 RUN corepack enable

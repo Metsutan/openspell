@@ -1,4 +1,4 @@
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
 RUN corepack enable
 ENV CI=true
@@ -7,7 +7,7 @@ ENV DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema
 COPY . .
 RUN pnpm install --frozen-lockfile
 
-FROM node:20-slim AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app /app

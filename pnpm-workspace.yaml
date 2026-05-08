@@ -3,9 +3,9 @@ packages:
   - apps/*
   - packages/*
 
-onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - better-sqlite3
-  - prisma
-  - sharp
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  better-sqlite3: true
+  prisma: true
+  sharp: true
