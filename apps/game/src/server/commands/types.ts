@@ -42,6 +42,9 @@ export interface CommandContext {
   /** Get an online player's user ID by display name (case-insensitive) */
   getPlayerIdByUsername: (username: string) => number | null;
 
+  /** Get a list of all currently online players' display names */
+  getOnlinePlayerNames: () => string[];
+
   // --- Teleportation ---
   /** Teleport a player to a specific location */
   teleportPlayer: (targetUserId: number, x: number, y: number, mapLevel: number) => void;

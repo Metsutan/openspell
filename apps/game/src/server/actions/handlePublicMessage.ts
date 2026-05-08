@@ -192,6 +192,13 @@ function buildCommandContext(ctx: ActionContext, playerState: PlayerState): Comm
       }
       return null;
     },
+    getOnlinePlayerNames: () => {
+      const names: string[] = [];
+      for (const state of ctx.playerStatesByUserId.values()) {
+        names.push(state.displayName ?? state.username);
+      }
+      return names;
+    },
     teleportPlayer: (targetUserId: number, x: number, y: number, mapLevel: number) => {
       ctx.teleportService.teleportPlayer(targetUserId, x, y, mapLevel as MapLevel, { validate: false });
     },

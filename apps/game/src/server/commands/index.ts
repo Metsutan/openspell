@@ -10,6 +10,7 @@ import { unmuteCommand } from "./unmute";
 import { banCommand } from "./ban";
 import { unbanCommand } from "./unban";
 import { moveCommand } from "./move";
+import { whoCommand } from "./who";
 
 // Re-export types for convenience
 export type { CommandContext, CommandDefinition, CommandHandler } from "./types";
@@ -132,6 +133,14 @@ const COMMANDS: Record<string, CommandDefinition> = {
     },
     usage: "/help",
     description: "Show available commands"
+  },
+
+  who: {
+    handler: whoCommand,
+    // Empty array or undefined means everyone can use it
+    requiredPrivilege: [],
+    usage: "/who",
+    description: "List currently online players"
   },
 };
 
