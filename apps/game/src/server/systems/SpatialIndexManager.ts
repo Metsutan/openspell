@@ -526,7 +526,7 @@ export class SpatialIndexManager {
       ENTITY_VIEW_RADIUS
     );
     for (const player of nearbyPlayers) {
-      if (player.id !== userId) {
+      if (player.id !== userId && !player.playerState.invisible) {
         result.add(this.makeEntityKey(EntityType.Player, player.id));
       }
     }
@@ -577,6 +577,13 @@ export class SpatialIndexManager {
     entityRef: EntityRef,
     position: Position
   ): Set<number> {
+    if (entityRef.type === EntityType.Player) {
+      const playerEntry = this.getPlayer(entityRef.id);
+      if (playerEntry?.playerState.invisible) {
+        return new Set<number>();
+      }
+    }
+
     const radius = entityRef.type === EntityType.Item
       ? ITEM_VIEW_RADIUS
       : ENTITY_VIEW_RADIUS;

@@ -46,12 +46,20 @@ export class DamageService {
     attacker: PlayerState | NPCState,
     target: PlayerState | NPCState
   ): number {
+    if ('userId' in target && target.godMode) return 0;
+
     const attackRoll = this.calculateRangedAttackRoll(attacker);
     const defenseRoll = this.calculateRangedDefenseRoll(target);
     const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
       return 0;
+    }
+
+    if ('userId' in attacker && attacker.instakill) {
+      return 'userId' in target 
+        ? target.getSkillBoostedLevel(SKILLS.hitpoints) 
+        : target.hitpointsLevel;
     }
 
     const maxHit = this.calculateRangedMaxHit(attacker);
@@ -85,6 +93,8 @@ export class DamageService {
     target: PlayerState | NPCState,
     spellId: number
   ): number {
+    if ('userId' in target && target.godMode) return 0;
+
     const spell = this.config.spellCatalog?.getDefinitionById(spellId);
     const maxDamage = spell?.maxDamage ?? 0;
     if (maxDamage <= 0) {
@@ -97,6 +107,12 @@ export class DamageService {
     const hitRoll = Math.random();
     if (hitRoll > hitChance) {
       return 0;
+    }
+
+    if ('userId' in attacker && attacker.instakill) {
+      return 'userId' in target 
+        ? target.getSkillBoostedLevel(SKILLS.hitpoints) 
+        : target.hitpointsLevel;
     }
 
     const damage = Math.floor(Math.random() * maxDamage) + 1;
@@ -127,7 +143,8 @@ export class DamageService {
     attacker: PlayerState | NPCState,
     target: PlayerState | NPCState
   ): number {
-    
+    if ('userId' in target && target.godMode) return 0;
+
     // Calculate accuracy roll (attacker's chance to hit)
     const accuracyRoll = this.calculateAccuracyRoll(attacker, target);
     
@@ -142,6 +159,12 @@ export class DamageService {
     if (hitRoll > hitChance) {
       // Miss! Early exit saves maxHit calculation
       return 0;
+    }
+
+    if ('userId' in attacker && attacker.instakill) {
+      return 'userId' in target 
+        ? target.getSkillBoostedLevel(SKILLS.hitpoints) 
+        : target.hitpointsLevel;
     }
 
     // Calculate maximum possible hit (only if attack lands)
@@ -397,6 +420,7 @@ export class DamageService {
     target: PlayerState | NPCState,
     scaledMaxDamage: number
   ): number {
+    if ('userId' in target && target.godMode) return 0;
     if (scaledMaxDamage <= 0) return 0;
 
     const attackRoll = this.calculateMagicAttackRoll(attacker);
@@ -404,6 +428,12 @@ export class DamageService {
     const hitChance = this.calculateHitChance(attackRoll, defenseRoll);
 
     if (Math.random() > hitChance) return 0;
+
+    if ('userId' in attacker && attacker.instakill) {
+      return 'userId' in target 
+        ? target.getSkillBoostedLevel(SKILLS.hitpoints) 
+        : target.hitpointsLevel;
+    }
 
     return Math.floor(Math.random() * scaledMaxDamage) + 1;
   }
@@ -750,6 +780,8 @@ export class DamageService {
     damage: number,
     targetPosition: Position
   ): number {
+    if ('userId' in targetState && targetState.godMode) return 0;
+
     // Get current hitpoints
     let currentHp: number;
     if ('userId' in targetState) {

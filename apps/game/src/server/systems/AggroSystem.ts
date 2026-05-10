@@ -36,7 +36,7 @@ export type AggroSystemConfig = {
 };
 
 export class AggroSystem {
-  constructor(private readonly config: AggroSystemConfig) {}
+  constructor(private readonly config: AggroSystemConfig) { }
 
   /**
    * Updates aggro state for all NPCs.
@@ -157,6 +157,11 @@ export class AggroSystem {
       return false;
     }
 
+    // Check if player has noTarget or is invisible - drop aggro immediately
+    if (playerEntry.playerState.noTarget || playerEntry.playerState.invisible) {
+      return false;
+    }
+
     // Check if player is still on the same map level
     if (playerEntry.mapLevel !== npc.mapLevel) {
       return false;
@@ -216,6 +221,11 @@ export class AggroSystem {
 
       // Skip dead players - NPCs cannot aggro on dead players
       if (player.playerState.currentState === States.PlayerDeadState) {
+        continue;
+      }
+
+      // Skip players with noTarget or invisible
+      if (player.playerState.noTarget || player.playerState.invisible) {
         continue;
       }
 

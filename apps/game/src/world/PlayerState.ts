@@ -427,6 +427,12 @@ export class PlayerState {
   public muteReason: string | null; // Account mute reason (null means not muted)
   public lastIncomingCombatHitAtMs: number = 0; // Last time this player took non-zero combat damage
   
+  // Admin Flags
+  public godMode: boolean = false;
+  public noTarget: boolean = false;
+  public invisible: boolean = false;
+  public instakill: boolean = false;
+  
   // Cached equipment bonuses (recalculated on equip/unequip)
   public accuracyBonus: number = 0; // Total accuracy bonus from all equipped items
   public strengthBonus: number = 0; // Total strength bonus from all equipped items

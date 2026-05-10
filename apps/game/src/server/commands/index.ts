@@ -11,6 +11,7 @@ import { banCommand } from "./ban";
 import { unbanCommand } from "./unban";
 import { moveCommand } from "./move";
 import { whoCommand } from "./who";
+import { godCommand, notargetCommand, invisCommand, instakillCommand } from "./adminFlags";
 
 // Re-export types for convenience
 export type { CommandContext, CommandDefinition, CommandHandler } from "./types";
@@ -40,6 +41,34 @@ const COMMANDS: Record<string, CommandDefinition> = {
     requiredPrivilege: [PlayerType.Admin],
     usage: "/move <north|south|east|west> [distance]",
     description: "Move by cardinal tiles using teleport"
+  },
+
+  god: {
+    handler: godCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/god",
+    description: "Toggle god mode (invulnerability)"
+  },
+
+  notarget: {
+    handler: notargetCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/notarget",
+    description: "Toggle no target mode (NPCs will not aggro you)"
+  },
+
+  invis: {
+    handler: invisCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/invis",
+    description: "Toggle invisibility (hidden from other players)"
+  },
+
+  instakill: {
+    handler: instakillCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/instakill",
+    description: "Toggle instakill mode (1-hit kill monsters)"
   },
 
   // Placeholder for future commands - implement handlers as needed
