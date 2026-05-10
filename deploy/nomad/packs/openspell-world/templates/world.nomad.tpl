@@ -75,11 +75,12 @@ job "openspell-worlds" {
       identity {
         env  = true
         file = true
+        change_mode = "noop"
       }
 
       template {
         data = <<EOH
-{{ with nomadVar "nomad/jobs/shared/registry" }}
+{{ with nomadVar "nomad/jobs/openspell-core" }}
 REGISTRY_USERNAME="{{ .GHCR_USERNAME }}"
 REGISTRY_PASSWORD="{{ .GHCR_PASSWORD }}"
 {{ end }}

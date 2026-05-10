@@ -1826,7 +1826,9 @@ export class GameServer {
 
     // SIGTERM (kill/docker stop)
     process.once('SIGTERM', async () => {
-      await this.handleShutdownSignal('SIGTERM', 0);
+      // await this.handleShutdownSignal('SIGTERM', 0);
+      console.log('[shutdown] Received SIGTERM, scheduling 5m graceful shutdown...');
+      this.scheduleServerShutdown(5);
     });
 
     // SIGUSR1 (Planned deployment shutdown with warning)
