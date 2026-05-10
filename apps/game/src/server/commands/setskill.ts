@@ -18,7 +18,7 @@ const COMBAT_SKILLS: Set<SkillSlug> = new Set([
 /**
  * Maximum level cap for skills
  */
-const MAX_LEVEL = 99;
+const MAX_LEVEL = 100;
 
 /**
  * /setskill <skill> <level> [username]
@@ -73,12 +73,12 @@ export const setskillCommand: CommandHandler = (ctx: CommandContext, args: strin
   if (args.length >= 3) {
     const targetName = args.slice(2).join(" "); // Handle spaces in usernames
     const foundId = ctx.getPlayerIdByUsername(targetName);
-    
+
     if (foundId === null) {
       ctx.reply(`Player "${targetName}" is not online`, MessageStyle.Warning);
       return;
     }
-    
+
     targetUserId = foundId;
     targetUsername = targetName;
   }
@@ -125,7 +125,7 @@ export const setskillCommand: CommandHandler = (ctx: CommandContext, args: strin
   if (oldCombatLevel !== null) {
     const newCombatLevel = calculateCombatLevel(playerState);
     playerState.updateCombatLevel(newCombatLevel);
-    
+
     // Only send PlayerCombatLevelIncreased if the combat level actually changed
     if (newCombatLevel !== oldCombatLevel) {
       ctx.sendCombatLevelIncreasedBroadcast(targetUserId, newCombatLevel);
