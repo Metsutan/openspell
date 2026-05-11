@@ -32,8 +32,8 @@ const COMMANDS: Record<string, CommandDefinition> = {
   teleport: {
     handler: teleportCommand,
     requiredPrivilege: [PlayerType.Admin],
-    usage: "/teleport <location> [player name]",
-    description: "Teleport to a location or teleport another player"
+    usage: "/teleport <location | x y [level]> [player name]",
+    description: "Teleport to a location, coordinates, or teleport another player"
   },
 
   move: {

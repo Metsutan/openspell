@@ -40,7 +40,7 @@ export type MovementSystemConfig = {
 };
 
 export class MovementSystem {
-  constructor(private readonly config: MovementSystemConfig) {}
+  constructor(private readonly config: MovementSystemConfig) { }
 
   /**
    * Updates player movement.
@@ -108,7 +108,7 @@ export class MovementSystem {
       if (!plan.lockSpeed) {
         plan.speed = this.getPlayerMovementSpeed(playerState);
       }
-      
+
       // Check if tracking an NPC that has moved - trigger re-pathfind if necessary
       if (playerState.pendingAction?.entityType === EntityType.NPC) {
         this.checkAndUpdateNPCPath(playerState, plan, entityKey);
@@ -267,7 +267,7 @@ export class MovementSystem {
 
   private reducePlayerStamina(playerState: PlayerState): boolean {
     const isSprinting = playerState.settings[PlayerSetting.IsSprinting] === 1 ? true : false;
-    if(process.env.DISABLE_STAMINA === 'true' || !isSprinting) {
+    if (process.env.DISABLE_STAMINA === 'true' || !isSprinting || playerState.playerType === 1) {
       return false;
     }
 
@@ -276,7 +276,7 @@ export class MovementSystem {
     // Use effective level (includes potions + equipment bonuses)
     const athleticsLevel = playerState.getEffectiveLevel(SKILLS.athletics);
     const unitsLost = Math.floor(60 + (67 * clampedWeight / 64) * (1 - athleticsLevel / 300));
-    
+
     // Update stamina ability
     const currentStamina = playerState.abilities[PlayerAbility.Stamina];
     const newStamina = playerState.updateAbility(PlayerAbility.Stamina, currentStamina - unitsLost);
@@ -313,9 +313,9 @@ export class MovementSystem {
     // Check if NPC has moved from last known position
     const lastX = (pendingAction as any).lastKnownX as number | undefined;
     const lastY = (pendingAction as any).lastKnownY as number | undefined;
-    
+
     if (lastX === undefined || lastY === undefined) return;
-    
+
     const hasMoved = lastX !== npcState.x || lastY !== npcState.y;
     if (!hasMoved) return;
 
@@ -371,10 +371,10 @@ export class MovementSystem {
     }
 
     // Success! Seamlessly replace the current path
-    
+
     // Replace the path in the existing plan
     plan.path = newPath;
-    
+
     // Skip the first point if it's the player's current position
     // This ensures sprinting speed is respected (move 2 tiles per tick if sprinting)
     if (newPath.length > 0 && newPath[0].x === playerState.x && newPath[0].y === playerState.y) {
@@ -382,7 +382,7 @@ export class MovementSystem {
     } else {
       plan.nextIndex = 0;
     }
-    
+
     // Update last known position to NPC's current position
     (pendingAction as any).lastKnownX = npcState.x;
     (pendingAction as any).lastKnownY = npcState.y;
