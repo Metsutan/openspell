@@ -9927,6 +9927,101 @@
         ]
     },
     {
+        "worldEntityTypeId": 11998,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 486,
+                            "y": -472,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12000,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 495,
+                            "y": -495,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12001,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 505,
+                            "y": -361,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12002,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 505,
+                            "y": -346,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12003,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 503,
+                            "y": -330,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "worldEntityTypeId": 12004,
         "onActions": [
             {
@@ -9946,6 +10041,44 @@
         ]
     },
     {
+        "worldEntityTypeId": 12010,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 489,
+                            "y": -472,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12011,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 497,
+                            "y": -501,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "worldEntityTypeId": 12034,
         "onActions": [
             {
@@ -9958,6 +10091,101 @@
                             "x": 504,
                             "y": -287,
                             "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12035,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 505,
+                            "y": -349,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12036,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 504,
+                            "y": -362,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12037,
+        "onActions": [
+            {
+                "targetAction": "climb",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 503,
+                            "y": -328,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12151,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 167,
+                            "y": 454,
+                            "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12152,
+        "onActions": [
+            {
+                "targetAction": "enter",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 167,
+                            "y": 454,
+                            "lvl": 0
                         }
                     }
                 ]
@@ -10004,6 +10232,44 @@
                             "x": 142,
                             "y": 421,
                             "lvl": 0
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12206,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 175,
+                            "y": 459,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12207,
+        "onActions": [
+            {
+                "targetAction": "exit",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "TeleportTo",
+                        "location": {
+                            "x": 175,
+                            "y": 459,
+                            "lvl": 1
                         }
                     }
                 ]
