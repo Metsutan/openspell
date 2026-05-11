@@ -64,10 +64,16 @@ export class AssetDownloader {
                     mkdirSync(localDir, { recursive: true });
                 }
 
-                console.log(`[AssetDownloader] Downloading ${url} -> ${localPath}`);
-                const fileRes = await fetch(url);
+                const cdnUrlObj = new URL(cdnUrl);
+                urlObj.protocol = cdnUrlObj.protocol;
+                urlObj.host = cdnUrlObj.host;
+                urlObj.port = cdnUrlObj.port;
+                const fetchUrl = urlObj.toString();
+
+                console.log(`[AssetDownloader] Downloading ${fetchUrl} -> ${localPath}`);
+                const fileRes = await fetch(fetchUrl);
                 if (!fileRes.ok) {
-                    throw new Error(`Failed to download ${url}: ${fileRes.status}`);
+                    throw new Error(`Failed to download ${fetchUrl}: ${fileRes.status}`);
                 }
 
                 const arrayBuffer = await fileRes.arrayBuffer();
