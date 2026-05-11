@@ -479,6 +479,7 @@ export class PlayerState {
     this.equippedWeight = Math.max(0, equippedWeight);
     this.mutedUntil = mutedUntil;
     this.muteReason = muteReason;
+    this.godMode = playerType === 1;
     this.markClean();
     this.rebuildBoostedSkillTracking();
   }
