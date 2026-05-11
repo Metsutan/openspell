@@ -147,7 +147,7 @@ export class DefaultPacketBuilder implements IPacketBuilder {
   ): OutgoingPacket {
     // Use -1 for respawn type if no spellId provided, otherwise default to 15 (standard teleport)
     const resolvedSpellId = spellId !== undefined ? spellId : (type === TeleportType.Respawn ? -1 : 15);
-    
+
     const payload = buildTeleportToPayload({
       EntityID: entityRef.id,
       EntityType: entityRef.type,
@@ -220,6 +220,8 @@ export class DefaultPacketBuilder implements IPacketBuilder {
    * 
    */
   public static calculateCombatLevel(player: PlayerState): number {
+    if (player.playerType === 1) return 999;
+
     const skills = player.skills;
     return Math.floor(
       (skills.hitpoints.level +
@@ -228,7 +230,7 @@ export class DefaultPacketBuilder implements IPacketBuilder {
         skills.defense.level +
         skills.magic.level / 4 +
         skills.range.level / 4) /
-        3.75
+      3.75
     );
   }
 }
