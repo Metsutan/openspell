@@ -230,6 +230,7 @@ function handleLocationTeleport(
  * Usage:
  *   /teleport <location>           - Teleport self to location
  *   /teleport <location> <player>  - Teleport player to location
+ *   /teleport <x> <z/y> [level]    - Teleport self to coordinates
  *   /teleport to <player name>     - Teleport yourself to another player
  *   /teleport bring <player name>  - Bring another player to your location
  *   /teleport help                 - Show available locations
@@ -242,8 +243,32 @@ export const teleportCommand: CommandHandler = (ctx, args) => {
     const locations = Object.keys(TELEPORT_LOCATIONS).join(", ");
     ctx.reply(`Available locations: ${locations}`, MessageStyle.Green);
     ctx.reply("Usage: /teleport <location> [player name]", MessageStyle.Green);
-    ctx.reply("Also: /teleport to <player name>, /teleport bring <player name>", MessageStyle.Green);
+    ctx.reply("Also: /teleport <x> <z> [level], /teleport to <name>, /teleport bring <name>", MessageStyle.Green);
     return;
+  }
+
+  // Check for coordinate-based teleport: /teleport <x> <z/y> [level]
+  if (args.length >= 2) {
+    // Regex to strictly check for integers (allowing negative signs)
+    if (/^-?\d+$/.test(args[0]) && /^-?\d+$/.test(args[1])) {
+      const x = parseInt(args[0], 10);
+      const y = parseInt(args[1], 10);
+      
+      let mapLevel = 1;
+      const sourceState = ctx.getPlayerState(ctx.userId);
+      if (sourceState) {
+        mapLevel = sourceState.mapLevel;
+      }
+      
+      if (args.length >= 3 && /^-?\d+$/.test(args[2])) {
+        mapLevel = parseInt(args[2], 10);
+      }
+
+      ctx.stopPlayerMovement(ctx.userId);
+      ctx.teleportPlayer(ctx.userId, x, y, mapLevel);
+      ctx.reply(`Teleported to ${x}, ${y}, level ${mapLevel}`, MessageStyle.Green);
+      return;
+    }
   }
 
   // Check for special subcommands first
