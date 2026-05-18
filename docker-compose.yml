@@ -47,6 +47,8 @@ x-game-base: &game_base
     options:
       max-size: "10m"
       max-file: "5"
+  extra_hosts:
+    - "localhost:host-gateway"
 
 services:
   env-init:
@@ -155,7 +157,7 @@ services:
       PERSISTENCE_ID: 2
       MAX_CONNECTIONS: 2
     ports:
-      - "8889:8889"
+      - "8889:8888"
 
   chat:
     build:
