@@ -432,6 +432,7 @@ export class PlayerState {
   public noTarget: boolean = false;
   public invisible: boolean = false;
   public instakill: boolean = false;
+  public leapMode: boolean = false;
   
   // Cached equipment bonuses (recalculated on equip/unequip)
   public accuracyBonus: number = 0; // Total accuracy bonus from all equipped items
