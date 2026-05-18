@@ -11,7 +11,7 @@ import { banCommand } from "./ban";
 import { unbanCommand } from "./unban";
 import { moveCommand } from "./move";
 import { whoCommand } from "./who";
-import { godCommand, notargetCommand, invisCommand, instakillCommand } from "./adminFlags";
+import { godCommand, notargetCommand, invisCommand, instakillCommand, leapCommand } from "./adminFlags";
 
 // Re-export types for convenience
 export type { CommandContext, CommandDefinition, CommandHandler } from "./types";
@@ -69,6 +69,13 @@ const COMMANDS: Record<string, CommandDefinition> = {
     requiredPrivilege: [PlayerType.Admin],
     usage: "/instakill",
     description: "Toggle instakill mode (1-hit kill monsters)"
+  },
+  
+  leap: {
+    handler: leapCommand,
+    requiredPrivilege: [PlayerType.Admin],
+    usage: "/leap",
+    description: "Toggle leap mode (jump to clicked tile)"
   },
 
   // Placeholder for future commands - implement handlers as needed

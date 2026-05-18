@@ -36,3 +36,11 @@ export const instakillCommand: CommandHandler = (ctx: CommandContext, args: stri
   state.instakill = !state.instakill;
   ctx.reply(`Instakill mode is now ${state.instakill ? 'ON' : 'OFF'}.`, MessageStyle.Green);
 };
+
+export const leapCommand: CommandHandler = (ctx: CommandContext, args: string[]) => {
+  const state = ctx.getPlayerState(ctx.userId);
+  if (!state) return;
+
+  state.leapMode = !state.leapMode;
+  ctx.reply(`Leap mode is now ${state.leapMode ? 'ON' : 'OFF'}.`, MessageStyle.Green);
+};
