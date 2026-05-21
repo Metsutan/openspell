@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
-import { 
-  RequirementsChecker, 
-  RequirementCheckContext, 
+import {
+  RequirementsChecker,
+  RequirementCheckContext,
   RequirementCheckResult,
-  Requirement 
+  Requirement
 } from "./RequirementsChecker";
 
 /**
@@ -39,6 +39,18 @@ export interface PlayerEventAction {
   location1?: WorldEntityActionLocation;
   /** Used by athleticsObstacle - position on other side of obstacle */
   location2?: WorldEntityActionLocation;
+  /** Used by athleticsObstacle jump actions - Mushroom jump final position */
+  location3?: WorldEntityActionLocation;
+  /** Used by athleticsObstacle jump actions - optional start locations */
+  startLocations?: WorldEntityActionLocation[];
+  /** Used by athleticsObstacle jump actions - apex height */
+  actionValue?: number;
+  /** Used by athleticsObstacle jump actions - travel duration in ticks */
+  actionTickLength?: number;
+  /** Used by athleticsObstacle jump actions - delay before jumping in ticks */
+  delayTicks?: number;
+  /** Used by athleticsObstacle - path speed */
+  speed?: number;
   /** Used by PlayerGiveItems - optional message when items are removed */
   messageToPlayer?: string;
   /** Used by PlayerGiveItems - item stacks removed from player inventory */
@@ -105,10 +117,10 @@ export class WorldEntityActionService {
       "../../../..",
       "shared-assets/base/static"
     );
-    const staticDir = process.env.STATIC_ASSETS_PATH 
+    const staticDir = process.env.STATIC_ASSETS_PATH
       ? path.resolve(process.env.STATIC_ASSETS_PATH)
       : defaultStaticDir;
-    
+
     const worldEntityActionsFilename = process.env.WORLD_ENTITY_ACTIONS_FILE || "worldentityactions.carbon";
     const defaultPath = path.join(staticDir, worldEntityActionsFilename);
     const actualPath = filePath ?? defaultPath;
