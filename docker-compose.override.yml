@@ -13,10 +13,19 @@ services:
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
-  # game:
-  #   volumes:
-  #     - ./apps/shared-assets:/app/apps/shared-assets:ro
-  #     - ./certs:/app/certs:ro
+  game:
+    build:
+      context: .
+      dockerfile: apps/game/Dockerfile
+      target: deps
+    command: pnpm -C apps/game dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/app:rw
+      - /app/node_modules
+      - /app/apps/game/node_modules
+      - /app/packages/db/node_modules
 
   chat:
     volumes:

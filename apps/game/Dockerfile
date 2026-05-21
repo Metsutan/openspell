@@ -1,5 +1,6 @@
 FROM node:22-slim AS deps
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 ENV CI=true
 ENV DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema=public
