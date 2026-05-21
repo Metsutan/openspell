@@ -78,3 +78,6 @@ init/*.sql
 # ChunkHound
 .chunkhound
 .chunkhound.json
+
+# Antigravity plugins
+.agents/
