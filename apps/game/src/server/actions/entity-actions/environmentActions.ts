@@ -23,16 +23,17 @@ import type { ActionContext } from "../types";
 import type { PlayerState } from "../../../world/PlayerState";
 import type { WorldEntityState } from "../../state/EntityState";
 import type { EntityRef } from "../../events/GameEvents";
-import { createPlayerWentThroughDoorEvent } from "../../events/GameEvents";
+import { createPlayerWentThroughDoorEvent, createPlayerMovedEvent } from "../../events/GameEvents";
 import { buildMovementPath, buildMovementPathAdjacent } from "../utils/pathfinding";
 import { checkAdjacentToEnvironment, checkAdjacentToDirectionalBlockingEntity } from "./shared";
-import type { WorldEntityActionLocation } from "../../services/WorldEntityActionService";
+import type { WorldEntityActionLocation, PlayerEventAction } from "../../services/WorldEntityActionService";
 import type { MapLevel } from "../../../world/Location";
 import type { RequirementCheckContext } from "../../services/RequirementsChecker";
 import { SKILLS, isSkillSlug } from "../../../world/PlayerState";
 import { DelayType } from "../../systems/DelaySystem";
 import { buildPathfindingFailedPayload } from "../../../protocol/packets/actions/PathfindingFailed";
 import { buildShowLootMenuPayload } from "../../../protocol/packets/actions/ShowLootMenu";
+import { buildEntityPerformedPhysicalActionPayload } from "../../../protocol/packets/actions/EntityPerformedPhysicalAction";
 import type { WorldEntityAction } from "../../services/WorldEntityActionService";
 import { Point } from "../../../world/pathfinding";
 
@@ -112,7 +113,7 @@ function requiresWaitTick(
   if (isDoorLikeEntity(entityState)) {
     return true;
   }
-  
+
   // Check if this entity has an override with TeleportTo, GoThroughDoor, MineThroughRocks, or ClimbSameMapLevel
   const hasOverride = ctx.worldEntityActionService.hasAction(entityState.id, actionName);
   if (hasOverride) {
@@ -120,8 +121,8 @@ function requiresWaitTick(
     if (config) {
       for (const eventAction of config.playerEventActions) {
         if (
-          eventAction.type === "TeleportTo" || 
-          eventAction.type === "GoThroughDoor" || 
+          eventAction.type === "TeleportTo" ||
+          eventAction.type === "GoThroughDoor" ||
           eventAction.type === "MineThroughRocks" ||
           eventAction.type === "ClimbSameMapLevel"
         ) {
@@ -130,7 +131,7 @@ function requiresWaitTick(
       }
     }
   }
-  
+
   return false;
 }
 
@@ -170,7 +171,7 @@ export function handleEnvironmentAction(
   // Validate action is supported
   const supportedActions = entityState.definition.actions || [];
   const hasOverride = ctx.worldEntityActionService.hasAction(entityState.id, actionName);
-  
+
   if (!supportedActions.includes(actionName) && !hasOverride) {
     ctx.messageService.sendServerInfo(playerState.userId, "Supported action but lacks override. Please contact an administrator.");
     ctx.messageService.sendServerInfo(playerState.userId, "Environment ID: " + entityState.id + " Action: " + actionName);
@@ -252,7 +253,7 @@ export function processPendingEnvironmentActions(ctx: ActionContext): void {
       // Check if still moving
       const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
       const isMoving = ctx.pathfindingSystem.hasMovementPlan(entityRef);
-      
+
       if (isMoving) {
         // Still pathfinding, wait for next tick
         continue;
@@ -261,7 +262,7 @@ export function processPendingEnvironmentActions(ctx: ActionContext): void {
       // Movement finished - check if in valid position
       const actionName = ACTION_TO_STRING[pending.action];
       const isInPosition = checkPosition(ctx, playerState, entityState, isDoor, actionName);
-      
+
       if (!isInPosition) {
         // Not in position and not moving - failed to reach
         ctx.messageService.sendServerInfo(playerState.userId, "Can't reach that");
@@ -325,11 +326,14 @@ function checkPosition(
   actionName?: string
 ): boolean {
   if (actionName) {
-    const athleticsObstacle = getAthleticsObstacleLocations(ctx, entityState.id, actionName);
-    if (athleticsObstacle) {
+    const eventAction = getAthleticsObstacleEventAction(ctx, entityState.id, actionName);
+    if (eventAction) {
+      if (eventAction.startLocations && eventAction.startLocations.length > 0) {
+        return isPlayerAtLocation(playerState, eventAction.location1!);
+      }
       return (
-        isPlayerAtLocation(playerState, athleticsObstacle.location1) ||
-        isPlayerAtLocation(playerState, athleticsObstacle.location2)
+        isPlayerAtLocation(playerState, eventAction.location1!) ||
+        isPlayerAtLocation(playerState, eventAction.location2!)
       );
     }
   }
@@ -338,12 +342,12 @@ function checkPosition(
   if (isDoor) {
     return checkAdjacentToDirectionalBlockingEntity(ctx, playerState, entityState);
   }
-  
+
   // Small entities (1x1): Cardinal adjacency only
   // Large entities (2x2+): Allow diagonal adjacency
   const isSmallEntity = entityState.width <= 1 && entityState.length <= 1;
   const allowDiagonal = !isSmallEntity;
-  
+
   const isAdjacentToEntity = checkAdjacentToEnvironment(ctx, playerState, entityState, false, allowDiagonal);
   if (isAdjacentToEntity) {
     return true;
@@ -400,7 +404,7 @@ function startPathfinding(
   // Determine adjacency rules based on entity size
   const isSmallEntity = entityState.width <= 1 && entityState.length <= 1;
   const allowDiagonal = isDoor ? false : !isSmallEntity; // Doors: false, Small: false, Large: true
-  
+
   const path = buildMovementPathAdjacent(
     ctx,
     playerState.x,
@@ -440,7 +444,7 @@ function startPathfinding(
 
   const speed = playerState.settings[PlayerSetting.IsSprinting] === 1 ? 2 : 1;
   const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
-  
+
   // Schedule movement - NO CALLBACK needed, tick processor handles completion
   ctx.pathfindingSystem.scheduleMovementPlan(
     entityRef,
@@ -475,11 +479,11 @@ function getClimbSameMapLevelSideLocations(
   return locations;
 }
 
-function getAthleticsObstacleLocations(
+function getAthleticsObstacleEventAction(
   ctx: ActionContext,
   entityId: number,
   actionName: string
-): { location1: WorldEntityActionLocation; location2: WorldEntityActionLocation } | null {
+): PlayerEventAction | null {
   const actionConfig = ctx.worldEntityActionService.getActionConfig(entityId, actionName);
   if (!actionConfig) {
     return null;
@@ -491,14 +495,26 @@ function getAthleticsObstacleLocations(
       eventAction.location1 &&
       eventAction.location2
     ) {
-      return {
-        location1: eventAction.location1,
-        location2: eventAction.location2
-      };
+      return eventAction;
     }
   }
 
   return null;
+}
+
+function getAthleticsObstacleLocations(
+  ctx: ActionContext,
+  entityId: number,
+  actionName: string
+): { location1: WorldEntityActionLocation; location2: WorldEntityActionLocation } | null {
+  const eventAction = getAthleticsObstacleEventAction(ctx, entityId, actionName);
+  if (!eventAction) {
+    return null;
+  }
+  return {
+    location1: eventAction.location1!,
+    location2: eventAction.location2!
+  };
 }
 
 function isPlayerAtLocation(
@@ -563,18 +579,31 @@ function getBestPathToAthleticsObstacleLocation(
     return null;
   }
 
-  const athleticsObstacle = getAthleticsObstacleLocations(ctx, entityState.id, actionName);
-  if (!athleticsObstacle) {
+  const eventAction = getAthleticsObstacleEventAction(ctx, entityState.id, actionName);
+  if (!eventAction || !eventAction.location1 || !eventAction.location2) {
     return null;
   }
 
+  if (eventAction.startLocations && eventAction.startLocations.length > 0) {
+    const isAtStart = eventAction.startLocations.some(
+      (loc) => isPlayerAtLocation(playerState, loc)
+    );
+    if (!isAtStart) {
+      return null;
+    }
+  }
+
   let bestPath: ReturnType<typeof buildMovementPath> = null;
-  for (const location of [athleticsObstacle.location1, athleticsObstacle.location2]) {
+  const targets = eventAction.startLocations && eventAction.startLocations.length > 0
+    ? [eventAction.location1]
+    : [eventAction.location1, eventAction.location2];
+
+  for (const location of targets) {
     if (location.lvl !== playerState.mapLevel) {
       continue;
     }
 
-    const candidatePath = buildMovementPath(
+    let candidatePath = buildMovementPath(
       ctx,
       playerState.x,
       playerState.y,
@@ -582,6 +611,10 @@ function getBestPathToAthleticsObstacleLocation(
       location.y,
       playerState.mapLevel
     );
+    if ((!candidatePath || candidatePath.length <= 1) && eventAction.startLocations) {
+      candidatePath = buildStraightLinePath(playerState.x, playerState.y, location.x, location.y);
+    }
+
     if (!candidatePath || candidatePath.length <= 1) {
       continue;
     }
@@ -700,7 +733,7 @@ function executeOverrideAction(
       // Use custom message from action config, or fall back to action-specific defaults
       let failureMessage;
       let detailedFailureMessage: string = requirementCheck.failureReason ?? "";
-      
+
       if (!failureMessage) {
         // Default messages based on action type
         switch (actionName) {
@@ -742,12 +775,15 @@ function executeOverrideAction(
           case "touch":
             failureMessage = "Nothing happens.";
             break;
+          case "walk_across":
+            failureMessage = "You cannot walk across this.";
+            break;
           default:
             // Fall back to detailed requirement failure reason
             failureMessage = requirementCheck.failureReason || "You don't meet the requirements.";
         }
       }
-      
+
       ctx.messageService.sendServerInfo(playerState.userId, failureMessage);
       ctx.messageService.sendServerInfo(playerState.userId, detailedFailureMessage);
       return;
@@ -795,8 +831,8 @@ function executeOverrideAction(
           ctx,
           playerState,
           entityState,
-          eventAction.location1,
-          eventAction.location2
+          eventAction,
+          actionName
         );
         break;
 
@@ -1623,7 +1659,7 @@ function executeClimbSameMapLevel(
     // Choose the closer one
     const distToSideOne = Math.abs(playerState.x - sideOne.x) + Math.abs(playerState.y - sideOne.y);
     const distToSideTwo = Math.abs(playerState.x - sideTwo.x) + Math.abs(playerState.y - sideTwo.y);
-    
+
     if (distToSideOne <= distToSideTwo) {
       targetSide = sideTwo;
     } else {
@@ -1681,9 +1717,14 @@ function executeAthleticsObstacle(
   ctx: ActionContext,
   playerState: PlayerState,
   entityState: WorldEntityState,
-  location1: WorldEntityActionLocation | undefined,
-  location2: WorldEntityActionLocation | undefined
+  eventAction: PlayerEventAction,
+  actionName: string
 ): void {
+  const location1 = eventAction.location1;
+  const location2 = eventAction.location2;
+  const location3 = eventAction.location3;
+  const speed = eventAction.speed !== undefined ? eventAction.speed : 1;
+
   if (!location1 || !location2) {
     ctx.messageService.sendServerInfo(playerState.userId, "You cannot do that right now.");
     return;
@@ -1708,25 +1749,85 @@ function executeAthleticsObstacle(
     return;
   }
 
+  const isJump = actionName.startsWith("jump_");
+  const delayTicks = isJump && eventAction.delayTicks !== undefined ? eventAction.delayTicks : (isJump ? 1 : 0);
+
   const started = ctx.delaySystem.startDelay({
     userId: playerState.userId,
     type: DelayType.Blocking,
-    ticks: travelTicks
+    ticks: travelTicks + delayTicks,
+    onComplete: (userId) => {
+      if (location3 && isAtLocation1) {
+        const result = ctx.teleportService.changeMapLevel(
+          userId,
+          location3.x,
+          location3.y,
+          location3.lvl as MapLevel
+        );
+        if (!result.success) {
+          ctx.messageService.sendServerInfo(userId, "Unable to teleport");
+        }
+      }
+    }
   });
   if (!started) {
     return;
   }
 
+  if (isJump) {
+    const actionValue = eventAction.actionValue !== undefined ? eventAction.actionValue : 1;
+    const actionTickLength = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : travelTicks;
+    console.log(
+      `Path length: ${path.length}\n` +
+      `Travel ticks: ${travelTicks}\n` +
+      `Action tick length: ${actionTickLength}\n` +
+      `Delay ticks: ${delayTicks}`);
+
+    const payload = buildEntityPerformedPhysicalActionPayload({
+      EntityID: playerState.userId,
+      EntityType: EntityType.Player,
+      Action: 0,
+      ActionTickLength: actionTickLength,
+      ActionValue: actionValue,
+      DelayTicks: delayTicks
+    });
+
+    const viewers = ctx.spatialIndex.getPlayersViewingPosition(playerState.mapLevel, playerState.x, playerState.y);
+    for (const viewer of viewers) {
+      ctx.enqueueUserMessage(viewer.id, GameAction.EntityPerformedPhysicalAction, payload);
+    }
+  }
+
   const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
   ctx.pathfindingSystem.deleteMovementPlan(entityRef);
-  ctx.pathfindingSystem.scheduleMovementPlan(
-    entityRef,
-    playerState.mapLevel,
-    path,
-    1,
-    undefined,
-    { lockSpeed: true }
-  );
+
+  if (isJump) {
+    // For jumps, immediately snap the player's logical position to the destination
+    // The client plays the tweened arc visually from the EntityPerformedPhysicalAction packet
+    const oldPosition = { x: playerState.x, y: playerState.y, mapLevel: playerState.mapLevel };
+
+    // Update player position (sets dirty flag for persistence)
+    playerState.updateLocation(destination.lvl as MapLevel, destination.x, destination.y);
+
+    const newPosition = { x: playerState.x, y: playerState.y, mapLevel: playerState.mapLevel };
+
+    // Emit event so VisibilitySystem broadcasts EntityMoved / handles region changes
+    ctx.eventBus.emit(createPlayerMovedEvent(
+      playerState.userId,
+      oldPosition,
+      newPosition
+    ));
+  } else {
+    // For non-jumps (e.g. balancing on logs), schedule a movement plan to interpolate walking
+    ctx.pathfindingSystem.scheduleMovementPlan(
+      entityRef,
+      playerState.mapLevel,
+      path,
+      speed,
+      undefined,
+      { lockSpeed: true }
+    );
+  }
 }
 
 /**
@@ -1825,14 +1926,14 @@ function executeMineThroughRocks(
 
   // Check if player has a pickaxe equipped
   const weaponItemId = ctx.equipmentService.getEquippedItemId(playerState.userId, "weapon");
-  
+
   if (!weaponItemId || !ctx.itemCatalog) {
     ctx.messageService.sendServerInfo(playerState.userId, "You need to equip a pickaxe to do that");
     return;
   }
 
   const weaponDef = ctx.itemCatalog.getDefinitionById(weaponItemId);
-  
+
   if (!weaponDef || !weaponDef.equippableRequirements) {
     ctx.messageService.sendServerInfo(playerState.userId, "You need to equip a pickaxe to do that");
     return;
@@ -1855,11 +1956,11 @@ function executeMineThroughRocks(
         // Use effective level (includes potions - equipment bonuses)
         const playerLevel = playerState.getSkillBoostedLevel(requirement.skill);
         const requiredLevel = requirement.level;
-        
+
         // Check operator (default to >=)
         const operator = requirement.operator || ">=";
         let meetsRequirement = false;
-        
+
         switch (operator) {
           case ">=":
             meetsRequirement = playerLevel >= requiredLevel;
@@ -1880,10 +1981,10 @@ function executeMineThroughRocks(
           default:
             meetsRequirement = playerLevel >= requiredLevel;
         }
-        
+
         if (!meetsRequirement) {
           ctx.messageService.sendServerInfo(
-            playerState.userId, 
+            playerState.userId,
             `You need a ${requirement.skill} level of ${requiredLevel} to do that`
           );
           return;
