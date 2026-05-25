@@ -1723,7 +1723,6 @@ function executeAthleticsObstacle(
   const location1 = eventAction.location1;
   const location2 = eventAction.location2;
   const location3 = eventAction.location3;
-  const speed = eventAction.speed !== undefined ? eventAction.speed : 1;
 
   if (!location1 || !location2) {
     ctx.messageService.sendServerInfo(playerState.userId, "You cannot do that right now.");
@@ -1744,12 +1743,25 @@ function executeAthleticsObstacle(
 
   const destination = isAtLocation1 ? location2 : location1;
   const path = buildStraightLinePath(playerState.x, playerState.y, destination.x, destination.y);
-  const travelTicks = path.length - 1;
+  if (path.length <= 1) {
+    return;
+  }
+
+  const isInstantJump = actionName === "jump_to" || actionName === "jump_in" || actionName === "climb_over";
+  const isPathJump = actionName === "jump_on" || actionName === "jump_over" || actionName === "leap_from";
+  const isJump = isInstantJump || isPathJump;
+
+  let speed = eventAction.speed !== undefined ? eventAction.speed : 1;
+  if (isJump) {
+    const targetTicks = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : 1;
+    speed = Math.max(1, Math.ceil((path.length - 1) / targetTicks));
+  }
+
+  const travelTicks = Math.ceil((path.length - 1) / speed);
   if (travelTicks <= 0) {
     return;
   }
 
-  const isJump = actionName.startsWith("jump_");
   const delayTicks = isJump && eventAction.delayTicks !== undefined ? eventAction.delayTicks : (isJump ? 1 : 0);
 
   const started = ctx.delaySystem.startDelay({
@@ -1758,27 +1770,75 @@ function executeAthleticsObstacle(
     ticks: travelTicks + delayTicks,
     onComplete: (userId) => {
       if (location3 && isAtLocation1) {
-        const result = ctx.teleportService.changeMapLevel(
-          userId,
-          location3.x,
-          location3.y,
-          location3.lvl as MapLevel
-        );
-        if (!result.success) {
-          ctx.messageService.sendServerInfo(userId, "Unable to teleport");
+        if (location3.lvl !== playerState.mapLevel) {
+          const result = ctx.teleportService.changeMapLevel(
+            userId,
+            location3.x,
+            location3.y,
+            location3.lvl as MapLevel
+          );
+          if (!result.success) {
+            ctx.messageService.sendServerInfo(userId, "Unable to teleport");
+          }
+        } else {
+          // Same-level transition (mushroom jump landing)
+          const oldPosition = {
+            mapLevel: playerState.mapLevel,
+            x: playerState.x,
+            y: playerState.y,
+          };
+          ctx.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: userId });
+          playerState.updateLocation(location3.lvl as MapLevel, location3.x, location3.y);
+          const newPosition = {
+            mapLevel: playerState.mapLevel,
+            x: playerState.x,
+            y: playerState.y,
+          };
+          ctx.eventBus.emit(createPlayerMovedEvent(
+            userId,
+            oldPosition,
+            newPosition
+          ));
         }
       }
     }
   });
-  if (!started) {
-    return;
-  }
+  // if (!started) {
+  //   return;
+  // }
 
-  if (isJump) {
+  const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
+
+  if (isInstantJump) {
+    // Delete any existing movement plans to prevent conflicts
+    ctx.pathfindingSystem.deleteMovementPlan(entityRef);
+
+    const oldPosition = {
+      mapLevel: playerState.mapLevel,
+      x: playerState.x,
+      y: playerState.y,
+    };
+
+    // Update logical position immediately
+    playerState.updateLocation(destination.lvl as MapLevel, destination.x, destination.y);
+
+    const newPosition = {
+      mapLevel: playerState.mapLevel,
+      x: playerState.x,
+      y: playerState.y,
+    };
+
+    // Emit event so VisibilitySystem broadcasts the final target location packet (EntityMoveTo)
+    ctx.eventBus.emit(createPlayerMovedEvent(
+      playerState.userId,
+      oldPosition,
+      newPosition
+    ));
+
     const actionValue = eventAction.actionValue !== undefined ? eventAction.actionValue : 1;
     const actionTickLength = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : travelTicks;
     console.log(
-      `Path length: ${path.length}\n` +
+      `Instant jump! Path length: ${path.length}\n` +
       `Travel ticks: ${travelTicks}\n` +
       `Action tick length: ${actionTickLength}\n` +
       `Delay ticks: ${delayTicks}`);
@@ -1796,29 +1856,37 @@ function executeAthleticsObstacle(
     for (const viewer of viewers) {
       ctx.enqueueUserMessage(viewer.id, GameAction.EntityPerformedPhysicalAction, payload);
     }
-  }
-
-  const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
-  ctx.pathfindingSystem.deleteMovementPlan(entityRef);
-
-  if (isJump) {
-    // For jumps, immediately snap the player's logical position to the destination
-    // The client plays the tweened arc visually from the EntityPerformedPhysicalAction packet
-    const oldPosition = { x: playerState.x, y: playerState.y, mapLevel: playerState.mapLevel };
-
-    // Update player position (sets dirty flag for persistence)
-    playerState.updateLocation(destination.lvl as MapLevel, destination.x, destination.y);
-
-    const newPosition = { x: playerState.x, y: playerState.y, mapLevel: playerState.mapLevel };
-
-    // Emit event so VisibilitySystem broadcasts EntityMoved / handles region changes
-    ctx.eventBus.emit(createPlayerMovedEvent(
-      playerState.userId,
-      oldPosition,
-      newPosition
-    ));
   } else {
-    // For non-jumps (e.g. balancing on logs), schedule a movement plan to interpolate walking
+    // For isPathJump (like "jump_on") and non-jumps (like log balancing):
+    // Delete any existing movement plans to prevent conflicts
+    ctx.pathfindingSystem.deleteMovementPlan(entityRef);
+
+    // If it's a path-based jump (e.g. jump_on / jump_over), broadcast physical action packet first
+    if (isPathJump) {
+      const actionValue = eventAction.actionValue !== undefined ? eventAction.actionValue : 1;
+      const actionTickLength = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : travelTicks;
+      console.log(
+        `Path jump! Path length: ${path.length}\n` +
+        `Travel ticks: ${travelTicks}\n` +
+        `Action tick length: ${actionTickLength}\n` +
+        `Delay ticks: ${delayTicks}`);
+
+      const payload = buildEntityPerformedPhysicalActionPayload({
+        EntityID: playerState.userId,
+        EntityType: EntityType.Player,
+        Action: 0,
+        ActionTickLength: actionTickLength,
+        ActionValue: actionValue,
+        DelayTicks: delayTicks
+      });
+
+      const viewers = ctx.spatialIndex.getPlayersViewingPosition(playerState.mapLevel, playerState.x, playerState.y);
+      for (const viewer of viewers) {
+        ctx.enqueueUserMessage(viewer.id, GameAction.EntityPerformedPhysicalAction, payload);
+      }
+    }
+
+    // Schedule pathfinding to move the player step-by-step
     ctx.pathfindingSystem.scheduleMovementPlan(
       entityRef,
       playerState.mapLevel,
