@@ -11042,6 +11042,371 @@
         ]
     },
     {
+        "worldEntityTypeId": 12574,
+        "onActions": [
+            {
+                "targetAction": "walk_across",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 92,
+                            "y": 455,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 87,
+                            "y": 455,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12575,
+        "onActions": [
+            {
+                "targetAction": "climb_over",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 92,
+                            "y": 464,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 92,
+                            "y": 465,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12576,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 95,
+                            "y": 467,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 95,
+                            "y": 470,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12577,
+        "onActions": [
+            {
+                "targetAction": "walk_across",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 94,
+                            "y": 471,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 89,
+                            "y": 471,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12578,
+        "onActions": [
+            {
+                "targetAction": "walk_across",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 88,
+                            "y": 470,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 83,
+                            "y": 470,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12579,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 82,
+                            "y": 470,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 82,
+                            "y": 467,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12580,
+        "onActions": [
+            {
+                "targetAction": "climb_over",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 78,
+                            "y": 459,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 78,
+                            "y": 457,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12586,
+        "onActions": [
+            {
+                "targetAction": "jump_over",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 77,
+                            "y": 453,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 77,
+                            "y": 447,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12587,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 83,
+                            "y": 442,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 86,
+                            "y": 442,
+                            "lvl": 1
+                        },
+                        "actionValue": 1,
+                        "actionTickLength": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12588,
+        "onActions": [
+            {
+                "targetAction": "leap_from",
+                "requirements": [
+                    {
+                        "desc": "Requires Athletics level 50",
+                        "type": "skill",
+                        "skill": "athletics",
+                        "level": 50,
+                        "operator": ">="
+                    }
+                ],
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 89,
+                            "y": 442,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 98,
+                            "y": 442,
+                            "lvl": 1
+                        },
+                        "actionTickLength": 1,
+                        "actionValue": 1,
+                        "delayTicks": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "worldEntityTypeId": 12632,
+        "onActions": [
+            {
+                "targetAction": "climb_same_map_level",
+                "requirements": null,
+                "playerEventActions": [
+                    {
+                        "type": "athleticsObstacle",
+                        "location1": {
+                            "x": 96,
+                            "y": 414,
+                            "lvl": 1
+                        },
+                        "location2": {
+                            "x": 93,
+                            "y": 414,
+                            "lvl": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "worldEntityTypeId": 12647,
         "onActions": [
             {
