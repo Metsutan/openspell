@@ -10518,7 +10518,8 @@
                             "x": -17,
                             "y": 52,
                             "lvl": 1
-                        }
+                        },
+                        "xpReward": 10
                     }
                 ]
             }
@@ -10542,7 +10543,8 @@
                             "x": -19,
                             "y": 52,
                             "lvl": 1
-                        }
+                        },
+                        "xpReward": 5
                     }
                 ]
             }
@@ -10566,7 +10568,8 @@
                             "x": -22,
                             "y": 43,
                             "lvl": 1
-                        }
+                        },
+                        "xpReward": 10
                     }
                 ]
             }
@@ -10590,7 +10593,8 @@
                             "x": -21,
                             "y": 35,
                             "lvl": 1
-                        }
+                        },
+                        "xpReward": 5
                     }
                 ]
             }
@@ -10614,7 +10618,9 @@
                             "x": -12,
                             "y": 30,
                             "lvl": 1
-                        }
+                        },
+                        "oneWay": true,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -10638,7 +10644,9 @@
                             "x": -9,
                             "y": 46,
                             "lvl": 1
-                        }
+                        },
+                        "oneWay": true,
+                        "xpReward": 50
                     }
                 ]
             }
@@ -10672,7 +10680,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -10706,7 +10715,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -10740,7 +10750,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -10774,7 +10785,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -10808,7 +10820,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 10
                     }
                 ]
             }
@@ -10842,7 +10855,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 10
                     }
                 ]
             }
@@ -10876,7 +10890,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 10
                     }
                 ]
             }
@@ -10915,7 +10930,9 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "oneWay": true,
+                        "xpReward": 35
                     }
                 ]
             }
@@ -10949,7 +10966,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 20
                     }
                 ]
             }
@@ -11035,7 +11053,9 @@
                         ],
                         "actionValue": 3,
                         "actionTickLength": 4,
-                        "speed": 2
+                        "speed": 2,
+                        "oneWay": true,
+                        "xpReward": 80
                     }
                 ]
             }
@@ -11069,7 +11089,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -11103,7 +11124,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 20
                     }
                 ]
             }
@@ -11137,7 +11159,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 10
                     }
                 ]
             }
@@ -11171,7 +11194,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -11205,7 +11229,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 25
                     }
                 ]
             }
@@ -11239,7 +11264,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 10
                     }
                 ]
             }
@@ -11273,7 +11299,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 20
                     }
                 ]
             }
@@ -11306,8 +11333,11 @@
                             "y": 447,
                             "lvl": 1
                         },
-                        "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 2,
+                        "actionValue": 1.25,
+                        "delayTicks": 1,
+                        "oneWay": true,
+                        "xpReward": 60
                     }
                 ]
             }
@@ -11341,7 +11371,8 @@
                             "lvl": 1
                         },
                         "actionValue": 1,
-                        "actionTickLength": 1
+                        "actionTickLength": 1,
+                        "xpReward": 10
                     }
                 ]
             }
@@ -11376,7 +11407,9 @@
                         },
                         "actionTickLength": 1,
                         "actionValue": 1,
-                        "delayTicks": 2
+                        "delayTicks": 2,
+                        "oneWay": true,
+                        "xpReward": 600
                     }
                 ]
             }
