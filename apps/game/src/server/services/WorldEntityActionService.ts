@@ -39,7 +39,9 @@ export interface PlayerEventAction {
   location1?: WorldEntityActionLocation;
   /** Used by athleticsObstacle - position on other side of obstacle */
   location2?: WorldEntityActionLocation;
-  /** Used by athleticsObstacle jump actions - Mushroom jump final position */
+  /** Used by athleticsObstacle - if true, can only be traversed from location1 to location2 */
+  oneWay?: boolean;
+  /** Used by athleticsObstacle jump actions - jump in pipe final position */
   location3?: WorldEntityActionLocation;
   /** Used by athleticsObstacle jump actions - optional start locations */
   startLocations?: WorldEntityActionLocation[];
@@ -51,6 +53,8 @@ export interface PlayerEventAction {
   delayTicks?: number;
   /** Used by athleticsObstacle - path speed */
   speed?: number;
+  /** Used by athleticsObstacle - XP reward */
+  xpReward?: number;
   /** Used by PlayerGiveItems - optional message when items are removed */
   messageToPlayer?: string;
   /** Used by PlayerGiveItems - item stacks removed from player inventory */

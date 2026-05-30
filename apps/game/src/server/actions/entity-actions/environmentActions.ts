@@ -1741,6 +1741,11 @@ function executeAthleticsObstacle(
     return;
   }
 
+  if (eventAction.oneWay && !isAtLocation1) {
+    ctx.messageService.sendServerInfo(playerState.userId, "You cannot do that from here.");
+    return;
+  }
+
   const destination = isAtLocation1 ? location2 : location1;
   const path = buildStraightLinePath(playerState.x, playerState.y, destination.x, destination.y);
   if (path.length <= 1) {
@@ -1755,6 +1760,9 @@ function executeAthleticsObstacle(
   if (isJump) {
     const targetTicks = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : 1;
     speed = Math.max(1, Math.ceil((path.length - 1) / targetTicks));
+
+    // Clamp the speed to a maximum of 3 tiles per tick so the client doesn't interpret it as a teleport
+    speed = Math.min(speed, 3);
   }
 
   const travelTicks = Math.ceil((path.length - 1) / speed);
@@ -1769,6 +1777,16 @@ function executeAthleticsObstacle(
     type: DelayType.Blocking,
     ticks: travelTicks + delayTicks,
     onComplete: (userId) => {
+      // Grant the XP to the player when the delay is complete
+      const pState = ctx.playerStatesByUserId.get(userId);
+      if (pState && eventAction.xpReward) {
+        ctx.experienceService.addSkillXp(
+          pState,
+          SKILLS.athletics,
+          eventAction.xpReward,
+          { sendGainedExp: true }
+        );
+      }
       if (location3 && isAtLocation1) {
         if (location3.lvl !== playerState.mapLevel) {
           const result = ctx.teleportService.changeMapLevel(
@@ -1803,9 +1821,9 @@ function executeAthleticsObstacle(
       }
     }
   });
-  // if (!started) {
-  //   return;
-  // }
+  if (!started) {
+    return;
+  }
 
   const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
 
@@ -1837,11 +1855,6 @@ function executeAthleticsObstacle(
 
     const actionValue = eventAction.actionValue !== undefined ? eventAction.actionValue : 1;
     const actionTickLength = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : travelTicks;
-    console.log(
-      `Instant jump! Path length: ${path.length}\n` +
-      `Travel ticks: ${travelTicks}\n` +
-      `Action tick length: ${actionTickLength}\n` +
-      `Delay ticks: ${delayTicks}`);
 
     const payload = buildEntityPerformedPhysicalActionPayload({
       EntityID: playerState.userId,
@@ -1865,11 +1878,6 @@ function executeAthleticsObstacle(
     if (isPathJump) {
       const actionValue = eventAction.actionValue !== undefined ? eventAction.actionValue : 1;
       const actionTickLength = eventAction.actionTickLength !== undefined ? eventAction.actionTickLength : travelTicks;
-      console.log(
-        `Path jump! Path length: ${path.length}\n` +
-        `Travel ticks: ${travelTicks}\n` +
-        `Action tick length: ${actionTickLength}\n` +
-        `Delay ticks: ${delayTicks}`);
 
       const payload = buildEntityPerformedPhysicalActionPayload({
         EntityID: playerState.userId,
@@ -1887,14 +1895,32 @@ function executeAthleticsObstacle(
     }
 
     // Schedule pathfinding to move the player step-by-step
-    ctx.pathfindingSystem.scheduleMovementPlan(
-      entityRef,
-      playerState.mapLevel,
-      path,
-      speed,
-      undefined,
-      { lockSpeed: true }
-    );
+    if (delayTicks > 0) {
+      ctx.delaySystem.startDelay({
+        userId: playerState.userId,
+        type: DelayType.NonBlocking,
+        ticks: delayTicks,
+        onComplete: () => {
+          ctx.pathfindingSystem.scheduleMovementPlan(
+            entityRef,
+            playerState.mapLevel,
+            path,
+            speed,
+            undefined,
+            { lockSpeed: true }
+          );
+        }
+      });
+    } else {
+      ctx.pathfindingSystem.scheduleMovementPlan(
+        entityRef,
+        playerState.mapLevel,
+        path,
+        speed,
+        undefined,
+        { lockSpeed: true }
+      );
+    }
   }
 }
 
