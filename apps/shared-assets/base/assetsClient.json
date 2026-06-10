@@ -21,7 +21,7 @@
                 "pickpocketDefs": "https://cdn.openspell.dev/static/pickpocketdefs.e224d0c2.carbon",
                 "worldEntityLootDefs": "https://cdn.openspell.dev/static/worldentitylootdefs.a198ea33.carbon",
                 "npcConversationDefs": "https://cdn.openspell.dev/static/npcconversationdefs.16b31ded.carbon",
-                "worldEntityActions": "https://cdn.openspell.dev/static/worldentityactions.33d326d6.carbon",
+                "worldEntityActions": "https://cdn.openspell.dev/static/worldentityactions.68932f6f.carbon",
                 "specialCoordinatesDefs": "https://cdn.openspell.dev/static/specialcoordinatesdefs.f2d99243.carbon"
             },
             "gameAssets": {

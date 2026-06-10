@@ -1772,62 +1772,64 @@ function executeAthleticsObstacle(
 
   const delayTicks = isJump && eventAction.delayTicks !== undefined ? eventAction.delayTicks : (isJump ? 1 : 0);
 
-  const started = ctx.delaySystem.startDelay({
-    userId: playerState.userId,
-    type: DelayType.Blocking,
-    ticks: travelTicks + delayTicks,
-    onComplete: (userId) => {
-      // Grant the XP to the player when the delay is complete
-      const pState = ctx.playerStatesByUserId.get(userId);
-      if (pState && eventAction.xpReward) {
-        ctx.experienceService.addSkillXp(
-          pState,
-          SKILLS.athletics,
-          eventAction.xpReward,
-          { sendGainedExp: true }
+  const onObstacleComplete = (userId: number) => {
+    // Grant the XP to the player when the delay or movement is complete
+    const pState = ctx.playerStatesByUserId.get(userId);
+    if (pState && eventAction.xpReward) {
+      ctx.experienceService.addSkillXp(
+        pState,
+        SKILLS.athletics,
+        eventAction.xpReward,
+        { sendGainedExp: true }
+      );
+    }
+    if (location3 && isAtLocation1) {
+      if (location3.lvl !== playerState.mapLevel) {
+        const result = ctx.teleportService.changeMapLevel(
+          userId,
+          location3.x,
+          location3.y,
+          location3.lvl as MapLevel
         );
-      }
-      if (location3 && isAtLocation1) {
-        if (location3.lvl !== playerState.mapLevel) {
-          const result = ctx.teleportService.changeMapLevel(
-            userId,
-            location3.x,
-            location3.y,
-            location3.lvl as MapLevel
-          );
-          if (!result.success) {
-            ctx.messageService.sendServerInfo(userId, "Unable to teleport");
-          }
-        } else {
-          // Same-level transition (mushroom jump landing)
-          const oldPosition = {
-            mapLevel: playerState.mapLevel,
-            x: playerState.x,
-            y: playerState.y,
-          };
-          ctx.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: userId });
-          playerState.updateLocation(location3.lvl as MapLevel, location3.x, location3.y);
-          const newPosition = {
-            mapLevel: playerState.mapLevel,
-            x: playerState.x,
-            y: playerState.y,
-          };
-          ctx.eventBus.emit(createPlayerMovedEvent(
-            userId,
-            oldPosition,
-            newPosition
-          ));
+        if (!result.success) {
+          ctx.messageService.sendServerInfo(userId, "Unable to teleport");
         }
+      } else {
+        // Same-level transition (mushroom jump landing)
+        const oldPosition = {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y,
+        };
+        ctx.pathfindingSystem.deleteMovementPlan({ type: EntityType.Player, id: userId });
+        playerState.updateLocation(location3.lvl as MapLevel, location3.x, location3.y);
+        const newPosition = {
+          mapLevel: playerState.mapLevel,
+          x: playerState.x,
+          y: playerState.y,
+        };
+        ctx.eventBus.emit(createPlayerMovedEvent(
+          userId,
+          oldPosition,
+          newPosition
+        ));
       }
     }
-  });
-  if (!started) {
-    return;
-  }
+  };
 
   const entityRef: EntityRef = { type: EntityType.Player, id: playerState.userId };
 
   if (isInstantJump) {
+    const started = ctx.delaySystem.startDelay({
+      userId: playerState.userId,
+      type: DelayType.Blocking,
+      ticks: travelTicks + delayTicks,
+      onComplete: onObstacleComplete
+    });
+    if (!started) {
+      return;
+    }
+
     // Delete any existing movement plans to prevent conflicts
     ctx.pathfindingSystem.deleteMovementPlan(entityRef);
 
@@ -1906,7 +1908,7 @@ function executeAthleticsObstacle(
             playerState.mapLevel,
             path,
             speed,
-            undefined,
+            () => onObstacleComplete(playerState.userId),
             { lockSpeed: true }
           );
         }
@@ -1917,7 +1919,7 @@ function executeAthleticsObstacle(
         playerState.mapLevel,
         path,
         speed,
-        undefined,
+        () => onObstacleComplete(playerState.userId),
         { lockSpeed: true }
       );
     }
