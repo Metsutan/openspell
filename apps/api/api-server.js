@@ -372,27 +372,42 @@ function resolveAssetsClientPath() {
   return null;
 }
 
-// The original base URL in assetsClient.json that needs to be replaced with CDN_URL
-const ASSETS_ORIGINAL_BASE_URL = process.env.ASSETS_ORIGINAL_BASE_URL || 'https://highspell.com:8887';
+// The original base URL(s) in assetsClient.json that need to be replaced with CDN_URL
+const ASSETS_ORIGINAL_BASE_URL = process.env.ASSETS_ORIGINAL_BASE_URL || 'https://cdn.openspell.dev';
+const KNOWN_BASE_URLS = Array.from(new Set([
+  ASSETS_ORIGINAL_BASE_URL,
+  'https://cdn.openspell.dev',
+  'https://highspell.com:8887'
+])).filter(Boolean);
 
 /**
  * Recursively rewrites URLs in an object, replacing the original base URL with CDN_URL
  */
-function rewriteAssetUrls(obj, originalBase, newBase) {
+function rewriteAssetUrls(obj, originalBases, newBase) {
+  const bases = Array.isArray(originalBases) ? originalBases : [originalBases];
   if (typeof obj === 'string') {
-    // Replace the original base URL with the new CDN URL
-    if (obj.startsWith(originalBase)) {
-      return newBase + obj.slice(originalBase.length);
+    for (const base of bases) {
+      if (obj.startsWith(base)) {
+        return newBase + obj.slice(base.length);
+      }
     }
+    try {
+      if (obj.startsWith('http://') || obj.startsWith('https://')) {
+        const parsedUrl = new URL(obj);
+        if (parsedUrl.pathname.startsWith('/static/')) {
+          return newBase + parsedUrl.pathname;
+        }
+      }
+    } catch (_) {}
     return obj;
   }
   if (Array.isArray(obj)) {
-    return obj.map(item => rewriteAssetUrls(item, originalBase, newBase));
+    return obj.map(item => rewriteAssetUrls(item, originalBases, newBase));
   }
   if (obj && typeof obj === 'object') {
     const result = {};
     for (const key of Object.keys(obj)) {
-      result[key] = rewriteAssetUrls(obj[key], originalBase, newBase);
+      result[key] = rewriteAssetUrls(obj[key], originalBases, newBase);
     }
     return result;
   }
@@ -412,7 +427,7 @@ function sendAssetsClientJson(res) {
     const parsed = JSON.parse(raw);
     
     // Rewrite asset URLs to use the configured CDN_URL
-    const rewritten = rewriteAssetUrls(parsed, ASSETS_ORIGINAL_BASE_URL, CDN_URL);
+    const rewritten = rewriteAssetUrls(parsed, KNOWN_BASE_URLS, CDN_URL);
     
     return res.status(200).json(rewritten);
   } catch (err) {
