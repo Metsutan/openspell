@@ -125,4 +125,9 @@ BEGIN
   CREATE INDEX "player_quests_userId_persistenceId_idx" ON "player_quests"("userId", "persistenceId");
   CREATE INDEX "player_quests_persistenceId_idx" ON "player_quests"("persistenceId");
   CREATE INDEX "player_quests_userId_persistenceId_questId_idx" ON "player_quests"("userId", "persistenceId", "questId");
+
+  -- Add persistenceId to online_users
+  ALTER TABLE "online_users" ADD COLUMN IF NOT EXISTS "persistenceId" INTEGER NOT NULL DEFAULT 1;
+  DROP INDEX IF EXISTS "online_users_userId_key";
+  CREATE UNIQUE INDEX IF NOT EXISTS "online_users_userId_persistenceId_key" ON "online_users"("userId", "persistenceId");
 END $$;

@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { AssetLoader } from "./assets/AssetLoader";
 import { OPPOSITE_DIR, DIRECTION_OFFSETS, PathingDirection } from "./pathfinding";
 import {
     MAP_LEVELS,
@@ -185,19 +186,12 @@ export class WorldModel {
     static async initialize(
         options?: WorldModelLoadOptions
     ): Promise<WorldModel> {
-        const basePath = options?.assetStaticPath ?? STATIC_ASSETS_ROOT;
-        const entityFile = path.join(
-            basePath,
-            options?.entityFileName ?? DEFAULT_ENTITIES_FILE
-        );
-        const definitionFile = path.join(
-            basePath,
-            options?.entityDefinitionFileName ?? DEFAULT_ENTITY_DEFS_FILE
-        );
+        const entityFileName = options?.entityFileName ?? DEFAULT_ENTITIES_FILE;
+        const definitionFileName = options?.entityDefinitionFileName ?? DEFAULT_ENTITY_DEFS_FILE;
 
         const [rawEntities, definitions] = await Promise.all([
-            loadJsonFile<RawWorldEntity[]>(entityFile),
-            loadJsonFile<WorldEntityDefinition[]>(definitionFile),
+            AssetLoader.loadOverlayArray<RawWorldEntity>(entityFileName, "_id"),
+            AssetLoader.loadOverlayArray<WorldEntityDefinition>(definitionFileName, "_id"),
         ]);
 
         const definitionsById = new Map<number, WorldEntityDefinition>();
@@ -218,10 +212,7 @@ export class WorldModel {
 
         const loadedHeightmaps = await Promise.all(
             layersToLoad.map(async (layerConfig) => {
-                const layerPath = path.join(
-                    basePath,
-                    layerConfig.relativePath
-                );
+                const layerPath = AssetLoader.resolveFilePath(layerConfig.relativePath);
                 const layer = await loadHeightmapLayer(layerConfig.name, layerPath);
                 return { config: layerConfig, layer };
             })
@@ -383,10 +374,6 @@ function parseDirection(value?: string | null): Dir {
     return DIRECTION_LOOKUP[normalized] ?? Dir.None;
 }
 
-async function loadJsonFile<T>(filePath: string): Promise<T> {
-    const contents = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(contents) as T;
-}
 
 async function loadHeightmapLayer(
     name: string,

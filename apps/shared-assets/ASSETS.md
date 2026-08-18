@@ -1,7 +1,18 @@
 # Shared Assets Inventory
 
 This document lists the asset files currently referenced under `apps/shared-assets/`.
-If you plan to use your own assets, replace the files referenced here.
+
+## Asset Overlay System
+
+The game server now supports an **Asset Overlay System**. This allows you to use your own custom assets without modifying the base files, preventing merge conflicts when updating the upstream repository.
+
+- **Base Assets**: Located in `apps/shared-assets/base/static/`
+- **Custom Assets**: Located in `apps/shared-assets/custom/static/`
+
+To use custom assets, simply place them in the `custom/static/` directory with the exact same filename.
+- **For JSON Arrays** (like item definitions, NPC definitions): The system will merge your custom array with the base array using the `_id` field. You can override specific items or add new ones without copying the entire file.
+- **For JSON Objects** (like loot tables): The system will merge the objects, allowing you to add or replace specific nested properties.
+- **For Binary Files** (like PNG heightmaps): The custom file will completely replace the base file.
 
 ## Common
 

@@ -2,25 +2,9 @@
  * ShopCatalog.ts - Loads and manages shop definitions.
  */
 
-import fs from "fs/promises";
-import path from "path";
-
-// Static shops path - configurable via environment variable
-// Default assumes shared-assets structure for Docker compatibility
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../assets/AssetLoader";
 
 const SHOP_DEFS_FILENAME = process.env.SHOP_DEFS_FILE || "shopdefs.carbon";
-const SHOP_DEFS_FILE = path.join(STATIC_ASSETS_DIR, SHOP_DEFS_FILENAME);
 
 /**
  * Shop item definition from catalog.
@@ -59,8 +43,7 @@ export class ShopCatalog {
    * Loads shop definitions from disk.
    */
   static async load(): Promise<ShopCatalog> {
-    const defsData = await fs.readFile(SHOP_DEFS_FILE, "utf8");
-    const rawDefs = JSON.parse(defsData) as ShopDefinition[];
+    const rawDefs = await AssetLoader.loadOverlayArray<ShopDefinition>(SHOP_DEFS_FILENAME, "_id");
 
     const definitionsById = new Map<number, ShopDefinition>();
     for (const raw of rawDefs) {

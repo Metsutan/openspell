@@ -16,21 +16,9 @@ import {
   createNPCRemovedEvent
 } from "../events/GameEvents";
 
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../../",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../../world/assets/AssetLoader";
 
 const INSTANCED_NPCS_FILENAME = process.env.INSTANCED_NPC_ENTITIES_FILE || "instancednpcentities.carbon";
-const INSTANCED_NPCS_FILE = path.join(STATIC_ASSETS_DIR, INSTANCED_NPCS_FILENAME);
 
 interface RawInstancedNpcDefinition {
   _id: number;
@@ -424,8 +412,7 @@ export class InstancedNpcService {
   }
 
   private async loadDefinitions(): Promise<void> {
-    const fileContent = await fs.readFile(INSTANCED_NPCS_FILE, "utf8");
-    const rows = JSON.parse(fileContent) as RawInstancedNpcDefinition[];
+    const rows = await AssetLoader.loadOverlayArray<RawInstancedNpcDefinition>(INSTANCED_NPCS_FILENAME, "_id");
     this.definitions.clear();
     for (const row of rows) {
       this.definitions.set(row._id, row);

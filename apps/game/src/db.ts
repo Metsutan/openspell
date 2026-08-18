@@ -159,6 +159,8 @@ export async function upsertWorld(params: {
       update: {
         serverUrl: params.serverUrl,
         persistenceId: params.persistenceId,
+        isActive: true,
+        isDevelopment: false,
         lastHeartbeat: now,
         updatedAt: now,
       },
@@ -170,7 +172,8 @@ export async function upsertWorld(params: {
         locationName: "Unknown",
         flagCode: "USA",
         isActive: true,
-        isDevelopment: process.env.NODE_ENV !== "production",
+        isDevelopment: false,
+        sortOrder: params.serverId,
         lastHeartbeat: now,
       },
     });
@@ -474,7 +477,7 @@ export async function getActiveAccountBansForUserIds(userIds: number[]): Promise
     }
   });
 
-  return rows.map((row) => ({
+  return rows.map((row: any) => ({
     userId: row.id,
     banReason: row.banReason,
     bannedUntil: row.bannedUntil

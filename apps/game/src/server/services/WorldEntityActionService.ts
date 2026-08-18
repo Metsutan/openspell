@@ -1,5 +1,4 @@
-import * as fs from "fs";
-import * as path from "path";
+import { AssetLoader } from "../../world/assets/AssetLoader";
 import {
   RequirementsChecker,
   RequirementCheckContext,
@@ -115,24 +114,13 @@ export class WorldEntityActionService {
       return;
     }
 
-    // Default path to the worldentityactions file - now in shared-assets
-    const defaultStaticDir = path.join(
-      __dirname,
-      "../../../..",
-      "shared-assets/base/static"
-    );
-    const staticDir = process.env.STATIC_ASSETS_PATH
-      ? path.resolve(process.env.STATIC_ASSETS_PATH)
-      : defaultStaticDir;
-
     const worldEntityActionsFilename = process.env.WORLD_ENTITY_ACTIONS_FILE || "worldentityactions.carbon";
-    const defaultPath = path.join(staticDir, worldEntityActionsFilename);
-    const actualPath = filePath ?? defaultPath;
 
     try {
-      console.log(`[WorldEntityActionService] Loading from: ${actualPath}`);
-      const fileContent = fs.readFileSync(actualPath, "utf-8");
-      const configs: WorldEntityTypeConfig[] = JSON.parse(fileContent);
+      const configs = AssetLoader.loadOverlayArraySync<WorldEntityTypeConfig>(
+        worldEntityActionsFilename, 
+        "worldEntityTypeId"
+      );
 
       // Index by worldEntityTypeId for fast lookup
       for (const config of configs) {

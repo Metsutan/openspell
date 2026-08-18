@@ -42,21 +42,9 @@ import { buildStartedTargetingPayload } from "../../protocol/packets/actions/Sta
 import { buildStoppedTargetingPayload } from "../../protocol/packets/actions/StoppedTargeting";
 import { createEntityForcedPublicMessageEvent, createPlayerStartedSkillingEvent } from "../events/GameEvents";
 
-// Static assets path
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../../",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../../world/assets/AssetLoader";
 
 const PICKPOCKET_DEFS_FILENAME = "pickpocketdefs.carbon";
-const PICKPOCKET_DEFS_FILE = path.join(STATIC_ASSETS_DIR, PICKPOCKET_DEFS_FILENAME);
 
 /** Number of ticks delay before pickpocket attempt */
 const PICKPOCKET_DELAY_TICKS = 4;
@@ -159,8 +147,16 @@ export class PickpocketService {
    */
   private async loadPickpocketDefs(): Promise<void> {
     try {
-      const data = await fs.readFile(PICKPOCKET_DEFS_FILE, "utf8");
-      const rawData = JSON.parse(data) as RawPickpocketData;
+      const rawData = await AssetLoader.loadOverlayObject<RawPickpocketData>(
+        PICKPOCKET_DEFS_FILENAME,
+        (base, custom) => {
+          const merged = new Map(base.pickpocketing.map(d => [d._id, d]));
+          for (const d of custom.pickpocketing || []) {
+            merged.set(d._id, d);
+          }
+          return { pickpocketing: Array.from(merged.values()) };
+        }
+      );
 
       for (const def of rawData.pickpocketing) {
         this.pickpocketDefs.set(def._id, def);
