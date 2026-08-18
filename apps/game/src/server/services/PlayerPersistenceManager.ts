@@ -83,6 +83,8 @@ export class PlayerPersistenceManager {
 
   startAutosaveLoop() {
     if (!this.dbEnabled || this.autosaveTimer) return;
+    // Send an immediate heartbeat/cleanup on start
+    void this.runAutosaveLoop();
     this.autosaveTimer = setInterval(() => {
       void this.runAutosaveLoop();
     }, AUTO_SAVE_INTERVAL_MS);

@@ -4,7 +4,7 @@
  *   npm run prisma:generate
  *   node prisma/populate-anti-cheat.js
  *
- * Requires DATABASE_URL (use shared.env or dotenv-cli).
+ * Requires DATABASE_URL (use .env or dotenv-cli).
  */
 
 const { PrismaClient } = require('@prisma/client');

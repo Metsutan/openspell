@@ -1,6 +1,6 @@
 param(
-    [ValidateSet("dev", "prod")]
-    [string]$Mode = "dev",
+    [ValidateSet("dev", "docker", "prod")]
+    [string]$Mode = "docker",
     [switch]$Force,
     [switch]$WriteDockerEnv
 )

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-MODE="${1:-dev}"
+MODE="${1:-docker}"
 FORCE_FLAG=""
 WRITE_DOCKER_ENV=""
 

@@ -23,9 +23,9 @@ services:
     env_file:
       - .env
 
-  migrate:
+  db-init:
     image: ${REGISTRY:-ghcr.io/openspell}/api:${IMAGE_TAG:-latest}
     build: null
     env_file:
       - .env
-    command: ["sh", "-c", "node scripts/validate-env.js migrate && pnpm -C packages/db prisma:migrate"]
+    command: ["sh", "-c", "pnpm -C packages/db prisma:migrate && pnpm -C packages/db prisma:seed"]

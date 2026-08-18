@@ -5,14 +5,14 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "prisma:generate": "dotenv -e ../../apps/shared-assets/base/shared.env -- prisma generate",
-    "prisma:migrate": "dotenv -e ../../apps/shared-assets/base/shared.env -- prisma migrate deploy",
-    "prisma:migrate:dev": "dotenv -e ../../apps/shared-assets/base/shared.env -- prisma migrate dev",
-    "prisma:reset": "dotenv -e ../../apps/shared-assets/base/shared.env -- prisma migrate reset --skip-seed && dotenv -e ../../apps/shared-assets/base/shared.env -- node prisma/seed.js",
-    "prisma:studio": "dotenv -e ../../apps/shared-assets/base/shared.env -- prisma studio",
-    "prisma:seed": "dotenv -e ../../apps/shared-assets/base/shared.env -- node prisma/seed.js",
-    "prisma:setup": "dotenv -e ../../apps/shared-assets/base/shared.env -- prisma migrate deploy && dotenv -e ../../apps/shared-assets/base/shared.env -- node prisma/seed.js",
-    "prisma:anti-cheat-seed": "dotenv -e ../../apps/shared-assets/base/shared.env -- node prisma/populate-anti-cheat.js",
+    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
+    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate deploy",
+    "prisma:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:reset": "dotenv -e ../../.env -- prisma migrate reset --skip-seed && dotenv -e ../../.env -- node prisma/seed.js",
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio",
+    "prisma:seed": "dotenv -e ../../.env -- node prisma/seed.js",
+    "prisma:setup": "dotenv -e ../../.env -- prisma migrate deploy && dotenv -e ../../.env -- node prisma/seed.js",
+    "prisma:anti-cheat-seed": "dotenv -e ../../.env -- node prisma/populate-anti-cheat.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -89,6 +89,8 @@ services:
     ports:
       - "${API_PORT:-3002}:3002"
     depends_on:
+      db-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -176,6 +178,8 @@ services:
     ports:
       - "${CHAT_PORT:-8765}:8765"
     depends_on:
+      db-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     logging:
@@ -184,15 +188,14 @@ services:
         max-size: "10m"
         max-file: "5"
 
-  migrate:
+  db-init:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
       target: migrate
-    container_name: openspell-migrate
-    profiles:
-      - migrate
+    container_name: openspell-db-init
     restart: "no"
+    command: ["sh", "-c", "pnpm -C packages/db prisma:migrate && pnpm -C packages/db prisma:seed"]
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: ${DATABASE_URL}
