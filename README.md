@@ -146,20 +146,16 @@ pnpm install
 # 2. Generate protocol files (required for game server)
 pnpm run protocol:generate
 
-# 3. Generate shared.env from template
+# 3. Generate environment variables file (.env)
 #    - dev = run services on your host (DATABASE_URL uses localhost)
 #    - docker = run services with docker compose (DATABASE_URL uses postgres)
-node scripts/setup-env.js --mode=dev
+./setup-env.ps1 -Mode dev
 
-# 4. Edit apps/shared-assets/base/shared.env with your database URL
-#    Host dev example:    DATABASE_URL=postgresql://openspell:openspell@localhost:5432/openspell?schema=public
-#    Docker compose:      DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema=public
-
-# 5. Run database migrations (make sure DATABASE_URL points to localhost)
+# 4. Run database migrations (make sure DATABASE_URL in .env points to localhost)
 cd packages/db
 pnpm prisma:migrate:dev
 
-# 6. Seed initial data (optional - creates admin user and World 1) (while inside of \packages\db)
+# 5. Seed initial data (creates admin user, skills, and news) (while inside of \packages\db)
 pnpm prisma:seed
 ```
 
@@ -223,7 +219,7 @@ pnpm -C apps/game dev   # Game server with ts-node
 
 ### Environment Configuration
 
-All services load from `apps/shared-assets/base/shared.env`. Key variables for development:
+All services load from the root `.env` file. Key variables for development:
 
 ```env
 DATABASE_URL=postgresql://openspell:openspell@localhost:5432/openspell
@@ -421,14 +417,17 @@ You update the repo on the server and build images there.
 1. **Clone or update the repo**
    - First time: `git clone <your-repo-url> /opt/openspell`
    - Updates: `git pull` in `/opt/openspell`
-2. **Generate/refresh `shared.env`**
-   - `ENV_MODE=prod docker compose --profile init run --rm env-init`
-3. **Build and start services**
-   - `docker compose up -d --build`
-4. **Run database migrations**
-   - `docker compose --profile migrate run --rm migrate`
-5. **Seed initial data** (first-time setup only)
-   - `docker compose run --rm api node packages/db/prisma/seed.js`
+2. **Generate/refresh `.env`**
+   ```powershell
+   ./setup-env.ps1 -Mode docker
+   ```
+
+3. **Start the containers**
+   ```powershell
+   docker compose up -d --build
+   ```
+   *Note: The `db-init` container will automatically run database migrations and seed the initial data before the other services start!*
+
 6. **Configure Cloudflare Tunnel**
    - `your-domain.com` -> `http://localhost:8887`
    - `api.your-domain.com` -> `http://localhost:3002`

@@ -1,23 +1,18 @@
-// Load environment variables from single shared config
 import { config } from "dotenv";
-import { join, resolve } from "path";
 
-// In dev mode (ts-node), __dirname is src/
-// In prod mode (node), __dirname is dist/
-const sharedEnvPath = join(__dirname, "..", "..", "shared-assets", "base", "shared.env");
-
-const result = config({ path: sharedEnvPath });
+const result = config();
 if (result.error) {
-  if (process.env.NODE_ENV !== "production") {
-    console.error(`[env] Failed to load shared.env from ${resolve(sharedEnvPath)}`);
-    console.error(`[env] Make sure to run ./setup-env.ps1 first!`);
+  // If .env is not present on disk, we rely on environment variables injected by Docker Compose / hosting environment
+  if (!process.env.DATABASE_URL) {
+    console.error(`[env] Neither .env file nor critical environment variables found.`);
+    console.error(`[env] Make sure to run ./setup-env.ps1 or provide environment variables!`);
     process.exit(1);
   } else {
-    console.warn(`[env] shared.env not found at ${resolve(sharedEnvPath)}, relying on external environment variables.`);
+    console.log(`[env] Using environment variables from process environment.`);
   }
+} else {
+  console.log(`[env] Loaded environment variables from .env`);
 }
-
-console.log(`[env] Loaded shared.env from ${resolve(sharedEnvPath)}`);
 
 // Verify critical environment variables
 console.log(`[env] DATABASE_URL: ${process.env.DATABASE_URL ? '✓ Set' : '✗ Not set'}`);

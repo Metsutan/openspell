@@ -4,7 +4,7 @@
  */
 
 // Load environment variables from single shared config
-require('dotenv').config({ path: require('path').join(__dirname, '..', 'shared-assets', 'base', 'shared.env') });
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const https = require('https');

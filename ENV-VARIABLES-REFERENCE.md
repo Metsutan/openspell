@@ -6,10 +6,8 @@ This document provides a comprehensive reference for all environment variables u
 
 ```
 OpenSpell/
-├── .env (ROOT - ALL SECRETS)
+├── .env (ROOT - ALL CONFIGURATION AND SECRETS)
 ├── apps/
-│   ├── shared-assets/base/
-│   │   └── shared.env (Shared configuration, URLs, asset paths)
 │   ├── api/.env (Optional - legacy/override only)
 │   ├── web/.env (Optional - legacy/override only)
 │   ├── game/.env (Optional - legacy/override only)
@@ -21,8 +19,7 @@ OpenSpell/
 Run `./setup-env.ps1` to automatically create/update all environment files with sensible defaults.
 
 The script:
-- ✅ Creates root `.env` with all secrets
-- ✅ Creates `apps/shared-assets/base/shared.env` with shared configuration
+- ✅ Creates root `.env` with all configuration and secrets
 - ✅ Generates cryptographically secure random secrets
 - ✅ Never overwrites existing values (safe to run multiple times)
 - ✅ Ensures HTTPS certificates are generated
