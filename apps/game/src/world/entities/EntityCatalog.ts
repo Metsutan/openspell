@@ -1,25 +1,7 @@
-import fs from "fs/promises";
-import path from "path";
-
-// Static entities path - configurable via environment variable
-// Default assumes shared-assets structure for Docker compatibility
-const DEFAULT_STATIC_ENTITIES_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ENTITIES_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ENTITIES_DIR;
+import { AssetLoader } from "../assets/AssetLoader";
 
 const ENTITY_DEFS_FILENAME = process.env.NPC_ENTITY_DEFS_FILE || "npcentitydefs.carbon";
 const ENTITIES_FILENAME = process.env.NPC_ENTITIES_FILE || "npcentities.carbon";
-
-const ENTITY_DEFS_FILE = path.join(STATIC_ENTITIES_DIR, ENTITY_DEFS_FILENAME);
-const ENTITIES_FILE = path.join(STATIC_ENTITIES_DIR, ENTITIES_FILENAME);
 
 export interface EntityCombatStats {
   level: number;
@@ -135,13 +117,10 @@ export class EntityCatalog {
   ) {}
 
   static async load(): Promise<EntityCatalog> {
-    const data = await Promise.all([
-      fs.readFile(ENTITY_DEFS_FILE, "utf8"),
-      fs.readFile(ENTITIES_FILE, "utf8")
+    const [rawDefs, rawEntities] = await Promise.all([
+      AssetLoader.loadOverlayArray<RawEntityDefinition>(ENTITY_DEFS_FILENAME, "_id"),
+      AssetLoader.loadOverlayArray<RawEntityInstance>(ENTITIES_FILENAME, "_id")
     ]);
-
-    const rawDefs = JSON.parse(data[0]) as RawEntityDefinition[];
-    const rawEntities = JSON.parse(data[1]) as RawEntityInstance[];
 
     const definitionsById = new Map<number, EntityDefinition>();
     for (const raw of rawDefs) {

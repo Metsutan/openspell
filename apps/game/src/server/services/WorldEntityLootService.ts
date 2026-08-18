@@ -4,20 +4,9 @@ import { SKILLS, isSkillSlug, type PlayerState, type SkillSlug } from "../../wor
 import { RequirementsChecker, type Requirement } from "./RequirementsChecker";
 import type { ItemCatalog } from "../../world/items/ItemCatalog";
 
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../../",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../../world/assets/AssetLoader";
 
 const WORLD_ENTITY_LOOT_DEFS_FILENAME = process.env.WORLD_ENTITY_LOOT_FILE || "worldentitylootdefs.carbon";
-const WORLD_ENTITY_LOOT_DEFS_FILE = path.join(STATIC_ASSETS_DIR, WORLD_ENTITY_LOOT_DEFS_FILENAME);
 
 export interface WorldEntityLootItem {
   itemId: number;
@@ -121,8 +110,7 @@ export class WorldEntityLootService {
   }
 
   private async loadLootDefinitions(): Promise<void> {
-    const data = await fs.readFile(WORLD_ENTITY_LOOT_DEFS_FILE, "utf8");
-    const defs = JSON.parse(data) as WorldEntityLootDefinition[];
+    const defs = await AssetLoader.loadOverlayArray<WorldEntityLootDefinition>(WORLD_ENTITY_LOOT_DEFS_FILENAME, "_id");
     for (const def of defs) {
       this.lootById.set(def._id, {
         ...def,

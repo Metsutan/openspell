@@ -1,27 +1,9 @@
-import fs from "fs/promises";
-import path from "path";
+import { AssetLoader } from "../assets/AssetLoader";
 import type { MapLevel } from "../Location";
-
-// Static world entities path - configurable via environment variable
-// Default assumes shared-assets structure for Docker compatibility
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
 
 // Uses same env variables as WorldModel.ts for consistency
 const WORLD_ENTITY_DEFS_FILENAME = process.env.WORLD_ENTITY_DEFS_FILE || "worldentitydefs.carbon";
 const WORLD_ENTITIES_FILENAME = process.env.WORLD_ENTITIES_FILE || "worldentities.carbon";
-
-const WORLD_ENTITY_DEFS_FILE = path.join(STATIC_ASSETS_DIR, WORLD_ENTITY_DEFS_FILENAME);
-const WORLD_ENTITIES_FILE = path.join(STATIC_ASSETS_DIR, WORLD_ENTITIES_FILENAME);
 
 /**
  * Action that can be performed when using an item on a world entity.
@@ -97,13 +79,10 @@ export class WorldEntityCatalog {
    * Loads world entity definitions and instances from static files.
    */
   static async load(): Promise<WorldEntityCatalog> {
-    const [defsData, instancesData] = await Promise.all([
-      fs.readFile(WORLD_ENTITY_DEFS_FILE, "utf8"),
-      fs.readFile(WORLD_ENTITIES_FILE, "utf8")
+    const [rawDefs, rawInstances] = await Promise.all([
+      AssetLoader.loadOverlayArray<RawWorldEntityDefinition>(WORLD_ENTITY_DEFS_FILENAME, "_id"),
+      AssetLoader.loadOverlayArray<RawWorldEntityInstance>(WORLD_ENTITIES_FILENAME, "_id")
     ]);
-
-    const rawDefs = JSON.parse(defsData) as RawWorldEntityDefinition[];
-    const rawInstances = JSON.parse(instancesData) as RawWorldEntityInstance[];
 
     // Build definitions maps (by type string and by id)
     const definitionsByType = new Map<string, WorldEntityDefinition>();

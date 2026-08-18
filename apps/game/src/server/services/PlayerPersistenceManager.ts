@@ -269,7 +269,7 @@ export class PlayerPersistenceManager {
     }
 
     try {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         try {
           // Update user's total time played
           await tx.user.update({

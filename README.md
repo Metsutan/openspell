@@ -25,6 +25,13 @@ If you're interest in production: It's not suited for production in its current 
 
 Please always remember to take backups, download, and keep a hold of anything provided to you online that you want to keep. Clone this repository, fork it for yourself, make sure it's available if the repository is ever removed.
 
+## Asset Overlay System
+
+The game supports an **Asset Overlay System** allowing you to use custom `.carbon` definition files and heightmap `.png`s without touching the base files. 
+- **Base Assets**: `apps/shared-assets/base/static/`
+- **Custom Assets**: `apps/shared-assets/custom/static/`
+When defining custom assets, create the corresponding file in `custom/static/`. JSON arrays and objects will be intelligently merged with the base files, and binaries will fully replace them. This separation avoids merge conflicts when pulling downstream updates. See `apps/shared-assets/ASSETS.md` for more info.
+
 ## What's Missing
 
 ### Entity Actions (from `Actions.ts` enum)

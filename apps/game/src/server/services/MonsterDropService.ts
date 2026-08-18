@@ -20,28 +20,13 @@
  * - Roll of 0.4 falls in range [0.3, 0.5] → second item
  */
 
-import fs from "fs/promises";
-import path from "path";
+import { AssetLoader } from "../../world/assets/AssetLoader";
 import { ItemManager } from "../../world/systems/ItemManager";
 import type { MapLevel } from "../../world/Location";
 import type { EntityCatalog } from "../../world/entities/EntityCatalog";
 import type { TreasureMapService } from "./TreasureMapService";
 
-// Static assets path
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../../",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
-
 const LOOT_TABLE_FILENAME = process.env.NPC_LOOT_FILE || "npcloot.carbon";
-const LOOT_TABLE_FILE = path.join(STATIC_ASSETS_DIR, LOOT_TABLE_FILENAME);
 
 /**
  * Represents a single loot item with its drop chance.
@@ -195,8 +180,26 @@ export class MonsterDropService {
    */
   private async loadLootTables(): Promise<void> {
     try {
-      const data = await fs.readFile(LOOT_TABLE_FILE, "utf8");
-      const rawData = JSON.parse(data) as RawLootData;
+      const rawData = await AssetLoader.loadOverlayObject<RawLootData>(
+        LOOT_TABLE_FILENAME,
+        (base, custom) => {
+          const mergedRoot = new Map(base.rootLootTables.map(t => [t._id, t]));
+          for (const t of custom.rootLootTables || []) {
+            mergedRoot.set(t._id, t);
+          }
+          
+          const mergedNpc = new Map(base.npcLootTables.map(t => [t._id, t]));
+          for (const t of custom.npcLootTables || []) {
+            mergedNpc.set(t._id, t);
+          }
+          
+          return {
+            rareLootTable: custom.rareLootTable !== undefined ? custom.rareLootTable : base.rareLootTable,
+            rootLootTables: Array.from(mergedRoot.values()),
+            npcLootTables: Array.from(mergedNpc.values())
+          };
+        }
+      );
 
       // Load rare loot table
       if (rawData.rareLootTable) {

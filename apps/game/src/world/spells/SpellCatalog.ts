@@ -1,22 +1,6 @@
-import fs from "fs/promises";
-import path from "path";
-
-// Static spells path - configurable via environment variable
-// Default assumes shared-assets structure for Docker compatibility
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../assets/AssetLoader";
 
 const SPELL_DEFS_FILENAME = process.env.SPELL_DEFS_FILE || "spelldefs.carbon";
-const SPELL_DEFS_FILE = path.join(STATIC_ASSETS_DIR, SPELL_DEFS_FILENAME);
 
 export type SpellRecipeEntry = {
   itemId: number;
@@ -61,8 +45,7 @@ export class SpellCatalog {
   constructor(private readonly definitionsById: Map<number, SpellDefinition>) {}
 
   static async load(): Promise<SpellCatalog> {
-    const rawData = await fs.readFile(SPELL_DEFS_FILE, "utf8");
-    const rawDefs = JSON.parse(rawData) as RawSpellDefinition[];
+    const rawDefs = await AssetLoader.loadOverlayArray<RawSpellDefinition>(SPELL_DEFS_FILENAME, "_id");
 
     const definitionsById = new Map<number, SpellDefinition>();
     for (const raw of rawDefs) {
