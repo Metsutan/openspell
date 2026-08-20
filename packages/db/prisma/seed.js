@@ -275,53 +275,7 @@ async function main() {
     }
   }
 
-  // Seed worlds (game servers) used by /play and /game
-  // 
-  // For Docker local setup: World 100 uses http://localhost:8888 which maps to the game container.
-  // The game server's SERVER_ID env var must match the serverId here.
-  // 
-  // For production: Add your own worlds with proper domain URLs (e.g., https://game.yourdomain.com:8888)
-  //
-  const worlds = [
-    // Default Docker world - this is what users click on when running Docker locally
-    // Uses http:// because USE_HTTPS=false in docker.env by default
-    {
-      serverId: 100,
-      name: 'World 1',
-      locationName: 'Local',
-      flagCode: 'USA',
-      serverUrl: 'http://localhost:8888',
-      tags: '',
-      sortOrder: 1,
-      isActive: true,
-      isDevelopment: false
-    }
-  ];
-
-  for (const world of worlds) {
-    try {
-      await prisma.world.upsert({
-        where: { serverId: world.serverId },
-        update: {
-          name: world.name,
-          locationName: world.locationName,
-          flagCode: world.flagCode,
-          serverUrl: world.serverUrl,
-          tags: world.tags || '',
-          sortOrder: world.sortOrder,
-          isActive: world.isActive,
-          isDevelopment: world.isDevelopment
-        },
-        create: world
-      });
-      console.log(`Seeded world: ${world.name} (serverId=${world.serverId})`);
-    } catch (error) {
-      console.error(`Error seeding world ${world.serverId}:`, error.message);
-    }
-  }
-  const persistenceId = await resolveDefaultPersistenceId(prisma);
-  
-  // Create a test admin user (password: admin123) with complete player data
+  // Create a test admin user (password: admin123)
   const hashedPassword = await bcrypt.hash('admin123', 10);
   
   try {
@@ -343,25 +297,6 @@ async function main() {
       }
     });
     console.log('Seeded admin user (username: admin, password: admin123, isAdmin: true, playerType: Admin)');
-    
-    // Initialize all player data for the admin user
-    console.log('Initializing player data for admin user...');
-    await ensureInitialPlayerSkillsForUser(prisma, adminUser.id, persistenceId);
-    console.log('  ✓ Skills initialized');
-    
-    await ensureInitialPlayerLocationForUser(prisma, adminUser.id, persistenceId);
-    console.log('  ✓ Location initialized');
-    
-    await ensureInitialPlayerEquipmentForUser(prisma, adminUser.id, persistenceId);
-    console.log('  ✓ Equipment initialized');
-    
-    await ensureInitialPlayerInventory(prisma, adminUser.id, persistenceId);
-    console.log('  ✓ Inventory initialized');
-
-    await ensureInitialPlayerAppearanceForUser(prisma, adminUser.id, persistenceId);
-    console.log('  ✓ Appearance initialized');
-    
-    console.log('Admin user player data initialized successfully!');
   } catch (error) {
     console.error('Error seeding admin user:', error.message);
   }

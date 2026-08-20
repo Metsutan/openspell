@@ -2,25 +2,9 @@
  * ConversationCatalog.ts - Loads and manages NPC conversation definitions.
  */
 
-import fs from "fs/promises";
-import path from "path";
-
-// Static conversations path - configurable via environment variable
-// Default assumes shared-assets structure for Docker compatibility
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../assets/AssetLoader";
 
 const CONVERSATION_DEFS_FILENAME = process.env.NPC_CONVERSATION_DEFS_FILE || "npcconversationdefs.carbon";
-const CONVERSATION_DEFS_FILE = path.join(STATIC_ASSETS_DIR, CONVERSATION_DEFS_FILENAME);
 
 export interface ConversationRequirement {
   type: string;
@@ -76,8 +60,7 @@ export class ConversationCatalog {
    */
   static async load(): Promise<ConversationCatalog> {
     try {
-      const data = await fs.readFile(CONVERSATION_DEFS_FILE, "utf8");
-      const rawConversations = JSON.parse(data) as ConversationDefinition[];
+      const rawConversations = await AssetLoader.loadOverlayArray<ConversationDefinition>(CONVERSATION_DEFS_FILENAME, "_id");
 
       const conversationsById = new Map<number, ConversationDefinition>();
       for (const conv of rawConversations) {

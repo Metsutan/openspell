@@ -11,19 +11,9 @@ import { MessageStyle } from "../../protocol/enums/MessageStyle";
 import { buildQuestProgressedPayload } from "../../protocol/packets/actions/QuestProgressed";
 import { isSkillSlug, type PlayerState, type SkillSlug } from "../../world/PlayerState";
 
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../../world/assets/AssetLoader";
+
 const QUEST_DEFS_FILENAME = process.env.QUEST_DEFS_FILE || "questdefs.carbon";
-const QUEST_DEFS_FILE = path.join(STATIC_ASSETS_DIR, QUEST_DEFS_FILENAME);
 
 interface QuestRewardExp {
   skill: string;
@@ -92,8 +82,7 @@ export class QuestProgressService {
     }
 
     try {
-      const data = fs.readFileSync(QUEST_DEFS_FILE, "utf8");
-      const parsed = JSON.parse(data) as QuestDefinition[];
+      const parsed = AssetLoader.loadOverlayArraySync<QuestDefinition>(QUEST_DEFS_FILENAME, "_id");
       const byId = new Map<number, QuestDefinition>();
       for (const quest of parsed) {
         if (Number.isInteger(quest?._id)) {

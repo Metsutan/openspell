@@ -2,7 +2,7 @@
 // Run with: node apps/game/check-env.js
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '.env') });
-require('dotenv').config({ path: require('path').join(__dirname, '..', 'shared-assets', 'base', 'shared.env') });
+require('dotenv').config();
 
 console.log('\n=== Environment Variable Check ===\n');
 

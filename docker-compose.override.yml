@@ -32,6 +32,6 @@ services:
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
-  migrate:
+  db-init:
     volumes:
       - ./apps/shared-assets:/app/apps/shared-assets:ro

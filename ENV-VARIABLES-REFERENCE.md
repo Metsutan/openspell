@@ -6,10 +6,8 @@ This document provides a comprehensive reference for all environment variables u
 
 ```
 OpenSpell/
-├── .env (ROOT - ALL SECRETS)
+├── .env (ROOT - ALL CONFIGURATION AND SECRETS)
 ├── apps/
-│   ├── shared-assets/base/
-│   │   └── shared.env (Shared configuration, URLs, asset paths)
 │   ├── api/.env (Optional - legacy/override only)
 │   ├── web/.env (Optional - legacy/override only)
 │   ├── game/.env (Optional - legacy/override only)
@@ -21,8 +19,7 @@ OpenSpell/
 Run `./setup-env.ps1` to automatically create/update all environment files with sensible defaults.
 
 The script:
-- ✅ Creates root `.env` with all secrets
-- ✅ Creates `apps/shared-assets/base/shared.env` with shared configuration
+- ✅ Creates root `.env` with all configuration and secrets
 - ✅ Generates cryptographically secure random secrets
 - ✅ Never overwrites existing values (safe to run multiple times)
 - ✅ Ensures HTTPS certificates are generated
@@ -350,6 +347,20 @@ The script:
 |----------|---------|-------------|
 | `WORLD_HEARTBEAT_TIMEOUT_SEC` | `120` | World considered offline after this (seconds) |
 | `GAME_LOGIN_TOKEN_TTL_SEC` | `60` | Game login token lifetime (seconds) |
+
+### 15. Automated Database Backups (Root `.env`)
+
+These variables configure the automated backup script (`scripts/backup-to-r2.js`) to upload PostgreSQL snapshots to Cloudflare R2 or standard AWS S3.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `R2_BUCKET_NAME` | `` | Bucket name for storing database backups |
+| `R2_ENDPOINT` | `` | S3-compatible API endpoint URL (e.g. Cloudflare R2 endpoint) |
+| `R2_ACCESS_KEY_ID` | `` | S3-compatible Access Key ID |
+| `R2_SECRET_ACCESS_KEY` | `` | S3-compatible Secret Access Key |
+| `AWS_REGION` | `auto` | Region (usually `auto` or `weur` for Cloudflare R2) |
+| `BACKUP_RETENTION_DAYS` | `7` | Number of days to retain backups before automatic cleanup |
+| `USE_DOCKER_EXEC` | `false` | Set to `true` when running backup script manually on a local Docker host |
 
 ## 🔄 Variable Usage by Service
 

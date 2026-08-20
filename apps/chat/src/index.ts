@@ -9,8 +9,7 @@ import { config } from "dotenv";
 import { getPrisma } from "@openspell/db";
 import { RegExpMatcher, TextCensor, englishDataset, englishRecommendedTransformers, asteriskCensorStrategy } from "obscenity";
 
-const sharedEnvPath = path.join(__dirname, "..", "..", "shared-assets", "base", "shared.env");
-config({ path: sharedEnvPath });
+config();
 
 const USE_HTTPS = process.env.USE_HTTPS === "true";
 const CHAT_PORT = Number(process.env.CHAT_PORT ?? process.env.PORT ?? 8765);

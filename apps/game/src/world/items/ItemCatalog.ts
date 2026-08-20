@@ -1,26 +1,8 @@
-import fs from "fs/promises";
-import path from "path";
+import { AssetLoader } from "../assets/AssetLoader";
 import type { MapLevel } from "../Location";
-
-// Static items path - configurable via environment variable
-// Default assumes shared-assets structure for Docker compatibility
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../..",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH 
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
 
 const ITEM_DEFS_FILENAME = process.env.ITEM_DEFS_FILE || "itemdefs.carbon";
 const GROUND_ITEMS_FILENAME = process.env.GROUND_ITEMS_FILE || "grounditems.carbon";
-
-const ITEM_DEFS_FILE = path.join(STATIC_ASSETS_DIR, ITEM_DEFS_FILENAME);
-const GROUND_ITEMS_FILE = path.join(STATIC_ASSETS_DIR, GROUND_ITEMS_FILENAME);
 
 /**
  * Edible effect types and their effects on skills.
@@ -172,13 +154,10 @@ export class ItemCatalog {
    * Loads item definitions and ground items from static files.
    */
   static async load(): Promise<ItemCatalog> {
-    const [defsData, groundItemsData] = await Promise.all([
-      fs.readFile(ITEM_DEFS_FILE, "utf8"),
-      fs.readFile(GROUND_ITEMS_FILE, "utf8")
+    const [rawDefs, rawGroundItems] = await Promise.all([
+      AssetLoader.loadOverlayArray<RawItemDefinition>(ITEM_DEFS_FILENAME, "_id"),
+      AssetLoader.loadOverlayArray<any>(GROUND_ITEMS_FILENAME)
     ]);
-
-    const rawDefs = JSON.parse(defsData) as RawItemDefinition[];
-    const rawGroundItems = JSON.parse(groundItemsData) as RawGroundItem[];
 
     const definitionsById = new Map<number, ItemDefinition>();
     for (const raw of rawDefs) {

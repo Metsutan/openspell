@@ -4,7 +4,7 @@ const crypto = require("crypto");
 
 const args = process.argv.slice(2);
 const modeArg = args.find((arg) => arg.startsWith("--mode="));
-const mode = (modeArg ? modeArg.split("=")[1] : "dev").toLowerCase();
+const mode = (modeArg ? modeArg.split("=")[1] : "docker").toLowerCase();
 const force = args.includes("--force");
 
 const rootDir = process.cwd();
@@ -19,8 +19,8 @@ if (!fs.existsSync(templatePath)) {
 const makeSecret = () => crypto.randomBytes(32).toString("hex");
 
 // Mode defaults:
+// - "docker": Local Docker development (default - tuned for docker compose)
 // - "dev": Running services directly on host machine (no Docker)
-// - "docker": Local Docker development (uses Docker service names for internal, localhost for browser)
 // - "prod": Production deployment (uses external domain URLs)
 const modeDefaults = {
   prod: {
@@ -53,7 +53,7 @@ const modeDefaults = {
     API_URL: "http://api:3002",           // Container-to-container (web/game → api)
     WEB_URL: "http://localhost:8887",     // Browser access
     CHAT_URL: "http://localhost:8765",    // Browser access
-    CDN_URL: "http://localhost:8887",     // Browser access
+    CDN_URL: "http://localhost:8081",     // Browser access (nginx cdn container)
     CLIENT_API_URL: "http://localhost:3002", // Browser → API (via port mapping)
     ALLOW_INSECURE_HTTPS: "false",
     REDIS_HOST: "redis",
@@ -72,7 +72,7 @@ const modeDefaults = {
     API_URL: "http://localhost:3002",
     WEB_URL: "http://localhost:8887",
     CHAT_URL: "http://localhost:8765",
-    CDN_URL: "http://localhost:8887",
+    CDN_URL: "http://localhost:8081",
     CLIENT_API_URL: "http://localhost:3002",
     ALLOW_INSECURE_HTTPS: "false",
     REDIS_HOST: "localhost",
@@ -82,7 +82,7 @@ const modeDefaults = {
   }
 };
 
-const defaults = modeDefaults[mode] || modeDefaults.dev;
+const defaults = modeDefaults[mode] || modeDefaults.docker;
 
 const secrets = {
   API_WEB_SECRET: makeSecret(),

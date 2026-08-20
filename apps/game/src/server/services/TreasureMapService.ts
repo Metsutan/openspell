@@ -5,20 +5,9 @@ import type { PlayerState } from "../../world/PlayerState";
 import type { EventBus } from "../events/EventBus";
 import type { ItemDespawnedEvent } from "../events/GameEvents";
 
-const DEFAULT_STATIC_ASSETS_DIR = path.resolve(
-  __dirname,
-  "../../../../../",
-  "apps",
-  "shared-assets",
-  "base",
-  "static"
-);
-const STATIC_ASSETS_DIR = process.env.STATIC_ASSETS_PATH
-  ? path.resolve(process.env.STATIC_ASSETS_PATH)
-  : DEFAULT_STATIC_ASSETS_DIR;
+import { AssetLoader } from "../../world/assets/AssetLoader";
 
 const SPECIAL_COORDS_FILENAME = process.env.SPECIAL_COORDS_FILE || "specialcoordinatesdefs.carbon";
-const SPECIAL_COORDS_FILE = path.join(STATIC_ASSETS_DIR, SPECIAL_COORDS_FILENAME);
 
 type TreasureMapTier = 1 | 2 | 3;
 
@@ -294,8 +283,27 @@ export class TreasureMapService {
   }
 
   private async loadCoordinates(): Promise<void> {
-    const file = await fs.readFile(SPECIAL_COORDS_FILE, "utf8");
-    const parsed = JSON.parse(file) as RawSpecialCoordinatesData;
+    const parsed = await AssetLoader.loadOverlayObject<RawSpecialCoordinatesData>(
+      SPECIAL_COORDS_FILENAME,
+      (base, custom) => {
+        return {
+          treasureMapCoordinates: {
+            treasureMap1: [
+              ...(base.treasureMapCoordinates?.treasureMap1 || []),
+              ...(custom.treasureMapCoordinates?.treasureMap1 || [])
+            ],
+            treasureMap2: [
+              ...(base.treasureMapCoordinates?.treasureMap2 || []),
+              ...(custom.treasureMapCoordinates?.treasureMap2 || [])
+            ],
+            treasureMap3: [
+              ...(base.treasureMapCoordinates?.treasureMap3 || []),
+              ...(custom.treasureMapCoordinates?.treasureMap3 || [])
+            ]
+          }
+        };
+      }
+    );
     const coords = parsed.treasureMapCoordinates;
     if (!coords) {
       throw new Error("[TreasureMapService] Missing treasureMapCoordinates in specialcoordinatesdefs");
