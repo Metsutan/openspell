@@ -80,8 +80,12 @@
 ## Ops hardening
 - Log rotation: Docker json-file logs are capped to 10MB x 5 files per service.
 - Postgres backups:
-  - Windows: `./scripts/backup-postgres.ps1`
-  - Linux: `./scripts/backup-postgres.sh`
+  - Automated R2 Backups: Deploy `deploy/nomad/backup.hcl` as a periodic Nomad batch job. Ensure `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` are provided as Nomad variables to `nomad/jobs/openspell-backup`.
+    - **To test immediately:** After deploying, run `nomad job periodic force openspell-backup` to trigger an immediate backup run.
+  - Manual local backups:
+    - Windows: `./scripts/backup-postgres.ps1`
+    - Linux: `./scripts/backup-postgres.sh`
+  - Restore from R2: `node ./scripts/restore-from-r2.js` (Requires environment variables in `.env` and `USE_DOCKER_EXEC=true` if run locally).
 - Game packet traces: back up `./data/game-logs` on the host.
 
 ## SQLite log storage (game only)
