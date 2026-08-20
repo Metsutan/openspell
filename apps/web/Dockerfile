@@ -2,6 +2,7 @@ FROM node:22-slim AS deps
 WORKDIR /app
 RUN corepack enable
 ENV CI=true
+ENV NPM_CONFIG_MINIMUM_RELEASE_AGE=0
 ENV DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema=public
 
 COPY . .

@@ -11,5 +11,8 @@
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.1034.0",
 		"@aws-sdk/lib-storage": "^3.600.0"
+	},
+	"pnpm": {
+		"minimumReleaseAge": 0
 	}
 }

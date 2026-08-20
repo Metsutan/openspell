@@ -3,6 +3,7 @@ WORKDIR /app
 RUN corepack enable
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 ENV CI=true
+ENV NPM_CONFIG_MINIMUM_RELEASE_AGE=0
 ENV DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema=public
 
 COPY . .
