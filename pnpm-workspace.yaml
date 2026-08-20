@@ -3,9 +3,13 @@ packages:
   - apps/*
   - packages/*
 
+minimumReleaseAge: 0
+
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
+  '@aws-sdk/lib-storage': true
+  '@aws-sdk/client-s3': true
   better-sqlite3: true
   prisma: true
   sharp: true
