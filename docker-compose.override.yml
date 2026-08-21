@@ -5,11 +5,13 @@ services:
 
   api:
     volumes:
+      - ./apps/api:/app/apps/api:ro
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
   web:
     volumes:
+      - ./apps/web:/app/apps/web:ro
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
@@ -35,3 +37,7 @@ services:
   db-init:
     volumes:
       - ./apps/shared-assets:/app/apps/shared-assets:ro
+
+  cdn:
+    volumes:
+      - ./deploy/nginx/cdn-local.conf:/etc/nginx/conf.d/default.conf:ro

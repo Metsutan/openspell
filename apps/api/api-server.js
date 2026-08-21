@@ -380,26 +380,80 @@ const KNOWN_BASE_URLS = Array.from(new Set([
   'https://highspell.com:8887'
 ])).filter(Boolean);
 
+function getCustomStaticDir() {
+  if (process.env.CUSTOM_STATIC_ASSETS_PATH) {
+    return path.resolve(process.env.CUSTOM_STATIC_ASSETS_PATH);
+  }
+  const defaultCustomDir = path.join(__dirname, '..', 'shared-assets', 'custom', 'static');
+  if (fs.existsSync(defaultCustomDir)) return defaultCustomDir;
+  const fallbackCustomDir = path.join(__dirname, '..', '..', 'shared-assets', 'custom', 'static');
+  if (fs.existsSync(fallbackCustomDir)) return fallbackCustomDir;
+  return null;
+}
+
+function getBaseStaticDir() {
+  if (process.env.BASE_STATIC_ASSETS_PATH) return path.resolve(process.env.BASE_STATIC_ASSETS_PATH);
+  if (process.env.STATIC_ASSETS_PATH) return path.resolve(process.env.STATIC_ASSETS_PATH);
+  const defaultBaseDir = path.join(__dirname, '..', 'shared-assets', 'base', 'static');
+  if (fs.existsSync(defaultBaseDir)) return defaultBaseDir;
+  const fallbackBaseDir = path.join(__dirname, '..', '..', 'shared-assets', 'base', 'static');
+  if (fs.existsSync(fallbackBaseDir)) return fallbackBaseDir;
+  return null;
+}
+
 /**
- * Recursively rewrites URLs in an object, replacing the original base URL with CDN_URL
+ * Recursively rewrites URLs in an object, replacing the original base URL with CDN_URL,
+ * and dynamically updating the version hash when custom overlay files exist so clients
+ * invalidate local browser caches.
  */
 function rewriteAssetUrls(obj, originalBases, newBase) {
   const bases = Array.isArray(originalBases) ? originalBases : [originalBases];
   if (typeof obj === 'string') {
+    let urlStr = obj;
     for (const base of bases) {
-      if (obj.startsWith(base)) {
-        return newBase + obj.slice(base.length);
+      if (urlStr.startsWith(base)) {
+        urlStr = newBase + urlStr.slice(base.length);
+        break;
       }
     }
     try {
-      if (obj.startsWith('http://') || obj.startsWith('https://')) {
-        const parsedUrl = new URL(obj);
+      if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+        const parsedUrl = new URL(urlStr);
         if (parsedUrl.pathname.startsWith('/static/')) {
-          return newBase + parsedUrl.pathname;
+          urlStr = newBase + parsedUrl.pathname;
         }
       }
     } catch (_) {}
-    return obj;
+
+    // Check for custom overlay cache busting
+    const customDir = getCustomStaticDir();
+    if (customDir) {
+      const match = urlStr.match(/^(.*\/static\/)(.*?)\.([a-fA-F0-9]+)\.([^.]+)$/);
+      if (match) {
+        const prefix = match[1];
+        const relName = match[2]; // e.g. "itemdefs" or "carbon/items"
+        const ext = match[4];
+        const canonicalRel = `${relName}.${ext}`;
+        const customPath = path.join(customDir, canonicalRel);
+        if (fs.existsSync(customPath)) {
+          const customStat = fs.statSync(customPath);
+          const baseDir = getBaseStaticDir();
+          let baseMtime = 0;
+          if (baseDir) {
+            const basePath = path.join(baseDir, canonicalRel);
+            if (fs.existsSync(basePath)) {
+              baseMtime = fs.statSync(basePath).mtimeMs;
+            }
+          }
+          const OVERLAY_VERSION = 'v5';
+          const hashInput = `${OVERLAY_VERSION}_${canonicalRel}_${baseMtime}_${customStat.mtimeMs}`;
+          const customHash = crypto.createHash('md5').update(hashInput).digest('hex').slice(0, 8);
+          urlStr = `${prefix}${relName}.${customHash}.${ext}`;
+        }
+      }
+    }
+
+    return urlStr;
   }
   if (Array.isArray(obj)) {
     return obj.map(item => rewriteAssetUrls(item, originalBases, newBase));

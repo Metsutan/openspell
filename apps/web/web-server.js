@@ -265,23 +265,12 @@ app.use('/css', express.static(cssPath));
 app.use('/js', express.static(jsPath));
 app.use('/images', express.static(imagesPath));
 
-// Local development fallback for hashed or versioned static files
-app.use('/static', (req, res, next) => {
-    if (process.env.NODE_ENV !== 'production') {
-        // Match formats like filename.123ab.ext or filename.7.ext
-        const match = req.path.match(/^(.*?)\.[a-fA-F0-9]+\.([^.]+)$/);
-        if (match) {
-            const originalPath = path.join(staticPath, req.path);
-            if (!fs.existsSync(originalPath)) {
-                const strippedPath = `${match[1]}.${match[2]}`;
-                if (fs.existsSync(path.join(staticPath, strippedPath))) {
-                    req.url = req.url.replace(req.path, strippedPath);
-                }
-            }
-        }
-    }
-    next();
-}, express.static(staticPath));
+// Local development fallback and asset overlay for custom assets and definition merging
+const { createAssetOverlayMiddleware } = require('./middleware/assetOverlay');
+app.use('/static', createAssetOverlayMiddleware({
+    baseStaticDir: staticPath
+}));
+app.use('/static', express.static(staticPath));
 
 // Import routes
 const newsRoutes = require('./routes/news');
