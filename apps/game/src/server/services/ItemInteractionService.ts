@@ -425,8 +425,24 @@ export class ItemInteractionService {
     }
 
     const craftsToRun = Math.min(craftCount, maxCrafts);
+    const effectiveSkill: SkillSlug | null =
+      (action.skillRequired && isSkillSlug(action.skillRequired))
+        ? action.skillRequired
+        : (isSkillSlug(action.skillToCreate) ? action.skillToCreate : null);
+
+    const requiredLevel = action.levelRequired ?? 0;
+    if (effectiveSkill && requiredLevel > 0) {
+      const playerLevel = playerState.getSkillBoostedLevel(effectiveSkill);
+      if (playerLevel < requiredLevel) {
+        const skillName = effectiveSkill.charAt(0).toUpperCase() + effectiveSkill.slice(1);
+        const message = action.failureMessage ?? `You need level ${requiredLevel} ${skillName} to make this.`;
+        this.deps.messageService.sendServerInfo(playerState.userId, message);
+        return { handled: true, success: false };
+      }
+    }
+
     const skillToCreate: SkillSlug | null = isSkillSlug(action.skillToCreate) ? action.skillToCreate : null;
-    const expPerCraft = this.getActionExpAmount(action, skillToCreate);
+    const expPerCraft = this.getActionExpAmount(action, effectiveSkill);
     const state = skillToCreate ? getStateForSkill(skillToCreate) : null;
     const delayTicks = isRapidArrowAction ? RAPID_ARROW_ITEM_ON_ITEM_TICKS : ITEM_ON_ITEM_INTERVAL_TICKS;
 
@@ -448,7 +464,7 @@ export class ItemInteractionService {
       actionIndex: index,
       remainingCrafts: craftsToRun,
       expPerCraft,
-      skillToCreate,
+      skillToCreate: effectiveSkill,
       state,
       delayTicks
     });
@@ -586,6 +602,10 @@ export class ItemInteractionService {
   }
 
   private getActionExpAmount(action: ItemOnItemAction, skillToCreate: SkillSlug | null): number {
+    if (action.expGained && action.expGained > 0) {
+      return action.expGained;
+    }
+
     if (!skillToCreate || !action.resultItems || action.resultItems.length === 0) {
       return 0;
     }
@@ -627,6 +647,15 @@ export class ItemInteractionService {
     }
 
     this.giveActionItems(playerState, context.action.resultItems);
+
+    const effectiveSkill: SkillSlug | null =
+      (context.action.skillRequired && isSkillSlug(context.action.skillRequired))
+        ? context.action.skillRequired
+        : (isSkillSlug(context.action.skillToCreate) ? context.action.skillToCreate : null);
+    const expAmount = this.getActionExpAmount(context.action, effectiveSkill);
+    if (effectiveSkill && expAmount > 0) {
+      this.deps.experienceService.addSkillXp(playerState, effectiveSkill, expAmount);
+    }
 
     const createdPayload = buildCreatedUseItemOnItemActionItemsPayload({
       UseItemID: context.useItemId,
