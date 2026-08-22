@@ -6,7 +6,7 @@ param(
 if (-not $Tag) { $Tag = "local" }
 if (-not $Registry) { $Registry = "ghcr.io/openspell" }
 
-$services = @("api", "web", "game")
+$services = @("api", "web", "game", "chat")
 foreach ($service in $services) {
   $image = "$Registry/$service:$Tag"
   Write-Host "Building $image"

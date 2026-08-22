@@ -1,8 +1,10 @@
 {
 	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev",
 		"protocol:generate": "node apps/game/tools/generate-protocol-from-factory.js --overwrite",
 		"env:secrets": "node scripts/update-shared-secrets.js",
-		"postinstall": "pnpm run protocol:generate"
+		"postinstall": "node -e \"if (require('fs').existsSync('apps/game/tools/generate-protocol-from-factory.js')) { require('child_process').execSync('node apps/game/tools/generate-protocol-from-factory.js --overwrite', {stdio: 'inherit'}); }\""
 	},
 	"dependencies": {
 		"dotenv": "^17.2.3",
@@ -14,5 +16,6 @@
 	},
 	"pnpm": {
 		"minimumReleaseAge": 0
-	}
+	},
+	"packageManager": "pnpm@9.15.4"
 }

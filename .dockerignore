@@ -1,25 +1,42 @@
+# Dependencies & Package Stores
+node_modules
 **/node_modules
-**/dist
+.pnpm-store
+**/.pnpm-store
+.turbo
+**/.turbo
 **/.cache
 **/.next
-**/*.log
-**/*.cpuprofile
-**/*.heapsnapshot
+
+# Build Outputs
+**/dist
+
+# Version Control & IDE
 .git
+**/.git
+.github
 .gitignore
 .cursorignore
 .vscode
 .idea
+
+# Logs & Profiling Dumps
+**/*.log
+**/*.cpuprofile
+**/*.heapsnapshot
 highspell-dumps
 vscode-profile-*.cpuprofile
 vscode-profile-*.heapsnapshot
 
-# Exclude static assets that are uploaded to R2 bucket
-apps/shared-assets/*/static
-apps/shared-assets/*/js/client/client.*.js
-apps/shared-assets/*/js/client/development.client.*.js
-apps/shared-assets/*/shared.env
+# Static Assets & Media (Served via CDN or volume mounts at runtime)
+apps/shared-assets
 
-# ChunkHound
+# Runtime-Only Mounted Directories & Infrastructure Configs
+certs
+init
+deploy
+
+# Documentation & Tooling Metadata
+*.md
 .chunkhound
 .chunkhound.json
