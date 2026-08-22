@@ -65,6 +65,10 @@ export interface ItemOnItemAction {
   resultItems: ItemOnItemActionItem[] | null;
   itemsToRemove: ItemOnItemActionItem[] | null;
   resultEntityId: number | null;
+  skillRequired?: string | null;
+  levelRequired?: number | null;
+  expGained?: number | null;
+  failureMessage?: string | null;
 }
 
 /**
