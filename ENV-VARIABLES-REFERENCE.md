@@ -295,6 +295,7 @@ The script:
 | `ASSETS_ROOT` | `` | Path to web assets (CSS, JS, images) |
 | `ASSETS_CLIENT_PATH` | `` | Path to assetsClient.json manifest |
 | `STATIC_ASSETS_PATH` | `` | Path to static game data (.carbon files) |
+| `AUTO_DOWNLOAD_ASSETS` | `false` | When `true`, game server downloads assets from CDN/R2 at startup |
 
 ### 12. Game Data Files (`shared.env`)
 
