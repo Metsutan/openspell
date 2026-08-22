@@ -56,8 +56,10 @@ async function boot() {
     process.exit(1);
   }
 
-  // Fetch the latest assets from R2/CDN before anything else initializes the files into memory
-  await AssetDownloader.downloadAssets();
+  // Fetch assets from CDN only if explicitly configured (e.g. stateless container environments)
+  if (process.env.AUTO_DOWNLOAD_ASSETS === "true") {
+    await AssetDownloader.downloadAssets();
+  }
 
   const gameServer = new GameServer({
     port: requestedPort,
