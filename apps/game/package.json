@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "protocol:generate": "node tools/generate-protocol-from-factory.js --overwrite",
+    "prebuild": "pnpm run protocol:generate",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --signal SIGINT -L --watch src --exec ts-node src/index.ts",

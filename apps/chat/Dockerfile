@@ -1,23 +1,36 @@
-FROM node:22-slim AS deps
-WORKDIR /app
+FROM node:22-slim AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 ENV CI=true
 ENV NPM_CONFIG_MINIMUM_RELEASE_AGE=0
 ENV DATABASE_URL=postgresql://openspell:openspell@postgres:5432/openspell?schema=public
 
+FROM base AS builder
+WORKDIR /app
+RUN npm install -g turbo@^2
 COPY . .
-# postinstall generates protocol files before build
-RUN pnpm install --frozen-lockfile
+RUN turbo prune chat --docker
+
+FROM base AS deps
+WORKDIR /app
+
+# Install dependencies (cached unless manifests change)
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --no-frozen-lockfile
 
 FROM deps AS build
+WORKDIR /app
+COPY --from=builder /app/out/full/ .
 RUN pnpm -C apps/chat build
 
-FROM node:22-slim AS runtime
+FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-COPY --from=deps /app /app
-COPY --from=build /app/apps/chat/dist /app/apps/chat/dist
+COPY --from=build /app /app
+COPY scripts/validate-env.js ./scripts/validate-env.js
 
 EXPOSE 8765
 CMD ["sh", "-c", "node scripts/validate-env.js chat && node apps/chat/dist/index.js"]
