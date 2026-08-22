@@ -6,12 +6,14 @@ services:
   api:
     volumes:
       - ./apps/api:/app/apps/api:ro
+      - /app/apps/api/node_modules
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
   web:
     volumes:
       - ./apps/web:/app/apps/web:ro
+      - /app/apps/web/node_modules
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro
 
