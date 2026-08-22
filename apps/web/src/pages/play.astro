@@ -1,0 +1,107 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { makeApiRequest } from '@/lib/api';
+import { getCsrfToken } from '@/lib/csrf';
+
+interface World {
+  serverId: number;
+  name: string;
+  locationName?: string;
+  flagCode?: string;
+  serverUrl?: string;
+  playerCount?: number;
+  isOnline?: boolean;
+  isActive?: boolean;
+}
+
+const user = await getUserInfo(Astro.cookies);
+const csrfToken = getCsrfToken(Astro.cookies);
+
+let worlds: World[] = [];
+let errorMessage: string | null = null;
+
+try {
+  const response = await makeApiRequest<{ worlds: World[] }>('/api/worlds');
+  worlds = response?.worlds || [];
+} catch (error) {
+  console.error('Error fetching worlds:', error);
+  errorMessage = 'Unable to load worlds right now. Please try again later.';
+}
+---
+
+<Layout title="OpenSpell - Play" description="Select a world to play on" user={user}>
+  <section id="srv-page">
+    <h1 class="sect-h" id="srv-h">
+      <span>Select a world to play on</span>
+    </h1>
+
+    <div id="srv-cont" class="content-box">
+      {errorMessage && (
+        <div class="card" style="margin-bottom: 16px; color: #ff4444;">
+          {errorMessage}
+        </div>
+      )}
+
+      <ul id="srv-tbl" class="card">
+        <li id="srv-hdr" class="srv-row sel">
+          <div class="srv-loc">Location</div>
+          <div class="srv-r">
+            <div class="srv-name">World</div>
+            <div class="srv-count">Players</div>
+          </div>
+        </li>
+
+        {worlds.length > 0 ? (
+          worlds.map((world) => {
+            const serverId = world.serverId;
+            const name = world.name || `World ${serverId}`;
+            const locationName = world.locationName || 'Unknown';
+            const flagCode = world.flagCode || 'USA';
+            const serverUrl = world.serverUrl || '';
+            const playerCount = Number.isFinite(Number(world.playerCount)) ? Number(world.playerCount) : 0;
+            const isOnline = world.isOnline === undefined ? true : !!world.isOnline;
+            const isActive = world.isActive === undefined ? true : !!world.isActive;
+
+            const disabled = !isActive || !isOnline || !serverUrl;
+            const countText = !isActive ? 'Disabled' : isOnline ? String(playerCount) : 'Offline';
+
+            return (
+              <li class="srv-row sel">
+                <div class="srv-loc">
+                  <span class={`c-flag c-flag__${flagCode}`} title={locationName}></span>
+                </div>
+                <div class="srv-r">
+                  <div class="srv-name">
+                    <form action="/game" name={String(serverId)} method="POST">
+                      <input type="hidden" name="_csrf" value={csrfToken} />
+                      <input
+                        type="submit"
+                        id="submit"
+                        class="srv-link fw-bold"
+                        name="submit"
+                        value={name}
+                        disabled={disabled}
+                      />
+                      <input type="hidden" value={String(serverId)} name="serverid" />
+                      <input type="hidden" value={serverUrl} name="serverurl" />
+                    </form>
+                  </div>
+                  <div class="srv-count">{countText}</div>
+                </div>
+              </li>
+            );
+          })
+        ) : (
+          <li class="srv-row sel">
+            <div style="padding: 20px; opacity: 0.8;">No worlds are currently available.</div>
+          </li>
+        )}
+      </ul>
+    </div>
+
+    <div id="srv-ad" class="card">
+      <div id="ad-box"></div>
+    </div>
+  </section>
+</Layout>

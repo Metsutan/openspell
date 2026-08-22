@@ -1,0 +1,142 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo, getAuthToken } from '@/lib/auth';
+import { makeApiRequest, extractApiErrorMessage } from '@/lib/api';
+import { getCsrfToken, validateCsrfToken } from '@/lib/csrf';
+import { sanitizeString, isValidEmail } from '@/lib/helpers';
+
+const user = await getUserInfo(Astro.cookies, true);
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+const token = getAuthToken(Astro.cookies);
+const csrfToken = getCsrfToken(Astro.cookies);
+let errorMessage = Astro.url.searchParams.get('error') || '';
+let successMessage = Astro.url.searchParams.get('success') || '';
+
+let canChange = true;
+let cooldownMessage = '';
+
+if (user.lastEmailChange) {
+  const lastChange = new Date(user.lastEmailChange);
+  const now = new Date();
+  const hoursSinceChange = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60);
+  if (hoursSinceChange < 24) {
+    const hoursRemaining = Math.ceil(24 - hoursSinceChange);
+    cooldownMessage = `Cooldown Active: Email can only be changed once per day. Please wait ${hoursRemaining} more hour(s).`;
+    canChange = false;
+  }
+}
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const submittedCsrf = String(formData.get('_csrf') || '');
+    if (!validateCsrfToken(Astro.cookies, submittedCsrf)) {
+      errorMessage = 'Invalid form submission.';
+    } else {
+      const newEmail = sanitizeString(formData.get('new-email'));
+      const password = String(formData.get('password') || '');
+
+      if (!newEmail || !password) {
+        errorMessage = 'All fields are required';
+      } else if (!isValidEmail(newEmail)) {
+        errorMessage = 'Invalid email format';
+      } else {
+        try {
+          const res = await makeApiRequest<{ success: boolean; error?: string }>('/api/auth/change-email', {
+            method: 'POST',
+            token,
+            body: { newEmail, password }
+          });
+          if (res && res.success) {
+            return Astro.redirect('/account?success=Email%20updated%20successfully.');
+          } else {
+            errorMessage = res?.error || 'Failed to change email';
+          }
+        } catch (err) {
+          errorMessage = extractApiErrorMessage(err);
+        }
+      }
+    }
+  } catch (_) {
+    errorMessage = 'Internal server error';
+  }
+}
+---
+
+<Layout title="OpenSpell - Change Email" user={user}>
+  <section id="change-email">
+    <div class="auth-wrap">
+      <div class="auth-wrap_inner card">
+        <div id="login-brand-img" title="OpenSpell"></div>
+
+        <div class="frm-wrap">
+          {cooldownMessage && (
+            <div style="color: #ff8800; margin-bottom: 16px; padding: 12px; background: #ff880020; border-radius: 4px;">
+              <strong>{cooldownMessage}</strong>
+            </div>
+          )}
+          {successMessage && (
+            <div style="color: #00aa00; margin-bottom: 16px; padding: 12px; background: #00aa0020; border-radius: 4px;">
+              {successMessage}
+            </div>
+          )}
+          {errorMessage && (
+            <div style="color: #ff4444; margin-bottom: 16px; padding: 12px; background: #ff444420; border-radius: 4px;">
+              {errorMessage}
+            </div>
+          )}
+
+          <form action="/account/change-email" method="POST">
+            <input type="hidden" name="_csrf" value={csrfToken} />
+
+            <div class="frm-wrap_row">
+              <label for="current-email">Current Email</label>
+              <input type="text" id="current-email" value={user.email || 'None'} disabled />
+            </div>
+
+            <div class="frm-wrap_row">
+              <label for="new-email">New Email</label>
+              <input
+                type="email"
+                id="new-email"
+                name="new-email"
+                maxlength="255"
+                placeholder="New Email Address"
+                required
+                disabled={!canChange}
+              />
+            </div>
+
+            <div class="frm-wrap_row">
+              <label for="password">Confirm Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                maxlength="64"
+                placeholder="Enter password to confirm"
+                required
+                disabled={!canChange}
+              />
+            </div>
+
+            <div class="frm-wrap_row frm-wrap_row--center">
+              <input type="submit" class="btn-submit" value="Update Email" disabled={!canChange} />
+            </div>
+
+            <div class="frm-wrap_row frm-wrap_row--center" style="margin-top:24px;flex-direction:column;">
+              <div style="margin:4px;"><a href="/account" title="Back to Account">Back to Account</a></div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div style="margin-top: 8px;">
+        <a href="/account" style="padding:8px;" title="Account">Back to Account</a>
+      </div>
+    </div>
+  </section>
+</Layout>

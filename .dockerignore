@@ -30,6 +30,7 @@ vscode-profile-*.heapsnapshot
 
 # Static Assets & Media (Served via CDN or volume mounts at runtime)
 apps/shared-assets
+apps/web-legacy
 
 # Runtime-Only Mounted Directories & Infrastructure Configs
 certs

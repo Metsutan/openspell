@@ -1,0 +1,28 @@
+{
+  "name": "openspell-web-legacy",
+  "version": "1.0.0",
+  "description": "OpenSpell website with server-side rendered news",
+  "main": "web-server.js",
+  "scripts": {
+    "start": "node web-server.js",
+    "dev": "node web-server.js",
+    "setup-assets": "node setup-assets.js"
+  },
+  "keywords": [
+    "openspell",
+    "website",
+    "news"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@openspell/rate-limiter": "file:../../packages/rate-limiter",
+    "dotenv": "^16.4.7",
+    "express": "^4.22.1",
+    "express-session": "^1.18.2",
+    "sharp": "^0.34.5"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

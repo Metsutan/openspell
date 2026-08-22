@@ -1,0 +1,86 @@
+---
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import type { UserSession } from '@/lib/auth';
+
+interface Props {
+  title?: string;
+  description?: string;
+  user?: UserSession | null;
+  additionalCss?: string[];
+  hiscoresWorlds?: { serverId: number; name: string }[];
+  selectedServerId?: number | null;
+  hiscoresSelectBaseUrl?: string | null;
+}
+
+const {
+  title = 'OpenSpell',
+  description = 'OpenSpell - A browser-based MMORPG. Play for free today!',
+  user = null,
+  additionalCss = [],
+  hiscoresWorlds = [],
+  selectedServerId = null,
+  hiscoresSelectBaseUrl = null
+} = Astro.props;
+
+const RECAPTCHA_ENABLED = process.env.RECAPTCHA_ENABLED === 'true';
+const RECAPTCHA_SITE_KEY = process.env.RECAPTCHA_SITE_KEY || '';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="Description" content={description} />
+    <meta name="author" content="OpenSpell" />
+    <meta name="keywords" content="openspell, mmo, mmorpg, fantasy, online game" />
+    <link rel="shortcut icon" href="/images/favicon2.ico?4" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+
+    <link href="/css/main.5.css" rel="stylesheet" type="text/css" />
+    {additionalCss.map((href) => (
+      <link href={href} rel="stylesheet" type="text/css" />
+    ))}
+
+    {RECAPTCHA_ENABLED && RECAPTCHA_SITE_KEY && (
+      <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    )}
+  </head>
+
+  <body>
+    <div id="app-wrap">
+      <Header
+        user={user}
+        hiscoresWorlds={hiscoresWorlds}
+        selectedServerId={selectedServerId}
+        hiscoresSelectBaseUrl={hiscoresSelectBaseUrl}
+      />
+
+      <main id="content">
+        <slot />
+      </main>
+
+      <Footer />
+    </div>
+
+    <script is:inline src="/js/main.js"></script>
+    <script is:inline>
+      // Support for hiscores server dropdown navigation
+      document.addEventListener('DOMContentLoaded', () => {
+        const select = document.querySelector('.hs-nav-select');
+        if (select) {
+          select.addEventListener('change', (e) => {
+            const baseUrl = select.getAttribute('data-base-url');
+            if (baseUrl) {
+              window.location.href = baseUrl + e.target.value;
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
