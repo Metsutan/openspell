@@ -1,0 +1,17 @@
+---
+import { getAuthToken, clearAuthCookies } from '@/lib/auth';
+import { makeApiRequest } from '@/lib/api';
+
+const token = getAuthToken(Astro.cookies);
+if (token) {
+  try {
+    await makeApiRequest('/api/auth/logout', {
+      method: 'POST',
+      token
+    });
+  } catch (_) {}
+}
+
+clearAuthCookies(Astro.cookies);
+return Astro.redirect('/');
+---

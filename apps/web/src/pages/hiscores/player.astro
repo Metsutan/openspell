@@ -1,0 +1,13 @@
+---
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const username = String(formData.get('username') || '').trim();
+  const serverId = String(formData.get('serverId') || '1').trim();
+
+  if (username) {
+    return Astro.redirect(`/hiscores/player/${encodeURIComponent(username)}?serverId=${serverId}`);
+  }
+}
+
+return Astro.redirect('/hiscores');
+---

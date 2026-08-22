@@ -1,0 +1,20 @@
+---
+import { makeApiRequest } from '@/lib/api';
+
+let selectedServerId = 1;
+try {
+  const response = await makeApiRequest<{ worlds: { serverId: number; isActive?: boolean }[] }>('/api/worlds');
+  const worlds = response?.worlds || [];
+  const queryServerId = Astro.url.searchParams.get('serverId');
+  const parsedId = queryServerId ? parseInt(queryServerId, 10) : null;
+
+  if (parsedId && worlds.some((w) => w.serverId === parsedId)) {
+    selectedServerId = parsedId;
+  } else {
+    const active = worlds.find((w) => w.isActive) || worlds[0];
+    if (active) selectedServerId = active.serverId;
+  }
+} catch (_) {}
+
+return Astro.redirect(`/hiscores/overall?serverId=${selectedServerId}`);
+---

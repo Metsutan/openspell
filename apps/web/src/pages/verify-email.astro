@@ -1,0 +1,42 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { makeApiRequest, extractApiErrorMessage } from '@/lib/api';
+
+const user = await getUserInfo(Astro.cookies);
+const token = Astro.url.searchParams.get('token');
+
+let isSuccess = false;
+let message = '';
+
+if (!token) {
+  message = 'Invalid verification link. Please check your email for the correct link.';
+} else {
+  try {
+    const res = await makeApiRequest<{ success: boolean; error?: string }>(
+      `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
+      { method: 'GET' }
+    );
+    if (res && res.success) {
+      isSuccess = true;
+      message = 'Your email has been successfully verified.';
+    } else {
+      message = res?.error || 'Verification failed';
+    }
+  } catch (err) {
+    message = extractApiErrorMessage(err);
+  }
+}
+---
+
+<Layout title={isSuccess ? 'OpenSpell - Email Verified' : 'OpenSpell - Verify Email'} user={user}>
+  <section id="verify-email">
+    <div class="auth-wrap">
+      <div class="auth-card card">
+        <h1>{isSuccess ? 'Email Verified!' : 'Email Verification'}</h1>
+        <p style={isSuccess ? 'color: #00aa00;' : 'color: #ff4444;'}>{message}</p>
+        <p><a href="/login">Return to Login</a></p>
+      </div>
+    </div>
+  </section>
+</Layout>

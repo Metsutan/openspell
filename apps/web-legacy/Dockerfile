@@ -20,19 +20,15 @@ COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN pnpm install --no-frozen-lockfile
 
-FROM deps AS build
-WORKDIR /app
+# Copy pruned source files
 COPY --from=builder /app/out/full/ .
-RUN pnpm -C apps/web build
+COPY scripts/validate-env.js ./scripts/validate-env.js
 
 FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=8887
 
-COPY --from=build /app /app
-COPY scripts/validate-env.js ./scripts/validate-env.js
+COPY --from=deps /app /app
 
 EXPOSE 8887
-CMD ["sh", "-c", "node scripts/validate-env.js web && node apps/web/dist/server/entry.mjs"]
+CMD ["sh", "-c", "node scripts/validate-env.js web && node apps/web/web-server.js"]

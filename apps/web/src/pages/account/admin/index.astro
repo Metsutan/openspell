@@ -1,0 +1,172 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo, getAuthToken } from '@/lib/auth';
+import { makeApiRequest, extractApiErrorMessage } from '@/lib/api';
+import { getCsrfToken, validateCsrfToken } from '@/lib/csrf';
+
+const user = await getUserInfo(Astro.cookies, true);
+if (!user || !user.isAdmin) {
+  return Astro.redirect('/account');
+}
+
+const token = getAuthToken(Astro.cookies);
+const csrfToken = getCsrfToken(Astro.cookies);
+let successMessage = Astro.url.searchParams.get('success') || '';
+let errorMessage = Astro.url.searchParams.get('error') || '';
+
+let searchResults: any[] = [];
+let searchedQuery = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const action = String(formData.get('action') || '');
+    const submittedCsrf = String(formData.get('_csrf') || '');
+
+    if (!validateCsrfToken(Astro.cookies, submittedCsrf)) {
+      errorMessage = 'Invalid CSRF token';
+    } else if (action === 'search') {
+      searchedQuery = String(formData.get('query') || '').trim();
+      if (searchedQuery) {
+        try {
+          const res = await makeApiRequest<{ users?: any[] }>(
+            `/api/admin/search-users?query=${encodeURIComponent(searchedQuery)}`,
+            {
+              method: 'GET',
+              token
+            }
+          );
+          searchResults = res?.users || (Array.isArray(res) ? res : []);
+          if (searchResults.length === 0) {
+            errorMessage = 'No users found matching your query.';
+          }
+        } catch (err) {
+          errorMessage = extractApiErrorMessage(err);
+        }
+      }
+    } else if (action === 'ban' || action === 'unban' || action === 'mute' || action === 'unmute') {
+      const targetUserId = parseInt(String(formData.get('userId') || ''), 10);
+      const reason = String(formData.get('reason') || 'Admin action');
+      if (targetUserId) {
+        try {
+          const endpoint = `/api/admin/${action}-user`;
+          await makeApiRequest(endpoint, {
+            method: 'POST',
+            token,
+            body: { userId: targetUserId, reason }
+          });
+          successMessage = `User successfully updated.`;
+        } catch (err) {
+          errorMessage = extractApiErrorMessage(err);
+        }
+      }
+    }
+  } catch (_) {
+    errorMessage = 'Internal server error';
+  }
+}
+---
+
+<Layout title="OpenSpell - Admin Panel" user={user}>
+  <section id="account">
+    <h1 class="sect-h">
+      <span>Admin Panel</span>
+    </h1>
+
+    <div id="account_container" class="content-box">
+      <ul id="settings" class="card">
+        <li class="card-title">ADMIN MENU</li>
+        <li>
+          <ul class="cfg-list">
+            <li><a href="/account" title="My Account">My Account</a></li>
+            <li><a href="/account/admin" title="Admin Panel" class="sel">Admin Panel</a></li>
+          </ul>
+        </li>
+      </ul>
+
+      <div id="admin-content" class="card" style="flex-grow: 1;">
+        {successMessage && (
+          <div style="color: #00aa00; margin-bottom: 16px; padding: 12px; background: #00aa0020; border-radius: 4px;">
+            {successMessage}
+          </div>
+        )}
+        {errorMessage && (
+          <div style="color: #ff4444; margin-bottom: 16px; padding: 12px; background: #ff444420; border-radius: 4px;">
+            {errorMessage}
+          </div>
+        )}
+
+        <h2>User Management</h2>
+
+        <div id="user-search-section" style="margin-bottom: 24px;">
+          <h3>Search User</h3>
+          <form method="POST" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <input type="hidden" name="_csrf" value={csrfToken} />
+            <input type="hidden" name="action" value="search" />
+            <input
+              type="text"
+              name="query"
+              value={searchedQuery}
+              placeholder="Username, Display Name, or IP"
+              required
+              style="flex: 1; min-width: 200px; padding: 8px;"
+            />
+            <button type="submit" class="btn-submit">Search</button>
+          </form>
+        </div>
+
+        {searchResults.length > 0 && (
+          <div style="margin-bottom: 24px; padding: 16px; background: var(--menu-selected-item-bg-color, #222); border-radius: 8px;">
+            <h3>Search Results ({searchResults.length})</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              {searchResults.map((u) => {
+                const isBanned = u.bannedUntil && new Date(u.bannedUntil) > new Date();
+                const isMuted = u.mutedUntil && new Date(u.mutedUntil) > new Date();
+
+                return (
+                  <li style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div>
+                      <strong>{u.displayName || u.username}</strong> (@{u.username}) - ID: #{u.id}
+                      {isBanned && <span style="color: #ff4444; margin-left: 8px;">[BANNED]</span>}
+                      {isMuted && <span style="color: #ff8800; margin-left: 8px;">[MUTED]</span>}
+                      {u.isAdmin && <span style="color: #00aa00; margin-left: 8px;">[ADMIN]</span>}
+                    </div>
+                    <div style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">
+                      Email: {u.email || 'None'} | Created: {new Date(u.createdAt).toLocaleDateString()}
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                      <form method="POST" style="display: inline;">
+                        <input type="hidden" name="_csrf" value={csrfToken} />
+                        <input type="hidden" name="userId" value={String(u.id)} />
+                        <input type="hidden" name="action" value={isBanned ? 'unban' : 'ban'} />
+                        <button
+                          type="submit"
+                          style={`padding: 4px 8px; border: none; border-radius: 4px; color: white; cursor: pointer; background: ${isBanned ? '#4CAF50' : '#f44336'};`}
+                        >
+                          {isBanned ? 'Unban User' : 'Ban User'}
+                        </button>
+                      </form>
+
+                      <form method="POST" style="display: inline;">
+                        <input type="hidden" name="_csrf" value={csrfToken} />
+                        <input type="hidden" name="userId" value={String(u.id)} />
+                        <input type="hidden" name="action" value={isMuted ? 'unmute' : 'mute'} />
+                        <button
+                          type="submit"
+                          style={`padding: 4px 8px; border: none; border-radius: 4px; color: white; cursor: pointer; background: ${isMuted ? '#4CAF50' : '#ff9800'};`}
+                        >
+                          {isMuted ? 'Unmute User' : 'Mute User'}
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+</Layout>

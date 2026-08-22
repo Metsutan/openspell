@@ -1,0 +1,85 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+
+const user = await getUserInfo(Astro.cookies);
+---
+
+<Layout title="OpenSpell - Rules" description="OpenSpell community rules and guidelines" user={user}>
+  <section id="rules-page">
+    <div>
+      <h1 class="rules-h">RULES</h1>
+    </div>
+    <div class="card rules-box">
+      <div class="rules-inner">
+        <div class="rules-cont">
+          <p class="rules-p">
+            OpenSpell is meant to be a fun and low-stress game environment. These rules exist to protect that experience,
+            not to police people unnecessarily. In an ideal world, they would never need to be enforced at all - the best
+            outcome is one where everyone simply enjoys the game and treats others with respect. However, past experience
+            shows that unclear boundaries and hands-off moderation allow toxicity, suspicion, and hostility to take over.
+            For that reason, OpenSpell will be intentionally curated. Participation is a privilege that depends on
+            respecting the experience of others, and moderation exists to keep the game enjoyable for the majority of
+            players acting in good faith.
+          </p>
+
+          <ol class="rules-ol">
+            <li class="rule">
+              <span class="rule-num">1</span>
+              <div class="rule-body">
+                <strong class="rule-h">Be kind and respectful.</strong>
+                <p class="rule-desc">
+                  Use your best judgement to be kind to one another. For example, Don't be toxic, racist, witch-hunt,
+                  harass, grief, etc. If we feel the game is a lesser experience with you in it, you will be removed from it.
+                </p>
+              </div>
+            </li>
+            <li class="rule">
+              <span class="rule-num">2</span>
+              <div class="rule-body">
+                <strong class="rule-h">No rules lawyering</strong>
+                <p class="rule-desc">
+                  No bad-faith arguing, no baiting/rage-baiting, drama farming, meta-conflict, or other disruptive behavior
+                  intended to undermine the community or moderation. This is not a democracy, this is not a court of law.
+                  This is a game, it's meant to be fun, relaxing, and enjoyable. Any attempt to subvert this is not being
+                  respectful to others.
+                </p>
+              </div>
+            </li>
+            <li class="rule">
+              <span class="rule-num">3</span>
+              <div class="rule-body">
+                <strong class="rule-h">Moderation decisions are final.</strong>
+                <p class="rule-desc">
+                  We are not required to provide evidence, debate rulings, or issue warnings before taking action. You are
+                  welcome to appeal a ban at <a href="mailto:support@openspell.dev" class="rule-link">support@openspell.dev</a>.
+                </p>
+              </div>
+            </li>
+            <li class="rule">
+              <span class="rule-num">4</span>
+              <div class="rule-body">
+                <strong class="rule-h">Don't bot on non-botting servers.</strong>
+                <p class="rule-desc">
+                  You will be banned permanently on your first offense. Any attempt to subvert an IP ban will result in
+                  permanent removal. This rule exists to protect fair play and prevent the toxic, accusatory culture that
+                  unchecked botting creates. If you'd like to bot, you're welcome to play on the botting server.
+                </p>
+              </div>
+            </li>
+            <li class="rule">
+              <span class="rule-num">5</span>
+              <div class="rule-body">
+                <strong class="rule-h">Account limit: one main and one alternate account.</strong>
+                <p class="rule-desc">
+                  Players may use a maximum of two accounts at a time across the servers (your main account plus one alternate
+                  account). If you are found playing more than two accounts at once, all associated accounts may be punished.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

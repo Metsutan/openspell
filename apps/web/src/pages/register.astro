@@ -1,0 +1,205 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo, setAuthCookies } from '@/lib/auth';
+import { makeApiRequest, extractApiErrorMessage } from '@/lib/api';
+import { getCsrfToken, validateCsrfToken } from '@/lib/csrf';
+import { sanitizeString, isValidUsername, isValidEmail } from '@/lib/helpers';
+
+const user = await getUserInfo(Astro.cookies);
+if (user) {
+  return Astro.redirect('/account');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+let errorMessage = Astro.url.searchParams.get('error') || '';
+
+const SHOW_EMAIL_FIELD = process.env.SHOW_EMAIL_FIELD !== 'false';
+const EMAIL_REQUIRED = process.env.EMAIL_REQUIRED === 'true';
+const RECAPTCHA_ENABLED = process.env.RECAPTCHA_ENABLED === 'true';
+const RECAPTCHA_SITE_KEY = process.env.RECAPTCHA_SITE_KEY || '';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const submittedCsrf = String(formData.get('_csrf') || '');
+    if (!validateCsrfToken(Astro.cookies, submittedCsrf)) {
+      errorMessage = 'Invalid form submission. Please try again.';
+    } else {
+      const username = sanitizeString(formData.get('username'));
+      const email = sanitizeString(formData.get('email'));
+      const displayName = sanitizeString(formData.get('display-name'));
+      const password = String(formData.get('password') || '');
+      const confirmPassword = String(formData.get('confirm-password') || '');
+      const acceptTerms = formData.get('accept-terms') === 'true' || formData.get('accept-terms') === 'on';
+      const recaptchaToken = String(formData.get('g-recaptcha-response') || '');
+
+      if (!username || !password) {
+        errorMessage = 'Username and password are required';
+      } else if (!isValidUsername(username)) {
+        errorMessage = 'Invalid username format';
+      } else if (password !== confirmPassword) {
+        errorMessage = 'Passwords do not match';
+      } else if (EMAIL_REQUIRED && !email) {
+        errorMessage = 'Email is required';
+      } else if (email && !isValidEmail(email)) {
+        errorMessage = 'Invalid email format';
+      } else if (!acceptTerms) {
+        errorMessage = 'You must accept the Terms & Conditions';
+      } else {
+        if (RECAPTCHA_ENABLED && RECAPTCHA_SECRET_KEY) {
+          try {
+            const verifyRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ secret: RECAPTCHA_SECRET_KEY, response: recaptchaToken }).toString()
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyData.success) {
+              errorMessage = 'reCAPTCHA verification failed. Please try again.';
+            }
+          } catch (_) {
+            errorMessage = 'Failed to verify reCAPTCHA. Please try again.';
+          }
+        }
+
+        if (!errorMessage) {
+          const finalDisplayName = displayName || username;
+          try {
+            const apiRes = await makeApiRequest<{ success: boolean; user: any; token: string; error?: string }>(
+              '/api/auth/register',
+              {
+                method: 'POST',
+                body: {
+                  username,
+                  email,
+                  password,
+                  displayName: finalDisplayName
+                }
+              }
+            );
+
+            if (apiRes && apiRes.success && apiRes.user && apiRes.token) {
+              setAuthCookies(Astro.cookies, apiRes.token, apiRes.user);
+              return Astro.redirect('/account');
+            } else {
+              errorMessage = apiRes?.error || 'Registration failed';
+            }
+          } catch (err) {
+            errorMessage = extractApiErrorMessage(err);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    errorMessage = 'Internal server error';
+  }
+}
+---
+
+<Layout title="OpenSpell - Register" user={null}>
+  <section id="register">
+    <div class="auth-wrap">
+      <div class="auth-card card">
+        <div id="login-brand-img" title="OpenSpell"></div>
+
+        <div class="frm-wrap">
+          <form action="/register" name="register-form" id="register-form" method="POST">
+            <input type="hidden" name="_csrf" value={csrfToken} />
+
+            <div class="frm-row">
+              <label for="username-input">Username</label>
+              <input type="text" id="username-input" name="username" maxlength="16" placeholder="Username" required />
+            </div>
+
+            {SHOW_EMAIL_FIELD && (
+              <div class="frm-row">
+                <label for="email-input">
+                  Email{EMAIL_REQUIRED ? <span style="color: #ff4444;"> *</span> : ' (Optional)'}
+                </label>
+                <input
+                  type="email"
+                  id="email-input"
+                  name="email"
+                  maxlength="255"
+                  placeholder={EMAIL_REQUIRED ? 'Email' : 'Email (optional)'}
+                  required={EMAIL_REQUIRED}
+                />
+              </div>
+            )}
+
+            <div class="frm-row">
+              <label for="display-name-input">Display Name</label>
+              <input
+                type="text"
+                id="display-name-input"
+                name="display-name"
+                maxlength="50"
+                placeholder="Display Name (optional)"
+              />
+            </div>
+
+            <div style="margin-bottom: 8px; color: #888; font-size: 0.9em; padding: 0 4px;">
+              This is how other players will see you.<br /> If left blank, your username will be used.
+            </div>
+
+            <div class="frm-row">
+              <label for="password-input">Password</label>
+              <input type="password" id="password-input" name="password" maxlength="64" placeholder="Password" required />
+            </div>
+
+            <div class="frm-row">
+              <label for="confirm-password-input">Confirm Password</label>
+              <input
+                type="password"
+                id="confirm-password-input"
+                name="confirm-password"
+                maxlength="64"
+                placeholder="Confirm Password"
+                required
+              />
+            </div>
+
+            <div class="frm-row">
+              <input type="checkbox" id="accept-terms-checkbox" name="accept-terms" value="true" />
+              <label for="accept-terms-checkbox">
+                I acknowledge that I have read and agree to the <a href="/rules">Rules</a>.
+              </label>
+            </div>
+
+            {RECAPTCHA_ENABLED && RECAPTCHA_SITE_KEY && (
+              <div class="frm-row frm-row--cntr">
+                <div class="captcha-box">
+                  <div class="g-recaptcha" data-sitekey={RECAPTCHA_SITE_KEY}></div>
+                </div>
+              </div>
+            )}
+
+            <div id="err-msg-row" class="frm-row">
+              <span id="status-msg" style={errorMessage ? 'color: #ff4444;' : ''}>
+                {errorMessage}
+              </span>
+            </div>
+
+            <div class="frm-row frm-row--cntr">
+              <input type="submit" id="submit-btn" class="btn-submit" name="submit" value="Register" />
+            </div>
+
+            <div class="frm-row frm-row--cntr" style="margin-top:24px;flex-direction:column;">
+              <div style="margin:4px;">Already have an account?</div>
+              <div style="margin:4px;"><a href="/login" title="Login">Login Now</a></div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div style="margin-top: 8px;">
+        <a href="/" style="padding:8px;" title="Home">Home</a>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline src="/js/checkfields.js?v=3"></script>
+  <script is:inline src="/js/registration.js?v=3"></script>
+  <script is:inline src="/js/registration-validator.js"></script>
+</Layout>

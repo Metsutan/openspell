@@ -1,0 +1,143 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo, setAuthCookies } from '@/lib/auth';
+import { makeApiRequest, extractApiErrorMessage } from '@/lib/api';
+import { getCsrfToken, validateCsrfToken } from '@/lib/csrf';
+import { sanitizeString, isValidUsername } from '@/lib/helpers';
+
+const user = await getUserInfo(Astro.cookies);
+if (user) {
+  return Astro.redirect('/account');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+let errorMessage = Astro.url.searchParams.get('error') || '';
+
+const SHOW_FORGOT_PASSWORD = process.env.SHOW_FORGOT_PASSWORD !== 'false';
+const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';
+const RECAPTCHA_ENABLED = process.env.RECAPTCHA_ENABLED === 'true';
+const RECAPTCHA_SITE_KEY = process.env.RECAPTCHA_SITE_KEY || '';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const submittedCsrf = String(formData.get('_csrf') || '');
+    if (!validateCsrfToken(Astro.cookies, submittedCsrf)) {
+      errorMessage = 'Invalid form submission. Please try again.';
+    } else {
+      const username = sanitizeString(formData.get('username'));
+      const password = String(formData.get('password') || '');
+      const recaptchaToken = String(formData.get('g-recaptcha-response') || '');
+
+      if (!username || !password) {
+        errorMessage = 'Username and password are required';
+      } else if (!isValidUsername(username)) {
+        errorMessage = 'Invalid username format';
+      } else {
+        if (RECAPTCHA_ENABLED && RECAPTCHA_SECRET_KEY) {
+          try {
+            const verifyRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ secret: RECAPTCHA_SECRET_KEY, response: recaptchaToken }).toString()
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyData.success) {
+              errorMessage = 'reCAPTCHA verification failed. Please try again.';
+            }
+          } catch (_) {
+            errorMessage = 'Failed to verify reCAPTCHA. Please try again.';
+          }
+        }
+
+        if (!errorMessage) {
+          try {
+            const apiRes = await makeApiRequest<{ success: boolean; user: any; token: string; error?: string }>(
+              '/api/auth/login',
+              {
+                method: 'POST',
+                body: { username, password }
+              }
+            );
+
+            if (apiRes && apiRes.success && apiRes.user && apiRes.token) {
+              setAuthCookies(Astro.cookies, apiRes.token, apiRes.user);
+              return Astro.redirect('/account');
+            } else {
+              errorMessage = apiRes?.error || 'Invalid credentials';
+            }
+          } catch (err) {
+            errorMessage = extractApiErrorMessage(err);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    errorMessage = 'Internal server error';
+  }
+}
+---
+
+<Layout title="OpenSpell - Login" user={null}>
+  <section id="login">
+    <div class="auth-wrap">
+      <div class="auth-card card">
+        <div id="login-brand-img" title="OpenSpell"></div>
+
+        <div class="frm-wrap">
+          <form action="/login" name="login-form" id="login-form" method="POST">
+            <input type="hidden" name="_csrf" value={csrfToken} />
+
+            <div class="frm-row">
+              <label for="username-input">Username</label>
+              <input type="text" id="username-input" name="username" maxlength="16" placeholder="Username" required />
+            </div>
+
+            <div class="frm-row">
+              <label for="password-input">Password</label>
+              <input type="password" id="password-input" name="password" maxlength="64" placeholder="Password" required />
+            </div>
+
+            {SHOW_FORGOT_PASSWORD && EMAIL_ENABLED && (
+              <div class="frm-row frm-row--cntr" style="margin-top: 8px; margin-bottom: 8px;">
+                <a href="/forgot-password">Forgot Password?</a>
+              </div>
+            )}
+
+            {RECAPTCHA_ENABLED && RECAPTCHA_SITE_KEY && (
+              <div class="frm-row frm-row--cntr">
+                <div class="captcha-box">
+                  <div class="g-recaptcha" data-sitekey={RECAPTCHA_SITE_KEY}></div>
+                </div>
+              </div>
+            )}
+
+            <div id="err-msg-row" class="frm-row">
+              <span id="status-msg" style={errorMessage ? 'color: #ff4444;' : ''}>
+                {errorMessage}
+              </span>
+            </div>
+
+            <div class="frm-row frm-row--cntr">
+              <input type="submit" id="submit-btn" class="btn-submit" name="submit" value="Login" />
+            </div>
+
+            <div class="frm-row frm-row--cntr" style="margin-top:24px;flex-direction:column;">
+              <div style="margin:4px;">
+                Not Registered? <a href="/register" title="Register">Create an Account</a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div style="margin-top: 8px;">
+        <a href="/" style="padding:8px;" title="Home">Home</a>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline src="/js/checkfields.js?v=3"></script>
+  <script is:inline src="/js/login.js"></script>
+</Layout>

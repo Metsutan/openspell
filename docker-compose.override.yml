@@ -11,8 +11,15 @@ services:
       - ./certs:/app/certs:ro
 
   web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: deps
+    command: pnpm -C apps/web dev
+    environment:
+      NODE_ENV: development
     volumes:
-      - ./apps/web:/app/apps/web:ro
+      - ./apps/web:/app/apps/web:rw
       - /app/apps/web/node_modules
       - ./apps/shared-assets:/app/apps/shared-assets:ro
       - ./certs:/app/certs:ro

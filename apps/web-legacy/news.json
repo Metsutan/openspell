@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "title": "Welcome to OpenSpell — Getting Started Guide",
+      "slug": "welcome-getting-started-guide",
+      "type": "Website",
+      "date": "2026-01-23",
+      "description": "New to OpenSpell? Here's everything you need to know to get the game running and start playing.",
+      "picture": "/static/assets/images/logo.png",
+      "content": "Welcome to OpenSpell! This guide will help you get the game up and running quickly.<br/><br/><h3>Quick Start (Docker)</h3><p>The easiest way to run OpenSpell is with Docker. Open a terminal in the project folder and run these commands:</p><ol class=\"default-ul\"><li><strong>Generate config files:</strong><br/><code>$env:ENV_MODE=\"docker\"; docker compose --env-file config/docker.env --profile init run --rm env-init</code></li><li><strong>Set up the database:</strong><br/><code>docker compose --env-file config/docker.env --profile migrate run --rm migrate</code></li><li><strong>Start everything:</strong><br/><code>docker compose --env-file config/docker.env up -d --build</code></li></ol><br/><h3>Play the Game</h3><ol class=\"default-ul\"><li>Open <a href=\"http://localhost:8887\">http://localhost:8887</a> in your browser</li><li>Click <strong>Play</strong></li><li>Select <strong>World 1</strong></li><li>Log in or create an account</li></ol><br/><h3>Default Admin Account</h3><p>A test admin account is created automatically:</p><ul class=\"default-ul\"><li><strong>Username:</strong> admin</li><li><strong>Password:</strong> admin123</li></ul><br/><h3>Made Changes to the Code?</h3><p>Docker containers have a copy of the code from when they were built. After editing files, rebuild the container:</p><ul class=\"default-ul\"><li><strong>Web changes:</strong> <code>docker compose --env-file config/docker.env up -d --build web</code></li><li><strong>API changes:</strong> <code>docker compose --env-file config/docker.env up -d --build api</code></li><li><strong>Game changes:</strong> <code>docker compose --env-file config/docker.env up -d --build game</code></li></ul><br/><h3>Need Help?</h3><p>Check the <strong>README.md</strong> file in the project root for detailed documentation, troubleshooting tips, and advanced configuration options.</p><br/>"
+    }
+  ]
+}

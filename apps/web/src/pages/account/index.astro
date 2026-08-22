@@ -1,0 +1,149 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { formatTotalPlayTime, escapeHtml } from '@/lib/helpers';
+import { getCsrfToken } from '@/lib/csrf';
+
+const user = await getUserInfo(Astro.cookies, true);
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+const successMessage = Astro.url.searchParams.get('success') || '';
+const accountErrorMessage = Astro.url.searchParams.get('error') || '';
+
+const SHOW_EMAIL_FIELD = process.env.SHOW_EMAIL_FIELD !== 'false';
+const SHOW_EMAIL_VERIFICATION_STATUS = process.env.SHOW_EMAIL_VERIFICATION_STATUS !== 'false';
+const EMAIL_VERIFICATION_REQUIRED = process.env.EMAIL_VERIFICATION_REQUIRED === 'true';
+const SHOW_RESEND_VERIFICATION = process.env.SHOW_RESEND_VERIFICATION !== 'false';
+
+let createdDateStr = 'N/A';
+if (user.createdAt) {
+  const createdDate = new Date(user.createdAt);
+  createdDateStr = createdDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+const totalPlayTimeStr = formatTotalPlayTime(user.timePlayed);
+
+let passwordCooldownInfo = { canChange: true, text: 'Password can be changed', color: '#00aa00' };
+if (user.lastPasswordChange) {
+  const lastChange = new Date(user.lastPasswordChange);
+  const now = new Date();
+  const hoursSinceChange = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60);
+  if (hoursSinceChange < 24) {
+    const hoursRemaining = Math.ceil(24 - hoursSinceChange);
+    passwordCooldownInfo = {
+      canChange: false,
+      text: `Password change cooldown: ${hoursRemaining} hour(s) remaining`,
+      color: '#ff8800'
+    };
+  }
+}
+
+let emailCooldownInfo = { canChange: true, text: 'Email can be changed', color: '#00aa00' };
+if (user.lastEmailChange) {
+  const lastChange = new Date(user.lastEmailChange);
+  const now = new Date();
+  const hoursSinceChange = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60);
+  if (hoursSinceChange < 24) {
+    const hoursRemaining = Math.ceil(24 - hoursSinceChange);
+    emailCooldownInfo = {
+      canChange: false,
+      text: `Email change cooldown: ${hoursRemaining} hour(s) remaining`,
+      color: '#ff8800'
+    };
+  }
+}
+---
+
+<Layout title="OpenSpell - My Account" user={user}>
+  <section id="account">
+    <h1 class="sect-h" id="account_title">
+      <span>Welcome, {user.displayName || user.username}</span>
+    </h1>
+
+    <div id="account_container" class="content-box">
+      <ul id="settings" class="card">
+        <li class="card-title">SETTINGS</li>
+        <li>
+          <ul class="cfg-list">
+            <li><a href="/account" title="My Account" class="sel">My Account</a></li>
+            <li><a href="/account/change-password" title="Change Password">Change Password</a></li>
+            <li><a href="/account/change-email" title="Change Email">Change Email</a></li>
+            {user.isAdmin && (
+              <li>
+                <a href="/account/admin" title="Admin Panel" style="color: var(--warning-color, #ffaa00); font-weight: 600;">
+                  Admin Panel
+                </a>
+              </li>
+            )}
+          </ul>
+        </li>
+      </ul>
+
+      <div id="account-info" class="card">
+        <ul class="cont-list">
+          {successMessage && (
+            <li style="color: #00aa00; margin-bottom: 16px; padding: 12px; background: #00aa0020; border-radius: 4px;">
+              {successMessage}
+            </li>
+          )}
+          {accountErrorMessage && (
+            <li style="color: #ff4444; margin-bottom: 16px; padding: 12px; background: #ff444420; border-radius: 4px;">
+              {accountErrorMessage}
+            </li>
+          )}
+
+          <li><h3>Account Overview</h3></li>
+          <li>Display Name: <span class="fw-bold">{user.displayName || user.username}</span></li>
+          <li>Username: <span class="fw-bold">{user.username}</span></li>
+
+          {SHOW_EMAIL_FIELD && (
+            <li>
+              Email: <span class="fw-bold">{user.email || 'None'}</span>
+              {SHOW_EMAIL_VERIFICATION_STATUS && EMAIL_VERIFICATION_REQUIRED && (
+                user.emailVerified ? (
+                  <span style="color: #00aa00; margin-left: 8px;">✓ Verified</span>
+                ) : (
+                  <span style="color: #ff8800; margin-left: 8px;">⚠ Not Verified</span>
+                )
+              )}
+            </li>
+          )}
+
+          {SHOW_EMAIL_VERIFICATION_STATUS && EMAIL_VERIFICATION_REQUIRED && !user.emailVerified && SHOW_RESEND_VERIFICATION && (
+            <li>
+              <form action="/resend-verification" method="POST" style="display: inline;">
+                <input type="hidden" name="_csrf" value={csrfToken} />
+                <button
+                  type="submit"
+                  style="background: #4CAF50; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;"
+                >
+                  Resend Verification Email
+                </button>
+              </form>
+            </li>
+          )}
+
+          <li>Player since <span class="fw-bold">{createdDateStr}</span></li>
+          <li>Total play time: <span class="fw-bold">{totalPlayTimeStr}</span></li>
+          <li>
+            <a href="/account/download-data" class="anchor-submit-button" title="Download Account Data">
+              Download account data
+            </a>
+          </li>
+          <li></li>
+          <li><h3>Account Management</h3></li>
+          <li style={`color: ${passwordCooldownInfo.color};`}>{passwordCooldownInfo.text}</li>
+          <li style={`color: ${emailCooldownInfo.color};`}>{emailCooldownInfo.text}</li>
+          <li></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Layout>
