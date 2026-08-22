@@ -1,0 +1,71 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { loadNews, fetchOnlineUsersCount } from '@/lib/news';
+import { formatDate } from '@/lib/helpers';
+
+const user = await getUserInfo(Astro.cookies);
+const onlineCount = await fetchOnlineUsersCount();
+const newsData = await loadNews();
+const newsItems = newsData.items || [];
+
+const latestNews = [...newsItems]
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  .slice(0, 5);
+---
+
+<Layout title="OpenSpell" user={user}>
+  <div id="online-count">
+    There are currently <span class="theme-color-text fw-bold">{onlineCount}</span> players online
+  </div>
+
+  <div id="gm-sect">
+    <div id="gm-img"></div>
+
+    <div id="play-sect">
+      <div class="play-btn-wrap">
+        <a href="/play" class="play-btn">PLAY NOW</a>
+      </div>
+      <div class="play-btn-wrap">
+        <a href="/register" class="play-btn reg-btn">
+          <div style="font-weight:100;">No Account?</div>
+          <div>Sign Up For Free</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h1 class="sect-h" id="news-h">
+      <div id="news-ico"></div><span>Latest News and Updates</span>
+    </h1>
+
+    {latestNews.length > 0 ? (
+      latestNews.map((item) => (
+        <div class="news-item">
+          <img
+            class="news-thumb"
+            width="180"
+            height="120"
+            src={item.thumbnail || '/images/logo.png'}
+            alt={item.title}
+            title={item.title}
+          />
+          <div>
+            <div class="news-h">
+              <a href={`/news/${item.slug}`} title={item.title}>{item.title}</a>
+            </div>
+            <div class="news-meta">
+              <a href="#" title={item.type || 'Game'}>{item.type || 'Game'}</a> | {formatDate(item.date)}
+            </div>
+            <div class="news-desc art-body">
+              {item.description} <a href={`/news/${item.slug}`} title="Read More">...Read More</a>
+            </div>
+          </div>
+        </div>
+      ))
+    ) : (
+      <p style="padding: 20px; opacity: 0.8;">No news updates currently available.</p>
+    )}
+  </div>
+</Layout>

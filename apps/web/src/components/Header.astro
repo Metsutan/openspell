@@ -1,0 +1,155 @@
+---
+import type { UserSession } from "@/lib/auth";
+
+interface Props {
+  user?: UserSession | null;
+  hiscoresWorlds?: { serverId: number; name: string }[];
+  selectedServerId?: number | null;
+  hiscoresSelectBaseUrl?: string | null;
+}
+
+const {
+  user = null,
+  hiscoresWorlds = [],
+  selectedServerId = null,
+  hiscoresSelectBaseUrl = null,
+} = Astro.props;
+
+const isAuthenticated = !!user;
+const displayName = user ? user.displayName || user.username || "User" : "";
+
+const SHOW_DISCORD_LINK = process.env.SHOW_DISCORD_LINK === "true";
+const DISCORD_LINK = process.env.DISCORD_LINK || "";
+---
+
+<header id="hd-fx">
+  <div id="hd-wrap">
+    <div class="mb-nav-btn"></div>
+    <div id="hd-l">
+      <div id="hd-l-wrap">
+        <div id="hd-brand">
+          <a href="/" title="Home">
+            <img
+              id="brand-img"
+              src="/images/logo-open.png"
+              width="189"
+              height="32"
+              alt="OpenSpell"
+            />
+          </a>
+        </div>
+      </div>
+    </div>
+    <div id="hd-r">
+      <nav id="nav-main">
+        <div class="nav-item">
+          <a href="/play" title="Play Now">PLAY NOW</a>
+        </div>
+        <div class="nav-item">
+          <a href="/news/archives" title="News">NEWS</a>
+        </div>
+        {
+          hiscoresWorlds &&
+          hiscoresWorlds.length > 0 &&
+          hiscoresSelectBaseUrl ? (
+            <div class="nav-item hs-nav">
+              <div class="hs-nav-label">HISCORES</div>
+              <select
+                class="hs-nav-select"
+                data-base-url={hiscoresSelectBaseUrl}
+                aria-label="Select hiscores world"
+              >
+                {hiscoresWorlds.map((world) => (
+                  <option
+                    value={world.serverId}
+                    selected={selectedServerId === world.serverId}
+                  >
+                    {world.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div class="nav-item">
+              <a href="/hiscores" title="HiScores">
+                HISCORES
+              </a>
+            </div>
+          )
+        }
+        <div class="nav-item"><a href="/rules" title="Rules">RULES</a></div>
+        {
+          SHOW_DISCORD_LINK && DISCORD_LINK && (
+            <div class="nav-item">
+              <a
+                href={DISCORD_LINK}
+                title="Community"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                COMMUNITY
+              </a>
+            </div>
+          )
+        }
+        <div class="nav-item">
+          <a
+            href="https://github.com/Metsutan/openspell"
+            title="Source"
+            target="_blank"
+            rel="noopener noreferrer">SOURCE</a
+          >
+        </div>
+        <div id="map-nav" class="nav-item">
+          <a href="/worldmap" title="World Map">WORLD MAP</a>
+        </div>
+      </nav>
+      <div id="hd-r-sec">
+        {
+          isAuthenticated ? (
+            <>
+              <div class="nav-item">
+                <span style="color: var(--theme-color); font-weight: 600;">
+                  {displayName}
+                </span>
+              </div>
+              <div class="nav-item">
+                <a href="/account" title="Account">
+                  MY ACCOUNT
+                </a>
+              </div>
+              <div class="nav-item">
+                <a href="/logout" title="Logout">
+                  LOGOUT
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              <div class="nav-item">
+                <a href="/login" title="Login">
+                  LOGIN
+                </a>
+              </div>
+              <div class="nav-item">
+                <a href="/register" title="Register">
+                  REGISTER
+                </a>
+              </div>
+            </>
+          )
+        }
+      </div>
+    </div>
+    <div class="mb-nav-btn">
+      <button
+        id="mb-toggle-btn"
+        class="mb-nav-btn hb-btn"
+        type="button"
+        aria-label="Toggle navigation"
+      >
+        <div id="hb-icon"></div>
+      </button>
+    </div>
+  </div>
+</header>

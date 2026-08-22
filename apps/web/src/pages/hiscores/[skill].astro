@@ -1,0 +1,232 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { makeApiRequest } from '@/lib/api';
+import { formatNumber } from '@/lib/helpers';
+import { getCsrfToken } from '@/lib/csrf';
+
+interface Skill {
+  id: number;
+  slug: string;
+  title: string;
+  iconPosition?: string;
+}
+
+interface HiscorePlayer {
+  rank?: number;
+  username?: string;
+  displayName?: string;
+  level?: number;
+  experience?: number | bigint;
+}
+
+interface World {
+  serverId: number;
+  name: string;
+  isActive?: boolean;
+}
+
+const user = await getUserInfo(Astro.cookies);
+const csrfToken = getCsrfToken(Astro.cookies);
+const skill = Astro.params.skill || 'overall';
+const page = parseInt(Astro.url.searchParams.get('page') || '1', 10);
+const limit = 25;
+
+let worlds: World[] = [];
+try {
+  const worldsRes = await makeApiRequest<{ worlds: World[] }>('/api/worlds');
+  worlds = worldsRes?.worlds || [];
+} catch (_) {}
+
+let selectedServerId = 1;
+const queryServerId = Astro.url.searchParams.get('serverId');
+if (queryServerId) {
+  const parsed = parseInt(queryServerId, 10);
+  if (worlds.some((w) => w.serverId === parsed)) {
+    selectedServerId = parsed;
+  }
+} else if (worlds.length > 0) {
+  const active = worlds.find((w) => w.isActive) || worlds[0];
+  if (active) selectedServerId = active.serverId;
+}
+
+let skills: Skill[] = [];
+try {
+  const skillsRes = await makeApiRequest<{ skills: Skill[] }>('/api/hiscores/skills');
+  skills = skillsRes?.skills || [];
+} catch (_) {}
+
+const skillInfo = skills.find((s) => s.slug === skill) || {
+  id: 0,
+  slug: skill,
+  title: skill.charAt(0).toUpperCase() + skill.slice(1)
+};
+
+const serverQuery = `serverId=${selectedServerId}`;
+const offset = (page - 1) * limit;
+
+let hiscoresData = { items: [] as HiscorePlayer[], total: 0 };
+try {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+    serverId: String(selectedServerId),
+    excludeUsername: 'admin'
+  });
+  if (skill === 'overall') {
+    params.set('minLevel', '26');
+  }
+  const data = await makeApiRequest<{ items: HiscorePlayer[]; total: number }>(
+    `/api/hiscores/${skill}?${params.toString()}`
+  );
+  if (data && Array.isArray(data.items)) {
+    hiscoresData = data;
+  }
+} catch (error) {
+  console.warn('Failed to fetch hiscores from API:', error);
+}
+
+const players = hiscoresData.items || [];
+const total = hiscoresData.total || 0;
+const totalPages = Math.ceil(total / limit);
+
+const startPage = Math.max(1, page - 2);
+const endPage = Math.min(totalPages, page + 2);
+---
+
+<Layout
+  title={`OpenSpell - HiScores - ${skillInfo.title}`}
+  description={`View the top players in ${skillInfo.title}`}
+  user={user}
+  hiscoresWorlds={worlds.map((w) => ({ serverId: w.serverId, name: w.name }))}
+  selectedServerId={selectedServerId}
+  hiscoresSelectBaseUrl={`/hiscores/${skill}?serverId=`}
+>
+  <section id="hs-page">
+    <h1 class="sect-h" id="hs-h">
+      <div id="hs-menu-toggle-wrap">
+        <button id="hs-menu-toggle" class="hb-btn" type="button">
+          <div id="hs-menu-icon"></div>
+        </button>
+      </div>
+      <span>HiScores</span>
+    </h1>
+
+    <div id="hs-box" class="content-box">
+      <ul id="sk-menu" class="card">
+        {skills.map((s) => (
+          <li class={s.slug === skill ? 'sel' : ''}>
+            <a href={`/hiscores/${s.slug}?${serverQuery}`} title={s.title} class="sk-link">
+              {s.title}
+              <span class="sk-ico" style={s.iconPosition ? `background-position: ${s.iconPosition};` : ''}></span>
+            </a>
+          </li>
+        ))}
+        <li>
+          <div>
+            <form action="/hiscores/player" method="POST">
+              <input type="hidden" name="_csrf" value={csrfToken} />
+              <input type="hidden" name="serverId" value={String(selectedServerId)} />
+              <div class="hs-search">
+                <div>Player Search</div>
+                <div>
+                  <input type="text" maxlength="16" id="search-player" name="username" placeholder="Username" required />
+                </div>
+                <div>
+                  <input type="submit" name="submit" value="Search" />
+                </div>
+              </div>
+            </form>
+          </div>
+        </li>
+      </ul>
+
+      <div class="hs-tbl-wrap">
+        <ul id="hs-tbl" class="card">
+          <li>
+            <div class="hs-h">
+              <h2>{skillInfo.title}</h2>
+            </div>
+          </li>
+          <li id="hs-hdr" class="hs-row">
+            <div class="hs-rank">Rank</div>
+            <div class="hs-name">Name</div>
+            <div class="hs-lvl">Level</div>
+            <div class="hs-exp">Experience</div>
+          </li>
+
+          {players.length > 0 ? (
+            players.map((player, idx) => {
+              const rank = player.rank !== null && player.rank !== undefined ? player.rank : offset + idx + 1;
+              const displayName = player.displayName || player.username || 'Unknown';
+              const level = player.level !== null && player.level !== undefined ? player.level : '-';
+              const exp = player.experience !== null && player.experience !== undefined ? formatNumber(player.experience) : '-';
+
+              return (
+                <li class="hs-row sel">
+                  <div class="hs-rank">{rank}</div>
+                  <div class="hs-name">
+                    <a href={`/hiscores/player/${encodeURIComponent(displayName)}?${serverQuery}`} title={displayName}>
+                      {displayName}
+                    </a>
+                  </div>
+                  <div class="hs-lvl">{level}</div>
+                  <div class="hs-exp">{exp}</div>
+                </li>
+              );
+            })
+          ) : (
+            <li class="hs-row">
+              <div style="text-align: center; padding: 20px; color: var(--text-color, #ffffff); opacity: 0.7;">
+                No players found
+              </div>
+            </li>
+          )}
+        </ul>
+
+        {totalPages > 1 && (
+          <div class="card pg-box">
+            <div class="pg-links">
+              {page > 1 ? (
+                <a href={`/hiscores/${skill}?${serverQuery}&page=${page - 1}`} class="pg-link">Previous</a>
+              ) : (
+                <span class="pg-link disabled">Previous</span>
+              )}
+
+              {startPage > 1 && (
+                <>
+                  <a href={`/hiscores/${skill}?${serverQuery}&page=1`}>1</a>
+                  {startPage > 2 && <span class="pg-ellipsis">...</span>}
+                </>
+              )}
+
+              {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((p) => (
+                p === page ? (
+                  <span class="pg-link active">{p}</span>
+                ) : (
+                  <a href={`/hiscores/${skill}?${serverQuery}&page=${p}`} class="pg-link">{p}</a>
+                )
+              ))}
+
+              {endPage < totalPages && (
+                <>
+                  {endPage < totalPages - 1 && <span class="pg-ellipsis">...</span>}
+                  <a href={`/hiscores/${skill}?${serverQuery}&page=${totalPages}`} class="pg-link">{totalPages}</a>
+                </>
+              )}
+
+              {page < totalPages ? (
+                <a href={`/hiscores/${skill}?${serverQuery}&page=${page + 1}`} class="pg-link">Next</a>
+              ) : (
+                <span class="pg-link disabled">Next</span>
+              )}
+            </div>
+            <div class="pg-info">
+              Page {page} of {totalPages} ({total} total players)
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+</Layout>

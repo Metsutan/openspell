@@ -1,0 +1,30 @@
+---
+import { getAuthToken, getUserInfo } from '@/lib/auth';
+import { makeApiRequest } from '@/lib/api';
+
+const token = getAuthToken(Astro.cookies);
+if (!token) {
+  return Astro.redirect('/login');
+}
+
+try {
+  const exportData = await makeApiRequest('/api/account/export', {
+    method: 'GET',
+    token
+  });
+
+  const username = exportData?.user?.username || 'user';
+  const safeUsername = String(username).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
+  const exportedAt = new Date().toISOString().slice(0, 10);
+  const fileName = `openspell-account-export-${safeUsername}-${exportedAt}.json`;
+
+  return new Response(JSON.stringify(exportData, null, 2), {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${fileName}"`
+    }
+  });
+} catch (error) {
+  return Astro.redirect('/account?error=Failed%20to%20download%20account%20data');
+}
+---

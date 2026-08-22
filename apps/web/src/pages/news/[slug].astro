@@ -1,0 +1,77 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { makeApiRequest } from '@/lib/api';
+import { loadNews, type NewsItem } from '@/lib/news';
+import { formatDate } from '@/lib/helpers';
+
+const user = await getUserInfo(Astro.cookies);
+const { slug } = Astro.params;
+
+let article: NewsItem | null = null;
+let isUnavailable = false;
+
+try {
+  const response = await makeApiRequest<NewsItem>(`/api/news/${slug}`);
+  if (response && response.title) {
+    article = response;
+  }
+} catch (error) {
+  console.warn('Failed to fetch news article from API, checking fallback:', error);
+}
+
+if (!article) {
+  const newsData = await loadNews();
+  const newsItems = newsData.items || [];
+  article = newsItems.find((item) => item.slug === slug) || null;
+}
+
+if (!article) {
+  isUnavailable = true;
+}
+---
+
+<Layout
+  title={article ? `OpenSpell - ${article.title}` : 'OpenSpell - News'}
+  description={article ? article.description : 'OpenSpell News Update'}
+  user={user}
+>
+  <section id="news-article">
+    <div class="card">
+      {isUnavailable ? (
+        <>
+          <div class="news-article-head">
+            <h1 id="news-article_title">News article not found</h1>
+            <div class="news-article-date"></div>
+          </div>
+          <div class="art-box sel">
+            <div class="news-article art-body">
+              We couldn't load this article right now or it does not exist.<br /><br />
+              <a href="/news/archives">Back to News Archives</a>
+            </div>
+          </div>
+        </>
+      ) : (
+        article && (
+          <>
+            <div class="news-article-head">
+              <h1 id="news-article_title">{article.title}</h1>
+              <div class="news-article-date">{formatDate(article.date)}</div>
+            </div>
+
+            <div class="art-box sel">
+              <div class="news-article art-body">
+                {article.picture && (
+                  <div class="flexbox-with-centered-content">
+                    <img src={article.picture} alt={article.title} title={article.title} />
+                  </div>
+                )}
+                <Fragment set:html={article.content} />
+              </div>
+            </div>
+          </>
+        )
+      )}
+    </div>
+  </section>
+</Layout>

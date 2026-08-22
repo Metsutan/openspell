@@ -1,0 +1,115 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+import { loadNews, organizeNewsByDate } from '@/lib/news';
+import { formatDate, MONTH_NAMES } from '@/lib/helpers';
+
+const user = await getUserInfo(Astro.cookies);
+const newsData = await loadNews();
+const newsItems = newsData.items || [];
+const organized = organizeNewsByDate(newsItems);
+
+// Filter years to only show 2025 and later
+const allYears = Object.keys(organized)
+  .map((y) => parseInt(y, 10))
+  .filter((y) => y >= 2025)
+  .sort((a, b) => b - a);
+
+let displayYear = 2025;
+let displayMonth = 1;
+
+if (allYears.length > 0) {
+  displayYear = allYears[0];
+  displayMonth = Math.max(...Object.keys(organized[displayYear]).map((m) => parseInt(m, 10)));
+}
+
+const monthNews = organized[displayYear] && organized[displayYear][displayMonth]
+  ? organized[displayYear][displayMonth]
+  : [];
+---
+
+<Layout title="OpenSpell - News Archives" user={user}>
+  <section id="news">
+    <h1 class="sect-h" id="news_title">
+      <span>News</span>
+    </h1>
+
+    {allYears.length === 0 ? (
+      <div class="card">
+        <p style="padding: 20px;">No news available.</p>
+      </div>
+    ) : (
+      <>
+        <div class="card scroll-x">
+          <div class="news-nav year-nav">
+            {allYears.map((y) => {
+              const lastMonth = Math.max(...Object.keys(organized[y]).map((m) => parseInt(m, 10)));
+              return (
+                <div>
+                  <a href={`/news/archives/${y}/${lastMonth}`}>{y}</a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div class="card scroll-x">
+          <div class="news-nav">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+              const hasNews = organized[displayYear] && organized[displayYear][m];
+              const monthName = MONTH_NAMES[m - 1];
+              if (hasNews) {
+                const isActive = m === displayMonth;
+                return (
+                  <div>
+                    <a href={`/news/archives/${displayYear}/${m}`} style={isActive ? 'font-weight: 600;' : ''}>
+                      {monthName}
+                    </a>
+                  </div>
+                );
+              } else {
+                return (
+                  <div style="color: #888; opacity: 0.6;">{monthName}</div>
+                );
+              }
+            })}
+          </div>
+        </div>
+
+        <h1 class="sect-h">
+          <span>{MONTH_NAMES[displayMonth - 1]} {displayYear}</span>
+        </h1>
+
+        <div class="card">
+          {monthNews.length > 0 ? (
+            monthNews.map((item) => (
+              <div class="news-item">
+                <img
+                  class="news-thumb"
+                  width="180"
+                  height="120"
+                  src={item.thumbnail || '/images/logo.png'}
+                  alt={item.title}
+                  title={item.title}
+                />
+                <div>
+                  <div class="news-h">
+                    <a href={`/news/${item.slug}`} title={item.title}>{item.title}</a>
+                  </div>
+                  <div class="news-meta">
+                    <a href="#" title={item.type || 'Game'}>{item.type || 'Game'}</a> | {formatDate(item.date)}
+                  </div>
+                  <div class="news-desc art-body">
+                    {item.description} <a href={`/news/${item.slug}`} title="Read More">...Read More</a>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style="padding: 20px; opacity: 0.8;">No news found for this month</div>
+          )}
+        </div>
+      </>
+    )}
+  </section>
+</Layout>

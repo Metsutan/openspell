@@ -1,0 +1,119 @@
+---
+import { makeApiRequest, RESOLVED_API_URL } from '@/lib/api';
+
+const CLIENT_API_URL = process.env.CLIENT_API_URL || process.env.API_URL || 'http://localhost:3002';
+const CLIENT_CHAT_URL = process.env.CHAT_URL || 'http://localhost:8765';
+const CLIENT_CDN_URL = process.env.CDN_URL || '';
+
+let serverId: number | null = null;
+let serverUrl: string | null = null;
+let worldName: string | null = null;
+let isDevelopmentWorld = false;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const rawId = formData.get('serverid');
+  const rawUrl = formData.get('serverurl');
+
+  if (rawId) {
+    serverId = parseInt(String(rawId), 10);
+  }
+  if (rawUrl) {
+    serverUrl = String(rawUrl);
+  }
+
+  if (serverId) {
+    try {
+      const response = await makeApiRequest<{ world: any }>(`/api/worlds/${serverId}`);
+      const world = response?.world;
+      if (world) {
+        serverUrl = world.serverUrl || serverUrl;
+        worldName = world.name || `World ${serverId}`;
+        isDevelopmentWorld = !!world.isDevelopment;
+      }
+    } catch (_) {}
+
+    // Save to cookies for persistence across refreshes
+    Astro.cookies.set('openspell_server_id', String(serverId), { path: '/', httpOnly: true });
+    if (serverUrl) Astro.cookies.set('openspell_server_url', serverUrl, { path: '/', httpOnly: true });
+    if (worldName) Astro.cookies.set('openspell_world_name', encodeURIComponent(worldName), { path: '/', httpOnly: true });
+  }
+} else {
+  // GET request - read from cookies
+  const cookieId = Astro.cookies.get('openspell_server_id')?.value;
+  const cookieUrl = Astro.cookies.get('openspell_server_url')?.value;
+  const cookieName = Astro.cookies.get('openspell_world_name')?.value;
+
+  if (cookieId) serverId = parseInt(cookieId, 10);
+  if (cookieUrl) serverUrl = cookieUrl;
+  if (cookieName) worldName = decodeURIComponent(cookieName);
+
+  if (!serverId || !serverUrl) {
+    return Astro.redirect('/play');
+  }
+}
+
+if (!serverId || !serverUrl) {
+  return Astro.redirect('/play');
+}
+
+// Fetch client bundle version
+let clientVersion = 61;
+try {
+  const assetsData = await makeApiRequest<{ data?: { latestClientVersion?: number } }>('/assetsClient');
+  const v = assetsData?.data?.latestClientVersion;
+  if (v && Number.isFinite(Number(v))) {
+    clientVersion = Number(v);
+  }
+} catch (_) {}
+
+const cdnBase = CLIENT_CDN_URL || '';
+const clientBundleSrc = isDevelopmentWorld
+  ? `${cdnBase}/js/client/development.client.${clientVersion}.js`
+  : `${cdnBase}/js/client/client.${clientVersion}.js`;
+
+const pageTitle = worldName || `World ${serverId}`;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="Description" content="OpenSpell - A browser-based MMORPG. Play for free today!" />
+    <meta name="author" content="OpenSpell" />
+    <meta name="keywords" content="openspell, mmo, mmorpg, fantasy, online game" />
+    <link rel="shortcut icon" href="/images/favicon2.ico?4" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, user-scalable=0, interactive-widget=overlays-content" />
+    <title>OpenSpell - {pageTitle}</title>
+
+    <link href="/css/client.2.css" rel="stylesheet" type="text/css" />
+    <link href="/css/game.12.css" rel="stylesheet" type="text/css" />
+    <link href="/css/gamelogin.2.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <div id="body-container">
+      <main id="main">
+        <div id="game-container">
+          <div id="loading-container">
+            <div class="spinner-container">
+              <svg class="spinner" width="66px" height="66px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+                <circle class="spinner-path" fill="none" stroke-width="4" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
+              </svg>
+            </div>
+            <span id="loading-client" class="game-text">Loading Client...</span>
+          </div>
+        </div>
+
+        <input type="hidden" id="api-url" value={CLIENT_API_URL} />
+        <input type="hidden" id="server-id-input" value={String(serverId)} />
+        <input type="hidden" id="server-url" value={serverUrl} />
+        <input type="hidden" id="chat-server-url" value={CLIENT_CHAT_URL} />
+        <input type="hidden" id="cdn-url" value={CLIENT_CDN_URL} />
+        <script is:inline src={clientBundleSrc}></script>
+      </main>
+    </div>
+  </body>
+</html>

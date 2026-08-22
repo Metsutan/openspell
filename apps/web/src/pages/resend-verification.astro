@@ -1,0 +1,28 @@
+---
+import { getAuthToken } from '@/lib/auth';
+import { makeApiRequest, extractApiErrorMessage } from '@/lib/api';
+
+const token = getAuthToken(Astro.cookies);
+if (!token) {
+  return Astro.redirect('/login');
+}
+
+if (Astro.request.method === 'POST') {
+  try {
+    const res = await makeApiRequest<{ success: boolean; error?: string }>('/api/auth/resend-verification', {
+      method: 'POST',
+      token
+    });
+    if (res && res.success) {
+      return Astro.redirect('/account?success=Verification%20email%20sent%20successfully.%20Please%20check%20your%20inbox.');
+    } else {
+      return Astro.redirect(`/account?error=${encodeURIComponent(res?.error || 'Failed to send verification email')}`);
+    }
+  } catch (err) {
+    const msg = extractApiErrorMessage(err);
+    return Astro.redirect(`/account?error=${encodeURIComponent(msg)}`);
+  }
+}
+
+return Astro.redirect('/account');
+---

@@ -1,0 +1,40 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getUserInfo } from '@/lib/auth';
+
+const user = await getUserInfo(Astro.cookies);
+---
+
+<Layout
+  title="OpenSpell - World Map"
+  description="Explore the world of OpenSpell with our interactive world map."
+  user={user}
+  additionalCss={['/css/worldmap.css']}
+>
+  <section id="world-map">
+    <div class="flex-center">
+      <div class="card" style="max-width: 1200px; margin: 20px auto; padding: 20px; text-align: center;">
+        <h1 class="sect-h" style="margin-bottom: 20px;">
+          <span>World Map</span>
+        </h1>
+        <div style="background: var(--background-color, #1a1a1a); border: 2px solid var(--theme-color, #4a9eff); border-radius: 8px; padding: 20px; display: inline-block; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+          <a
+            href="/images/worldmap.png"
+            target="_blank"
+            title="Click to open full size map in new tab"
+            style="display: inline-block; cursor: pointer; transition: transform 0.2s;"
+          >
+            <img
+              src="/images/worldmap.png"
+              alt="World Map"
+              style="max-width: 100%; height: auto; border-radius: 4px; display: block;"
+            />
+          </a>
+          <p style="margin-top: 15px; color: var(--text-color, #ffffff); font-size: 14px; opacity: 0.8;">
+            Click the map to view full size in a new tab
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
