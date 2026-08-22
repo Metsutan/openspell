@@ -107,11 +107,17 @@ export class AssetLoader {
   }
 
   /**
+   * Strips UTF-8 Byte Order Mark (BOM) from string if present.
+   */
+  private static stripBom(text: string): string {
+    return text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+  }
+
+  /**
    * Loads a JSON array file, overlaying custom entries on top of base entries.
    * 
-   * @param filename Name of the file to load
-   * @param keyProp Property to use as the unique key for merging (e.g., '_id'). 
-   *                If not provided, arrays are simply concatenated.
+   * If `keyProp` is provided, items with matching keys will be overwritten by custom items.
+   * If `keyProp` is not provided, arrays are simply concatenated.
    */
   static async loadOverlayArray<T>(filename: string, keyProp?: keyof T): Promise<T[]> {
     const { baseData, customData, resolvedPath } = await this.loadRawFiles(filename);
@@ -119,7 +125,7 @@ export class AssetLoader {
     let baseItems: T[] = [];
     if (baseData) {
       try {
-        baseItems = JSON.parse(baseData) as T[];
+        baseItems = JSON.parse(this.stripBom(baseData)) as T[];
       } catch (err) {
         console.error(`[AssetLoader] Failed to parse base file ${resolvedPath}:`, err);
         throw err;
@@ -132,7 +138,7 @@ export class AssetLoader {
     
     let customItems: T[] = [];
     try {
-      customItems = JSON.parse(customData) as T[];
+      customItems = JSON.parse(this.stripBom(customData)) as T[];
     } catch (err) {
       console.error(`[AssetLoader] Failed to parse custom file for ${filename}:`, err);
       throw err;
@@ -168,7 +174,7 @@ export class AssetLoader {
     let baseObj: T | null = null;
     if (baseData) {
       try {
-        baseObj = JSON.parse(baseData) as T;
+        baseObj = JSON.parse(this.stripBom(baseData)) as T;
       } catch (err) {
         console.error(`[AssetLoader] Failed to parse base file ${resolvedPath}:`, err);
         throw err;
@@ -184,7 +190,7 @@ export class AssetLoader {
     
     let customObj: T | null = null;
     try {
-      customObj = JSON.parse(customData) as T;
+      customObj = JSON.parse(this.stripBom(customData)) as T;
     } catch (err) {
       console.error(`[AssetLoader] Failed to parse custom file for ${filename}:`, err);
       throw err;
@@ -234,7 +240,7 @@ export class AssetLoader {
     let baseItems: T[] = [];
     if (baseData) {
       try {
-        baseItems = JSON.parse(baseData) as T[];
+        baseItems = JSON.parse(this.stripBom(baseData)) as T[];
       } catch (err) {
         console.error(`[AssetLoader] Failed to parse base file ${resolvedPath}:`, err);
         throw err;
@@ -247,7 +253,7 @@ export class AssetLoader {
     
     let customItems: T[] = [];
     try {
-      customItems = JSON.parse(customData) as T[];
+      customItems = JSON.parse(this.stripBom(customData)) as T[];
     } catch (err) {
       console.error(`[AssetLoader] Failed to parse custom file for ${filename}:`, err);
       throw err;
