@@ -53,7 +53,10 @@ export function getMimeType(filePath: string): string {
  * e.g., "itemdefs.3a9b0596.carbon" -> "itemdefs.carbon"
  */
 export function normalizeRelativePath(reqPath: string): { originalPath: string; strippedPath: string } {
-  const cleanPath = reqPath.replace(/^\/+/, '');
+  let cleanPath = reqPath.replace(/^\/+/, '');
+  if (cleanPath.startsWith('static/')) {
+    cleanPath = cleanPath.slice(7);
+  }
   const dir = path.dirname(cleanPath);
   const base = path.basename(cleanPath);
 
@@ -188,11 +191,12 @@ export function getAsset(reqPath: string): { status: number; contentType: string
       };
     }
 
+    const stripBom = (text: string) => text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
     const baseContent = fs.readFileSync(basePath!, 'utf8');
     const customContent = fs.readFileSync(customPath!, 'utf8');
 
-    const baseJson = JSON.parse(baseContent);
-    const customJson = JSON.parse(customContent);
+    const baseJson = JSON.parse(stripBom(baseContent));
+    const customJson = JSON.parse(stripBom(customContent));
 
     let mergedJson: any;
 
