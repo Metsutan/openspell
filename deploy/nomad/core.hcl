@@ -1,16 +1,43 @@
+variable "image_tag" {
+  type        = string
+  description = "Tag to use for core container images (e.g. v0.1.0, latest)"
+  default     = "latest"
+}
+
+variable "image_registry" {
+  type        = string
+  description = "Base container registry"
+  default     = "ghcr.io/metsutan/openspell"
+}
+
+variable "force_pull" {
+  type        = bool
+  description = "Force pull image on start (set to false for immutable version tags)"
+  default     = false
+}
+
 variable "api_image" {
-    type    = string
-    description = "Container image path for the API"
+  type        = string
+  description = "Override container image path for the API (defaults to image_registry/api:image_tag)"
+  default     = ""
 }
 
 variable "web_image" {
-    type    = string
-    description = "Container image path for the Web frontend"
+  type        = string
+  description = "Override container image path for the Web frontend (defaults to image_registry/web:image_tag)"
+  default     = ""
 }
 
 variable "chat_image" {
-    type    = string
-    description = "Container image path for the Chat service"
+  type        = string
+  description = "Override container image path for the Chat service (defaults to image_registry/chat:image_tag)"
+  default     = ""
+}
+
+locals {
+  api_image  = var.api_image != "" ? var.api_image : "${var.image_registry}/api:${var.image_tag}"
+  web_image  = var.web_image != "" ? var.web_image : "${var.image_registry}/web:${var.image_tag}"
+  chat_image = var.chat_image != "" ? var.chat_image : "${var.image_registry}/chat:${var.image_tag}"
 }
 
 job "openspell-core" {
@@ -77,10 +104,10 @@ EOH
       }
 
       config {
-        image = var.api_image
+        image = local.api_image
         
         cap_drop = ["ALL"]
-        force_pull = true
+        force_pull = var.force_pull
         auth {
           username = "${REGISTRY_USERNAME}"
           password = "${REGISTRY_PASSWORD}"
@@ -183,10 +210,10 @@ EOH
       }
 
       config {
-        image = var.web_image
+        image = local.web_image
         ports = ["web"]
         cap_drop = ["ALL"]
-        force_pull = true
+        force_pull = var.force_pull
         auth {
           username = "${REGISTRY_USERNAME}"
           password = "${REGISTRY_PASSWORD}"
@@ -273,10 +300,10 @@ EOH
       }
 
       config {
-        image = var.chat_image
+        image = local.chat_image
         ports = ["chat"]
         cap_drop = ["ALL"]
-        force_pull = true
+        force_pull = var.force_pull
         auth {
           username = "${REGISTRY_USERNAME}"
           password = "${REGISTRY_PASSWORD}"
