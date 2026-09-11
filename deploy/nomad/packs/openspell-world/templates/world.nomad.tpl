@@ -2,6 +2,8 @@ job "openspell-worlds" {
   datacenters = ["dc1"]
   type        = "service"
 
+  [[- $default_registry := var "image_registry" . ]]
+  [[- $default_tag := var "image_tag" . ]]
   # Loop through every world defined in the pkrvars file
   [[- range $world_id, $world := var "worlds" . ]]
 
@@ -92,9 +94,12 @@ EOH
       kill_signal = "SIGUSR1"
       kill_timeout = "7m"
       config {
-        image = "[[ $world.game_image ]]"
+        [[- $registry := default $default_registry $world.image_registry ]]
+        [[- $tag := default $default_tag $world.image_tag ]]
+        [[- $image := default (printf "%s/game:%s" $registry $tag) $world.game_image ]]
+        image = "[[ $image ]]"
         ports = ["game"]
-        force_pull = true
+        force_pull = [[ default false $world.force_pull ]]
         auth {
           username = "${REGISTRY_USERNAME}"
           password = "${REGISTRY_PASSWORD}"

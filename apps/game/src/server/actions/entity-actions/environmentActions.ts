@@ -87,7 +87,7 @@ const ACTION_TO_STRING: Partial<Record<Action, string>> = {
 const DOOR_LIKE_TYPES = new Set(["door", "opendoor", "gate"]);
 const SEARCH_DELAY_TICKS = 4;
 const PICKLOCK_DELAY_TICKS = 4;
-const DISABLED_WORLD_ENTITY_LOOT_IDS = new Set([23, 24]);
+const DISABLED_WORLD_ENTITY_LOOT_IDS = new Set<number>();
 const DISABLED_WORLD_ENTITY_LOOT_MESSAGE = "This content is currently disabled.";
 
 function isDoorLikeEntity(entityState: WorldEntityState): boolean {

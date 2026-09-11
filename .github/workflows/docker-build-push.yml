@@ -3,10 +3,15 @@ name: Build and Push Docker Images
 on:
   push:
     branches:
-      - legacy
+      - main
     tags:
       - 'v*'
-  workflow_dispatch: # Allows manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Explicit image tag (e.g. v0.1.0, test-build). If empty, tags with short SHA (and latest if on main).'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -41,8 +46,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref_type == 'branch' }}
-            type=semver,pattern={{version}}
+            type=ref,event=tag
+            type=raw,value=${{ inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' && inputs.tag != '' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short,prefix=sha-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
