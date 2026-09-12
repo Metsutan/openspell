@@ -1,19 +1,19 @@
 variable "image_tag" {
   type        = string
   description = "Tag to use for core container images (e.g. v0.1.0, latest)"
-  default     = "latest"
+  default     = "v0.1.3"
 }
 
 variable "image_registry" {
   type        = string
   description = "Base container registry"
-  default     = "ghcr.io/metsutan/openspell"
+  default     = "ghcr.io/metsutan/onispell"
 }
 
 variable "force_pull" {
   type        = bool
   description = "Force pull image on start (set to false for immutable version tags)"
-  default     = false
+  default     = true
 }
 
 variable "api_image" {
@@ -32,12 +32,6 @@ variable "chat_image" {
   type        = string
   description = "Override container image path for the Chat service (defaults to image_registry/chat:image_tag)"
   default     = ""
-}
-
-locals {
-  api_image  = var.api_image != "" ? var.api_image : "${var.image_registry}/api:${var.image_tag}"
-  web_image  = var.web_image != "" ? var.web_image : "${var.image_registry}/web:${var.image_tag}"
-  chat_image = var.chat_image != "" ? var.chat_image : "${var.image_registry}/chat:${var.image_tag}"
 }
 
 job "openspell-core" {
@@ -104,7 +98,7 @@ EOH
       }
 
       config {
-        image = local.api_image
+        image = "${var.image_registry}/api:${var.image_tag}"
         
         cap_drop = ["ALL"]
         force_pull = var.force_pull
@@ -212,7 +206,7 @@ EOH
       }
 
       config {
-        image = local.web_image
+        image = "${var.image_registry}/web:${var.image_tag}"
         ports = ["web"]
         cap_drop = ["ALL"]
         force_pull = var.force_pull
@@ -302,7 +296,7 @@ EOH
       }
 
       config {
-        image = local.chat_image
+        image = "${var.image_registry}/chat:${var.image_tag}"
         ports = ["chat"]
         cap_drop = ["ALL"]
         force_pull = var.force_pull
