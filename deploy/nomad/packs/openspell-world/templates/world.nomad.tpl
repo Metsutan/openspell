@@ -124,6 +124,10 @@ TICK_MS="[[ $world.tick_ms ]]"
 API_URL="http://127.0.0.1:3002"
 SERVER_URL="https://[[ $world.domain ]]"
 
+CDN_URL="{{ .CDN_URL }}"
+AUTO_DOWNLOAD_ASSETS="true"
+STATIC_ASSETS_PATH="/app/shared-assets/base/static"
+
 DATABASE_URL="postgresql://{{ .POSTGRES_USER }}:{{ .POSTGRES_PASSWORD }}@127.0.0.1:5432/{{ .POSTGRES_DB }}"
 REDIS_HOST="127.0.0.1"
 REDIS_PORT="6379"
@@ -132,8 +136,6 @@ REDIS_PASSWORD="{{ .REDIS_PASSWORD }}"
 JWT_SECRET="{{ .API_JWT_SECRET }}"
 CHAT_JWT_SECRET="{{ .CHAT_JWT_SECRET }}"
 HISCORES_UPDATE_SECRET="{{ .HISCORES_UPDATE_SECRET }}"
-
-STATIC_ASSETS_PATH="/app/shared-assets/base/static"
 
 LOG_FILE_PATH="/data/game-logs/world-[[ $world_id ]]/game.log"
 
