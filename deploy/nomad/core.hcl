@@ -1,13 +1,13 @@
-variable "image_tag" {
-  type        = string
-  description = "Tag to use for core container images (e.g. v0.1.0, latest)"
-  default     = "v0.1.3"
-}
-
 variable "image_registry" {
   type        = string
-  description = "Base container registry"
-  default     = "ghcr.io/metsutan/onispell"
+  description = "Base container registry (e.g. ghcr.io/metsutan/openspell)"
+  default     = "ghcr.io/metsutan/openspell"
+}
+
+variable "image_tag" {
+  type        = string
+  description = "Default tag to use for core container images (e.g. v0.1.3, latest)"
+  default     = "latest"
 }
 
 variable "force_pull" {
@@ -18,20 +18,44 @@ variable "force_pull" {
 
 variable "api_image" {
   type        = string
-  description = "Override container image path for the API (defaults to image_registry/api:image_tag)"
+  description = "Override container image path for the API (defaults to image_registry/api:tag)"
+  default     = ""
+}
+
+variable "api_tag" {
+  type        = string
+  description = "Override container image tag for the API (defaults to image_tag)"
   default     = ""
 }
 
 variable "web_image" {
   type        = string
-  description = "Override container image path for the Web frontend (defaults to image_registry/web:image_tag)"
+  description = "Override container image path for the Web frontend (defaults to image_registry/web:tag)"
+  default     = ""
+}
+
+variable "web_tag" {
+  type        = string
+  description = "Override container image tag for the Web frontend (defaults to image_tag)"
   default     = ""
 }
 
 variable "chat_image" {
   type        = string
-  description = "Override container image path for the Chat service (defaults to image_registry/chat:image_tag)"
+  description = "Override container image path for the Chat service (defaults to image_registry/chat:tag)"
   default     = ""
+}
+
+variable "chat_tag" {
+  type        = string
+  description = "Override container image tag for the Chat service (defaults to image_tag)"
+  default     = ""
+}
+
+variable "curl_image" {
+  type        = string
+  description = "Container image for curl health check tasks"
+  default     = "docker.io/curlimages/curl:latest"
 }
 
 job "openspell-core" {
@@ -98,7 +122,7 @@ EOH
       }
 
       config {
-        image = "${var.image_registry}/api:${var.image_tag}"
+        image = var.api_image != "" ? var.api_image : "${var.image_registry}/api:${var.api_tag != "" ? var.api_tag : var.image_tag}"
         
         cap_drop = ["ALL"]
         force_pull = var.force_pull
@@ -180,7 +204,7 @@ EOH
       }
       driver = "podman"
       config {
-        image   = "docker.io/curlimages/curl:latest"
+        image   = var.curl_image
         command = "/bin/sh"
         args    = ["-c", "until curl -s http://127.0.0.1:3002/health > /dev/null; do echo 'Waiting for API proxy...'; sleep 2; done"]
       }
@@ -206,7 +230,7 @@ EOH
       }
 
       config {
-        image = "${var.image_registry}/web:${var.image_tag}"
+        image = var.web_image != "" ? var.web_image : "${var.image_registry}/web:${var.web_tag != "" ? var.web_tag : var.image_tag}"
         ports = ["web"]
         cap_drop = ["ALL"]
         force_pull = var.force_pull
@@ -296,7 +320,7 @@ EOH
       }
 
       config {
-        image = "${var.image_registry}/chat:${var.image_tag}"
+        image = var.chat_image != "" ? var.chat_image : "${var.image_registry}/chat:${var.chat_tag != "" ? var.chat_tag : var.image_tag}"
         ports = ["chat"]
         cap_drop = ["ALL"]
         force_pull = var.force_pull
