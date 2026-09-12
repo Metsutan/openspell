@@ -15,6 +15,9 @@ const PORT = parseInt(process.env.PORT || process.env.WEB_PORT || '8887', 10);
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
+  security: {
+    checkOrigin: false
+  },
   adapter: node({
     mode: 'standalone'
   }),
