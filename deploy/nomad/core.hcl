@@ -336,6 +336,7 @@ EOH
 NODE_ENV="production"
 CHAT_JWT_SECRET="{{ .CHAT_JWT_SECRET }}"
 DATABASE_URL="postgresql://{{ .POSTGRES_USER }}:{{ .POSTGRES_PASSWORD }}@127.0.0.1:5432/{{ .POSTGRES_DB }}"
+CHAT_FILTER_ENABLED="false"
 {{- end -}}
 EOH
         destination = "local/env"

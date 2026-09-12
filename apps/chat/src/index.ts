@@ -118,6 +118,10 @@ const io = new SocketIOServer(server, {
 const sessionsByUserId = new Map<number, ChatSession>();
 const userIdBySocketId = new Map<string, number>();
 
+// Chat filter toggle (defaults to false: disabled).
+// Kept in place for future web admin panel configuration (custom words/regex filters).
+const CHAT_FILTER_ENABLED = process.env.CHAT_FILTER_ENABLED === "true";
+
 /**
  * Match game server public chat censor behavior exactly.
  */
@@ -128,6 +132,10 @@ const matcher = new RegExpMatcher({
 const censor = new TextCensor().setStrategy(asteriskCensorStrategy());
 
 function censorMessage(text: string): string {
+  if (!CHAT_FILTER_ENABLED) {
+    return text;
+  }
+
   const matches = matcher.getAllMatches(text);
 
   if (matches.length === 0) {

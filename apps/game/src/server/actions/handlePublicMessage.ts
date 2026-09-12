@@ -52,21 +52,25 @@ function validateChatMessageText(message: string): ChatValidationResult {
 
   return { ok: true, trimmed };
 }
+// Chat filter toggle (defaults to false: disabled).
+// Kept in place for future web admin panel configuration (custom words/regex filters).
+const CHAT_FILTER_ENABLED = process.env.CHAT_FILTER_ENABLED === "true";
+
 /**
  * Censors obscenities in a message, excluding mild curse words.
+ * Returns unmodified text if CHAT_FILTER_ENABLED is false.
  * @param text The message text to censor
- * @returns The censored message
+ * @returns The censored message (or original text if filter is disabled)
  */
 function censorMessage(text: string): string {
+  if (!CHAT_FILTER_ENABLED) {
+    return text;
+  }
+
   const matches = matcher.getAllMatches(text);
 
   if (matches.length === 0) {
     return text; // No obscenities found
-  }
-
-
-  if (matches.length === 0) {
-    return text; // Only mild curses found, don't censor
   }
 
   return censor.applyTo(text, matches);

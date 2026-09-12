@@ -22,6 +22,7 @@ x-game-env: &game_base_env
   SERVER_URL: ${SERVER_URL:-http://localhost:${GAME_PORT:-8888}}
   PERSISTENCE_ID: ${PERSISTENCE_ID:-1}
   DISABLE_STAMINA: ${DISABLE_STAMINA:-false}
+  CHAT_FILTER_ENABLED: ${CHAT_FILTER_ENABLED:-false}
 
 x-game-base: &game_base
   build:
@@ -189,6 +190,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: ${DATABASE_URL}
       CHAT_JWT_SECRET: ${CHAT_JWT_SECRET}
+      CHAT_FILTER_ENABLED: ${CHAT_FILTER_ENABLED:-false}
       USE_HTTPS: ${USE_HTTPS:-false}
       SSL_CERT_PATH: ${SSL_CERT_PATH:-/app/certs/localhost.pem}
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/app/certs/localhost-key.pem}

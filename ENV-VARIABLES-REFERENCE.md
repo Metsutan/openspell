@@ -93,6 +93,7 @@ The script:
 | `TICK_MS` | `600` | Game tick interval in milliseconds |
 | `SERVER_ID` | `1` | Unique server ID (for multi-server setups) |
 | `DISABLE_STAMINA` | `false` | Disable stamina system (for testing) |
+| `CHAT_FILTER_ENABLED` | `false` | Enable chat profanity/obscenity filter (disabled by default) |
 
 #### Packet Logging (Game Server)
 | Variable | Default | Description |
