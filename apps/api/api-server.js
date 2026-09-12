@@ -468,24 +468,77 @@ function rewriteAssetUrls(obj, originalBases, newBase) {
   return obj;
 }
 
-function sendAssetsClientJson(res) {
-  const filePath = resolveAssetsClientPath();
-  if (!filePath) {
-    return res.status(404).json({ error: 'assetsClient.json not found' });
+// Assets client cache (caches parsed or CDN-fetched assetsClient.json)
+let assetsClientCache = { data: null, expiresAt: 0, inFlight: null };
+
+async function getAssetsClientJson() {
+  const now = Date.now();
+  const ttlMs = 30 * 1000;
+
+  if (assetsClientCache.data && assetsClientCache.expiresAt > now) {
+    return assetsClientCache.data;
   }
 
+  if (assetsClientCache.inFlight) {
+    return await assetsClientCache.inFlight;
+  }
+
+  assetsClientCache.inFlight = (async () => {
+    try {
+      // 1. Try fetching from CDN if CDN_URL is configured
+      if (CDN_URL && (CDN_URL.startsWith('http://') || CDN_URL.startsWith('https://'))) {
+        try {
+          const cdnManifestUrl = `${CDN_URL.replace(/\/+$/, '')}/assetsClient.json`;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(cdnManifestUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (resp.ok) {
+            const json = await resp.json();
+            if (json && json.data) {
+              assetsClientCache.data = json;
+              assetsClientCache.expiresAt = Date.now() + ttlMs;
+              return json;
+            }
+          }
+        } catch (fetchErr) {
+          // CDN fetch failed; continue to local fallback
+        }
+      }
+
+      // 2. Fallback to local file on disk
+      const filePath = resolveAssetsClientPath();
+      if (filePath && fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const parsed = JSON.parse(raw);
+        const rewritten = rewriteAssetUrls(parsed, KNOWN_BASE_URLS, CDN_URL);
+        assetsClientCache.data = rewritten;
+        assetsClientCache.expiresAt = Date.now() + ttlMs;
+        return rewritten;
+      }
+    } catch (err) {
+      console.error('Failed to load assetsClient.json:', err);
+    } finally {
+      assetsClientCache.inFlight = null;
+    }
+
+    return assetsClientCache.data || null;
+  })();
+
+  return await assetsClientCache.inFlight;
+}
+
+async function sendAssetsClientJson(res) {
   res.setHeader('Cache-Control', 'no-store');
 
   try {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    
-    // Rewrite asset URLs to use the configured CDN_URL
-    const rewritten = rewriteAssetUrls(parsed, KNOWN_BASE_URLS, CDN_URL);
-    
-    return res.status(200).json(rewritten);
+    const data = await getAssetsClientJson();
+    if (!data) {
+      return res.status(404).json({ error: 'assetsClient.json not found' });
+    }
+    return res.status(200).json(data);
   } catch (err) {
-    console.error('Failed to read/parse assetsClient.json:', err);
+    console.error('Failed to send assetsClient.json:', err);
     return res.status(500).json({ error: 'Failed to load assetsClient.json' });
   }
 }
@@ -511,41 +564,16 @@ app.get('/assetsClient', (req, res) => sendAssetsClientJson(res));
 app.get('/assetsClient.json', (req, res) => sendAssetsClientJson(res));
 
 // Read assetsClient.json (server-side) for validating client versions.
-let assetsClientMetaCache = { version: null, expiresAt: 0, inFlight: null };
 async function getLatestClientVersionFromAssetsClient() {
-  const now = Date.now();
-  const ttlMs = 30 * 1000;
-
-  if (assetsClientMetaCache.version !== null && assetsClientMetaCache.expiresAt > now) {
-    return assetsClientMetaCache.version;
-  }
-
-  if (assetsClientMetaCache.inFlight) {
-    return await assetsClientMetaCache.inFlight;
-  }
-
-  assetsClientMetaCache.inFlight = (async () => {
-    try {
-      const filePath = resolveAssetsClientPath();
-      if (!filePath) return null;
-      const raw = fs.readFileSync(filePath, 'utf8');
-      const parsed = JSON.parse(raw);
-      const v = parsed?.data?.latestClientVersion;
-      const n = Number(v);
-      if (Number.isFinite(n) && n > 0) {
-        assetsClientMetaCache.version = n;
-        assetsClientMetaCache.expiresAt = Date.now() + ttlMs;
-        return n;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    } finally {
-      assetsClientMetaCache.inFlight = null;
+  try {
+    const manifest = await getAssetsClientJson();
+    const v = manifest?.data?.latestClientVersion;
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) {
+      return n;
     }
-  })();
-
-  return await assetsClientMetaCache.inFlight;
+  } catch (_) {}
+  return 61;
 }
 
 // Helper: Clean up expired sessions from database
