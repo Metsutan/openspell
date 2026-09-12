@@ -425,34 +425,6 @@ function rewriteAssetUrls(obj, originalBases, newBase) {
       }
     } catch (_) {}
 
-    // Check for custom overlay cache busting
-    const customDir = getCustomStaticDir();
-    if (customDir) {
-      const match = urlStr.match(/^(.*\/static\/)(.*?)\.([a-fA-F0-9]+)\.([^.]+)$/);
-      if (match) {
-        const prefix = match[1];
-        const relName = match[2]; // e.g. "itemdefs" or "carbon/items"
-        const ext = match[4];
-        const canonicalRel = `${relName}.${ext}`;
-        const customPath = path.join(customDir, canonicalRel);
-        if (fs.existsSync(customPath)) {
-          const customStat = fs.statSync(customPath);
-          const baseDir = getBaseStaticDir();
-          let baseMtime = 0;
-          if (baseDir) {
-            const basePath = path.join(baseDir, canonicalRel);
-            if (fs.existsSync(basePath)) {
-              baseMtime = fs.statSync(basePath).mtimeMs;
-            }
-          }
-          const OVERLAY_VERSION = 'v5';
-          const hashInput = `${OVERLAY_VERSION}_${canonicalRel}_${baseMtime}_${customStat.mtimeMs}`;
-          const customHash = crypto.createHash('md5').update(hashInput).digest('hex').slice(0, 8);
-          urlStr = `${prefix}${relName}.${customHash}.${ext}`;
-        }
-      }
-    }
-
     return urlStr;
   }
   if (Array.isArray(obj)) {
@@ -486,23 +458,28 @@ async function getAssetsClientJson() {
   assetsClientCache.inFlight = (async () => {
     try {
       // 1. Try fetching from CDN if CDN_URL is configured
-      if (CDN_URL && (CDN_URL.startsWith('http://') || CDN_URL.startsWith('https://'))) {
+      const candidateCdnUrls = Array.from(new Set([
+        CDN_URL,
+        'https://cdn.openspell.dev'
+      ])).filter(u => u && (u.startsWith('http://') || u.startsWith('https://')));
+
+      for (const cdnBase of candidateCdnUrls) {
         try {
-          const cdnManifestUrl = `${CDN_URL.replace(/\/+$/, '')}/assetsClient.json`;
+          const cdnManifestUrl = `${cdnBase.replace(/\/+$/, '')}/assetsClient.json`;
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
           const resp = await fetch(cdnManifestUrl, { signal: controller.signal });
           clearTimeout(timeoutId);
           if (resp.ok) {
             const json = await resp.json();
-            if (json && json.data) {
+            if (json && json.data && json.data.files) {
               assetsClientCache.data = json;
               assetsClientCache.expiresAt = Date.now() + ttlMs;
               return json;
             }
           }
         } catch (fetchErr) {
-          // CDN fetch failed; continue to local fallback
+          // Try next candidate
         }
       }
 
