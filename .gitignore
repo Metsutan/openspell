@@ -82,3 +82,9 @@ init/*.sql
 
 # Antigravity plugins
 .agents/
+
+# Astro cache
+.astro/
+
+# Turborepo cache
+.turbo/
