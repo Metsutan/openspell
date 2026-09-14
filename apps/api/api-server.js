@@ -34,10 +34,13 @@ const SSL_CERT_PATH = process.env.SSL_CERT_PATH || DEFAULT_CERT_PATH;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || DEFAULT_KEY_PATH;
 
 // Assets client JSON (served at GET /assetsClient)
-// This file lives in shared-assets since it's shared across all asset sets
+// Supports custom overlay manifest (apps/shared-assets/custom/assetsClient.json) falling back to base
+const DEFAULT_CUSTOM_ASSETS_CLIENT_PATH = path.join(__dirname, '..', 'shared-assets', 'custom', 'assetsClient.json');
+const FALLBACK_CUSTOM_ASSETS_CLIENT_PATH = path.join(__dirname, '..', '..', 'shared-assets', 'custom', 'assetsClient.json');
 const DEFAULT_ASSETS_CLIENT_PATH = path.join(__dirname, '..', 'shared-assets', 'base', 'assetsClient.json');
 const FALLBACK_ASSETS_CLIENT_PATH = path.join(__dirname, '..', '..', 'shared-assets', 'base', 'assetsClient.json');
-const ASSETS_CLIENT_PATH = process.env.ASSETS_CLIENT_PATH || DEFAULT_ASSETS_CLIENT_PATH;
+const ASSETS_CLIENT_PATH = process.env.ASSETS_CLIENT_PATH || null;
+
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const WEB_URL = process.env.WEB_URL || 'http://localhost:8887';
@@ -367,7 +370,10 @@ const rateLimiter = createRateLimiter({
 // ==================== ASSETS CLIENT (STATIC JSON) ====================
 
 function resolveAssetsClientPath() {
-  if (fs.existsSync(ASSETS_CLIENT_PATH)) return ASSETS_CLIENT_PATH;
+  if (ASSETS_CLIENT_PATH && fs.existsSync(ASSETS_CLIENT_PATH)) return ASSETS_CLIENT_PATH;
+  if (fs.existsSync(DEFAULT_CUSTOM_ASSETS_CLIENT_PATH)) return DEFAULT_CUSTOM_ASSETS_CLIENT_PATH;
+  if (fs.existsSync(FALLBACK_CUSTOM_ASSETS_CLIENT_PATH)) return FALLBACK_CUSTOM_ASSETS_CLIENT_PATH;
+  if (fs.existsSync(DEFAULT_ASSETS_CLIENT_PATH)) return DEFAULT_ASSETS_CLIENT_PATH;
   if (fs.existsSync(FALLBACK_ASSETS_CLIENT_PATH)) return FALLBACK_ASSETS_CLIENT_PATH;
   return null;
 }

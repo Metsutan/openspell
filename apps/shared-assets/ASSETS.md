@@ -13,6 +13,8 @@ To use custom assets, simply place them in the `custom/static/` directory with t
 - **For JSON Arrays** (like item definitions, NPC definitions): The system will merge your custom array with the base array using the `_id` field. You can override specific items or add new ones without copying the entire file.
 - **For JSON Objects** (like loot tables): The system will merge the objects, allowing you to add or replace specific nested properties.
 - **For Binary Files** (like PNG heightmaps): The custom file will completely replace the base file.
+- **For Client Manifest** (`assetsClient.json`): Custom asset URLs and version hashes are saved to `apps/shared-assets/custom/assetsClient.json`, leaving `base/assetsClient.json` untouched to prevent upstream merge conflicts.
+
 
 ## Common
 

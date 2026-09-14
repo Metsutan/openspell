@@ -46,12 +46,29 @@ const CUSTOM_STATIC_DIR = process.env.CUSTOM_STATIC_ASSETS_PATH
     : path.join(CUSTOM_SHARED_ASSETS_DIR, 'static');
 
 const hasCustomStatic = fs.existsSync(CUSTOM_STATIC_DIR);
+const hasCustomDir = fs.existsSync(CUSTOM_SHARED_ASSETS_DIR) || hasCustomStatic;
 
-const ASSETS_CLIENT_PATH = process.env.ASSETS_CLIENT_PATH
-    ? path.resolve(process.env.ASSETS_CLIENT_PATH)
-    : (fs.existsSync(path.join(CUSTOM_SHARED_ASSETS_DIR, 'assetsClient.json'))
-        ? path.join(CUSTOM_SHARED_ASSETS_DIR, 'assetsClient.json')
-        : path.join(BASE_SHARED_ASSETS_DIR, 'assetsClient.json'));
+const CUSTOM_ASSETS_CLIENT_PATH = path.join(CUSTOM_SHARED_ASSETS_DIR, 'assetsClient.json');
+const BASE_ASSETS_CLIENT_PATH = path.join(BASE_SHARED_ASSETS_DIR, 'assetsClient.json');
+
+// Source manifest template to read keys and URLs from:
+const INPUT_ASSETS_CLIENT_PATH = process.env.ASSETS_CLIENT_INPUT_PATH || process.env.ASSETS_CLIENT_PATH
+    ? path.resolve(process.env.ASSETS_CLIENT_INPUT_PATH || process.env.ASSETS_CLIENT_PATH)
+    : (fs.existsSync(CUSTOM_ASSETS_CLIENT_PATH)
+        ? CUSTOM_ASSETS_CLIENT_PATH
+        : BASE_ASSETS_CLIENT_PATH);
+
+// Destination manifest path to write updated hashes to:
+// If custom directory exists, write to custom/assetsClient.json to leave base/assetsClient.json untouched.
+// If no custom directory exists, write directly to base/assetsClient.json.
+const OUTPUT_ASSETS_CLIENT_PATH = process.env.ASSETS_CLIENT_OUTPUT_PATH || process.env.ASSETS_CLIENT_PATH
+    ? path.resolve(process.env.ASSETS_CLIENT_OUTPUT_PATH || process.env.ASSETS_CLIENT_PATH)
+    : (hasCustomDir
+        ? CUSTOM_ASSETS_CLIENT_PATH
+        : BASE_ASSETS_CLIENT_PATH);
+
+
+
 
 // Array definition files that should be merged by '_id' / 'id'
 const ARRAY_DEFINITIONS = new Set([
@@ -271,14 +288,15 @@ async function main() {
     console.log('Starting assets upload script...');
     console.log(`Base Static Dir: ${BASE_STATIC_DIR}`);
     console.log(`Custom Static Dir: ${hasCustomStatic ? CUSTOM_STATIC_DIR : '(none)'}`);
-    console.log(`Assets Client Path: ${ASSETS_CLIENT_PATH}`);
+    console.log(`Assets Client Input: ${INPUT_ASSETS_CLIENT_PATH}`);
+    console.log(`Assets Client Output: ${OUTPUT_ASSETS_CLIENT_PATH}`);
 
-    if (!fs.existsSync(ASSETS_CLIENT_PATH)) {
-        console.error('assetsClient.json not found at', ASSETS_CLIENT_PATH);
+    if (!fs.existsSync(INPUT_ASSETS_CLIENT_PATH)) {
+        console.error('assetsClient.json not found at', INPUT_ASSETS_CLIENT_PATH);
         process.exit(1);
     }
     
-    const assetsClientData = JSON.parse(fs.readFileSync(ASSETS_CLIENT_PATH, 'utf8'));
+    const assetsClientData = JSON.parse(fs.readFileSync(INPUT_ASSETS_CLIENT_PATH, 'utf8'));
     const filesSection = { ...assetsClientData.data.files.defs, ...assetsClientData.data.files.gameAssets };
     let hasChanges = false;
 
@@ -337,13 +355,14 @@ async function main() {
         }
     }
 
-    if (hasChanges) {
+    if (hasChanges || INPUT_ASSETS_CLIENT_PATH !== OUTPUT_ASSETS_CLIENT_PATH) {
         if (isDryRun) {
-            console.log('[DRY-RUN] assetsClient.json would be updated with new asset hash URLs:');
+            console.log(`[DRY-RUN] Manifest would be saved to ${OUTPUT_ASSETS_CLIENT_PATH}:`);
             console.log(JSON.stringify(assetsClientData, null, 4));
         } else {
-            fs.writeFileSync(ASSETS_CLIENT_PATH, JSON.stringify(assetsClientData, null, 4));
-            console.log(`Updated ${ASSETS_CLIENT_PATH} with new asset hash URLs.`);
+            fs.mkdirSync(path.dirname(OUTPUT_ASSETS_CLIENT_PATH), { recursive: true });
+            fs.writeFileSync(OUTPUT_ASSETS_CLIENT_PATH, JSON.stringify(assetsClientData, null, 4));
+            console.log(`Updated ${OUTPUT_ASSETS_CLIENT_PATH} with new asset hash URLs.`);
         }
     } else {
         console.log('No URL changes needed for assetsClient.json');
