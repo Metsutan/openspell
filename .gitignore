@@ -58,6 +58,7 @@ certs/*.pfx
 tmp/
 temp/
 *.tmp
+*.bak
 
 # Optional: Ignore large asset files if needed (uncomment if desired)
 # files/
