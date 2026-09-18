@@ -299,6 +299,7 @@ async function main() {
     const assetsClientData = JSON.parse(fs.readFileSync(INPUT_ASSETS_CLIENT_PATH, 'utf8'));
     const filesSection = { ...assetsClientData.data.files.defs, ...assetsClientData.data.files.gameAssets };
     let hasChanges = false;
+    let hasUploadErrors = false;
 
     for (const [key, url] of Object.entries(filesSection)) {
         const urlObj = new URL(url);
@@ -352,6 +353,7 @@ async function main() {
             }
         } catch (e) {
             console.error(`Failed to upload ${asset.sourcePath}:`, e.message);
+            hasUploadErrors = true;
         }
     }
 
@@ -391,6 +393,7 @@ async function main() {
             await uploadFile(usePath, objectKey, 'application/javascript');
         } catch (e) {
             console.error(`Failed to upload ${usePath}:`, e.message);
+            hasUploadErrors = true;
         }
     }
 
@@ -440,6 +443,7 @@ async function main() {
                     await uploadFile(filePathToUpload, objectKey, getContentType(path.extname(relFile)));
                 } catch (e) {
                     console.error(`Failed to upload ${filePathToUpload}:`, e.message);
+                    hasUploadErrors = true;
                 }
             }
         }
@@ -451,7 +455,16 @@ async function main() {
         await uploadFile(manifestBuffer, 'assetsClient.json', 'application/json');
     } catch (e) {
         console.error('Failed to upload assetsClient.json:', e.message);
+        hasUploadErrors = true;
+    }
+
+    if (hasUploadErrors) {
+        console.error('Asset upload finished with one or more errors.');
+        process.exit(1);
     }
 }
 
-main().catch(console.error);
+main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+});

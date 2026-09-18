@@ -1,0 +1,74 @@
+name: Upload Assets to CDN
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/shared-assets/**'
+      - 'scripts/upload-assets.js'
+      - '.github/workflows/upload-assets.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (validate asset hashes without uploading to R2/S3)'
+        type: boolean
+        required: false
+        default: false
+  workflow_call:
+    inputs:
+      dry_run:
+        description: 'Dry run mode'
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      R2_ENDPOINT:
+        required: false
+      R2_BUCKET_NAME:
+        required: false
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
+
+concurrency:
+  group: upload-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upload-assets:
+    name: Upload Game Assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Upload assets to Cloudflare R2
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            EXTRA_ARGS="--dry-run"
+          fi
+          node scripts/upload-assets.js $EXTRA_ARGS
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || vars.R2_BUCKET_NAME || 'openspell' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'auto' }}
