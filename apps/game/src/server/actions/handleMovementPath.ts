@@ -53,6 +53,11 @@ export const handleMovementPath: ActionHandler = (ctx, actionData) => {
   const playerState = ctx.playerStatesByUserId.get(ctx.userId);
   if (!playerState) return;
 
+  // Ignore movement requests while player is traversing an obstacle
+  if (playerState.currentState === States.ManeuveringObstacleState) {
+    return;
+  }
+
   const move = decodeSendMovementPathPayload(actionData);
   if (!move) return;
 

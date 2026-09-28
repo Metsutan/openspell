@@ -1,4 +1,5 @@
 import { GameAction } from "../../protocol/enums/GameAction";
+import { States } from "../../protocol/enums/States";
 import { buildLoggedOutPayload } from "../../protocol/packets/actions/LoggedOut";
 import type { ActionHandler } from "./types";
 
@@ -12,6 +13,14 @@ export const handleLogout: ActionHandler = async (ctx, actionData) => {
 
   const playerState = ctx.playerStatesByUserId.get(ctx.userId);
   if (!playerState) return;
+
+  if (playerState.currentState === States.ManeuveringObstacleState) {
+    ctx.messageService.sendServerInfo(
+      ctx.userId,
+      "You cannot logout right now"
+    );
+    return;
+  }
 
   if (playerState.wasHitWithin(10_000)) {
     ctx.messageService.sendServerInfo(

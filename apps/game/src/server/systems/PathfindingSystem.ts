@@ -563,6 +563,13 @@ export class PathfindingSystem {
       this.cancelMovementPlan(entityRef);
       return;
     }
+    // Reject new movement plans while a player is traversing an obstacle
+    if (entityRef.type === EntityType.Player && !options?.preserveStateOnStart) {
+      const player = this.config.playerStates.get(entityRef.id);
+      if (player && player.currentState === States.ManeuveringObstacleState) {
+        return;
+      }
+    }
     if (!options?.preserveStateOnStart) {
       this.config.stateMachine.setState(entityRef, States.MovingState);
     }
@@ -585,6 +592,13 @@ export class PathfindingSystem {
    * Removes the plan and sets the entity to IdleState.
    */
   cancelMovementPlan(entityRef: EntityRef): void {
+    // Obstacle traversal cannot be cancelled via normal cancelMovementPlan
+    if (entityRef.type === EntityType.Player) {
+      const player = this.config.playerStates.get(entityRef.id);
+      if (player && player.currentState === States.ManeuveringObstacleState) {
+        return;
+      }
+    }
     const key = this.config.makeEntityKey(entityRef);
     this.config.movementPlans.delete(key);
     this.config.stateMachine.setState(entityRef, States.IdleState);

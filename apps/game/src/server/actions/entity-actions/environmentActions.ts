@@ -1824,6 +1824,8 @@ function executeAthleticsObstacle(
       userId: playerState.userId,
       type: DelayType.Blocking,
       ticks: travelTicks + delayTicks,
+      state: States.ManeuveringObstacleState,
+      restoreState: States.IdleState,
       onComplete: onObstacleComplete
     });
     if (!started) {
@@ -1896,12 +1898,21 @@ function executeAthleticsObstacle(
       }
     }
 
+    // Set state to ManeuveringObstacleState so the player cannot be interrupted while traversing
+    if (ctx.stateMachine) {
+      ctx.stateMachine.setState(entityRef, States.ManeuveringObstacleState);
+    } else {
+      playerState.setState(States.ManeuveringObstacleState);
+    }
+
     // Schedule pathfinding to move the player step-by-step
     if (delayTicks > 0) {
-      ctx.delaySystem.startDelay({
+      const started = ctx.delaySystem.startDelay({
         userId: playerState.userId,
-        type: DelayType.NonBlocking,
+        type: DelayType.Blocking,
         ticks: delayTicks,
+        state: States.ManeuveringObstacleState,
+        skipStateRestore: true,
         onComplete: () => {
           ctx.pathfindingSystem.scheduleMovementPlan(
             entityRef,
@@ -1909,10 +1920,18 @@ function executeAthleticsObstacle(
             path,
             speed,
             () => onObstacleComplete(playerState.userId),
-            { lockSpeed: true }
+            { lockSpeed: true, preserveStateOnStart: true }
           );
         }
       });
+      if (!started) {
+        if (ctx.stateMachine) {
+          ctx.stateMachine.setState(entityRef, States.IdleState);
+        } else {
+          playerState.setState(States.IdleState);
+        }
+        return;
+      }
     } else {
       ctx.pathfindingSystem.scheduleMovementPlan(
         entityRef,
@@ -1920,7 +1939,7 @@ function executeAthleticsObstacle(
         path,
         speed,
         () => onObstacleComplete(playerState.userId),
-        { lockSpeed: true }
+        { lockSpeed: true, preserveStateOnStart: true }
       );
     }
   }

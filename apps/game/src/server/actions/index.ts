@@ -197,6 +197,11 @@ export async function dispatchClientAction(
       // They will be respawned automatically after the death delay
       return;
     }
+
+    if (playerState && playerState.currentState === States.ManeuveringObstacleState) {
+      // Player is traversing an obstacle - silently ignore the action to prevent interrupting traversal
+      return;
+    }
   }
 
   // Block actions while player is stun-locked.

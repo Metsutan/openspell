@@ -32,6 +32,11 @@ export const handleSwitchToIdleState: ActionHandler = (ctx, actionData) => {
     return;
   }
 
+  // Do not allow cancelling obstacle traversal via switch to idle
+  if (playerState.currentState === States.ManeuveringObstacleState) {
+    return;
+  }
+
   // Clear any pending actions (NPC interactions, seamless pathfinding)
   if (playerState.pendingAction) {
     playerState.pendingAction = null;

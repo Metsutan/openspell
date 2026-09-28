@@ -6,6 +6,7 @@
  */
 
 import { EntityType } from "../../protocol/enums/EntityType";
+import { States } from "../../protocol/enums/States";
 import { decodePerformActionOnEntityPayload } from "../../protocol/packets/actions/PerformActionOnEntity";
 import type { ActionContext, ActionHandler } from "./types";
 import type { PlayerState } from "../../world/PlayerState";
@@ -31,6 +32,11 @@ export const handlePerformActionOnEntity: ActionHandler = (ctx, actionData) => {
   const playerState = ctx.playerStatesByUserId.get(ctx.userId);
   if (!playerState) {
     console.warn(`[handlePerformActionOnEntity] No player state for user ${ctx.userId}`);
+    return;
+  }
+
+  // Ignore entity interactions while player is traversing an obstacle
+  if (playerState.currentState === States.ManeuveringObstacleState) {
     return;
   }
 
