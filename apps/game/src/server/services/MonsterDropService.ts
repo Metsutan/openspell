@@ -61,7 +61,8 @@ export interface TreasureMapDrop {
  * Root loot reference (points to a rootLootTable).
  */
 export interface RootLootReference {
-  id: number;
+  id?: number;
+  tableId?: number;
   probability: number;
 }
 
@@ -351,13 +352,16 @@ export class MonsterDropService {
 
     // 2. Roll for root loot
     if (lootTable.rootLoot && Math.random() < lootTable.rootLoot.probability) {
-      const rootItem = this.rollOnRootLootTable(lootTable.rootLoot.id);
-      if (rootItem) {
-        drops.push({
-          itemId: rootItem.itemId,
-          amount: rootItem.amount,
-          isIOU: rootItem.isIOU
-        });
+      const rootTableId = lootTable.rootLoot.tableId ?? lootTable.rootLoot.id;
+      if (typeof rootTableId === "number") {
+        const rootItem = this.rollOnRootLootTable(rootTableId);
+        if (rootItem) {
+          drops.push({
+            itemId: rootItem.itemId,
+            amount: rootItem.amount,
+            isIOU: rootItem.isIOU
+          });
+        }
       }
     }
 
